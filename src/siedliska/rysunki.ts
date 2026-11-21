@@ -7,6 +7,19 @@ import type { Namiot, Pal, RodzajRekwizytu } from './typy';
 
 /** Wysokości (px generatora). Bohater ma ok. 27 px. */
 export const WYS = { pal: 24, slupBramy: 33, namiot: 22, namiotSzefa: 28, wieza: 44, martwe: 46 };
+
+/** Wysokość schronienia (px generatora) wg kształtu – też do cieni w Workerze. */
+export function wysokoscNamiotu(n: Namiot) {
+  const k = n.szef ? 1.2 : 1;
+  switch (n.ksztalt) {
+    case 'szalas': return 17 * k;
+    case 'kota': return 30 * k;
+    case 'jurta': return 21 * k;
+    case 'chata': return 28 * k;
+    case 'beduin': return 13 * k;
+    default: return n.szef ? WYS.namiotSzefa : WYS.namiot;
+  }
+}
 const SKOS = 0.35;
 
 /** Obraz z kotwicą: punkt świata (px generatora) leży w (kx, ky) obrazu. */
@@ -90,15 +103,23 @@ export function rysujOdcinek(pale: Pal[]): Rysunek {
 
 /** Namiot dwuspadowy: kalenica północ–południe, trójkątny szczyt z wejściem od południa (do widza). Podstawa w px generatora (w × d). */
 export function rysujNamiot(n: Namiot): Rysunek {
-  const w = Math.round(n.w), d = Math.round(n.d), H = n.szef ? WYS.namiotSzefa : WYS.namiot;
+  if (n.ksztalt === 'kota' || n.ksztalt === 'jurta' || n.ksztalt === 'chata') return rysujOkragle(n);
+  const w = Math.round(n.w), d = Math.round(n.d), H = Math.round(wysokoscNamiotu(n));
+  const galezie = n.ksztalt === 'szalas', welna = n.ksztalt === 'beduin';
   const pad = 12;
   const W = w + Math.ceil(H * SKOS) + pad * 2, Hh = H + d + pad * 2;
   const o = nowy(W, Hh);
   const cx = pad + w / 2, cy = pad + H + d / 2; // (0,0,0) = środek podstawy
   const P = (x: number, y: number, z: number) => [cx + x + z * SKOS, cy + y - z];
-  const kol = n.szef ? CZERWIEN : PLOTNO;
+  const kol = galezie ? GALEZIE : welna ? WELNA : n.szef ? CZERWIEN : PLOTNO;
   const lata = LATA[n.wariant % LATA.length];
   const plotno = (ton: number, pasy: boolean) => (x: number, y: number) => {
+    if (galezie) {
+      // Szałas: skośne kije i kępy liści/igliwia, bez łat i linek.
+      const h = hash(x >> 1, y >> 1, n.wariant + 5);
+      return h < 0.45 ? LISCIE[Math.min(3, ton + (h < 0.15 ? 1 : 0))] : h < 0.8 ? kol[Math.min(kol.length - 1, ton)] : GALEZIE[Math.max(0, ton - 1)];
+    }
+    if (welna) return Math.floor((y + 40) / 3) % 3 === 0 ? WELNA_PAS[ton > 1 ? 1 : 0] : kol[Math.min(kol.length - 1, ton)];
     let c = pasy && Math.floor((y + x * 0.5 + 40) / 4) % 2 ? PLOTNO[Math.min(3, ton + 1)] : kol[Math.min(kol.length - 1, ton)];
     if (!pasy && hash(Math.floor(x / 5), Math.floor(y / 4), n.wariant + 11) < 0.07) c = lata; // łaty
     if (hash(x, y, 91) < 0.04) c = ciemniej(c);
@@ -109,8 +130,14 @@ export function rysujNamiot(n: Namiot): Rysunek {
   wielokat(o, [...P(-w / 2, -d / 2, 0), ...P(-w / 2, d / 2, 0), ...P(0, d / 2, H), ...P(0, -d / 2, H)], plotno(2, !!n.szef));
   // Szwy płótna na zachodnim spadzie: od kalenicy do okapu.
   for (let v = -d / 2 + 5; v < d / 2 - 1; v += 5) {
+    if (galezie) {
+      // Szałas: kije oparte o kalenicę, każdy trochę inaczej (nie równe szwy).
+      const dv = (hash(v, 1, n.wariant) - 0.5) * 3, [ax, ay] = P(0.5, v + dv, H + 1), [bx, by] = P(-w / 2 - 1, v - dv, 0);
+      linia(o, ax, ay, bx, by, KORA[hash(v, 2, n.wariant) < 0.5 ? 1 : 2]);
+      continue;
+    }
     const [ax, ay] = P(0, v, H), [bx, by] = P(-w / 2, v, 0);
-    linia(o, ax, ay, bx, by, n.szef ? CZERWIEN[0] : PLOTNO[1]);
+    linia(o, ax, ay, bx, by, n.szef ? CZERWIEN[0] : welna ? WELNA[0] : PLOTNO[1]);
   }
   wielokat(o, [...P(-w / 2, d / 2, 0), ...P(w / 2, d / 2, 0), ...P(0, d / 2, H)], plotno(n.szef ? 2 : 3, false));
   // Wejście: ciemny trójkąt, jedna poła odchylona.
@@ -121,8 +148,19 @@ export function rysujNamiot(n: Namiot): Rysunek {
   const [rx0, ry0] = P(0, -d / 2, H), [rx1, ry1] = P(0, d / 2, H);
   linia(o, rx0, ry0, rx1, ry1, n.szef ? CZERWIEN[0] : PLOTNO[0]);
   linia(o, rx1, ry1, rx1, ry1 - 3, KORA[0]);
+  if (galezie) {
+    // Skrzyżowane kije wystające nad kalenicą z przodu i z tyłu oraz liście sterczące na grzbiecie.
+    for (const [qx, qy] of [[rx0, ry0], [rx1, ry1]]) {
+      linia(o, qx - 3, qy + 2, qx + 3, qy - 4, KORA[1]);
+      linia(o, qx + 3, qy + 2, qx - 3, qy - 4, KORA[2]);
+    }
+    for (let k = 0; k < 8; k++) {
+      const u = k / 7, qx = Math.round(rx0 + (rx1 - rx0) * u), qy = Math.round(ry0 + (ry1 - ry0) * u);
+      ustaw(o, qx + (k % 2 ? 1 : -1), qy - 1, LISCIE[k % 2 ? 3 : 2]);
+    }
+  }
   const LINKA = hex('#9c8a68');
-  for (const sx of [-1, 1]) {
+  if (!galezie) for (const sx of [-1, 1]) {
     const [gx, gy] = P(sx * (w / 2 + 5), d / 2 + 4, 0);
     linia(o, rx1, ry1, gx, gy, LINKA);
     ustaw(o, Math.round(gx), Math.round(gy), KORA[0]);
@@ -146,6 +184,76 @@ function bryla(o: Obraz, bx: number, by: number, w: number, d: number, h: number
 }
 
 const DESKI = [hex('#5c3f26'), hex('#7a5634'), hex('#946a40'), hex('#ad8250')];
+const GALEZIE = [hex('#4a3a24'), hex('#5e4a2c'), hex('#6f5c34'), hex('#7d6a3c')];
+const LISCIE = [hex('#3c5228'), hex('#4c6630'), hex('#5c7838'), hex('#6e8a40')];
+const WELNA = [hex('#2e2620'), hex('#3e332a'), hex('#4d4034'), hex('#5c4e40')];
+const WELNA_PAS = [hex('#8a6a3a'), hex('#b08a4a')];
+
+/**
+ * Schronienia okrągłe jako bryła obrotowa: kolejne przekroje (elipsy rzutu) od ziemi do szczytu, wyższy przykrywa
+ * niższy – kota (stożek z żerdzi i skór), jurta (filcowy walec z kopułką) i chata (gliniana ściana + strzecha).
+ */
+function rysujOkragle(n: Namiot): Rysunek {
+  const R = Math.round(n.w / 2), H = Math.round(wysokoscNamiotu(n));
+  const W = R * 2 + Math.ceil(H * SKOS) + 16, Hh = H + R + 18;
+  const o = nowy(W, Hh);
+  const cx = 8 + R, cy = Hh - 6 - Math.round(R * 0.55);
+  const afryka = n.region === 'afryka';
+  const sciana = n.ksztalt === 'jurta' ? H * 0.5 : n.ksztalt === 'chata' ? H * 0.42 : 0;
+  const promien = (z: number) => {
+    if (n.ksztalt === 'kota') return R * (1 - z / H) + 0.6;
+    if (z < sciana) return R * (n.ksztalt === 'chata' ? 0.82 : 1);
+    const u = (z - sciana) / (H - sciana);
+    return n.ksztalt === 'jurta' ? R * Math.sqrt(Math.max(0, 1 - u * u)) * 1.02 + 0.5 : R * 1.08 * (1 - u) + 0.5; // chata: strzecha z okapem
+  };
+  const kolor = (z: number, u: number, v: number, x: number, y: number) => {
+    const swiatlo = -u * 0.8 + 0.2; // lewa strona jaśniej
+    const t = Math.max(0, Math.min(3, Math.round(1.5 + swiatlo * 1.5)));
+    const drzwi = v > 0.55 && Math.abs(u) < 0.22;
+    if (n.ksztalt === 'kota') {
+      if (drzwi && z < H * 0.45) return hex('#2a2224');
+      const pas = Math.floor(z / 4) % 3 === 0;
+      return pas ? [hex('#5e4a36'), hex('#6e5640'), hex('#80664c'), hex('#937458')][t] : [hex('#8a8070'), hex('#a09684'), hex('#b4aa96'), hex('#c8bea8')][t];
+    }
+    if (n.ksztalt === 'jurta') {
+      if (z < sciana) {
+        if (drzwi && z < sciana * 0.85) return n.szef ? hex('#c0402e') : hex('#d86a2c');
+        if (Math.abs(z - sciana * 0.6) < 1) return hex('#b8402e');
+        return [hex('#a89c86'), hex('#c0b49c'), hex('#d4c8ae'), hex('#e6dcc4')][t];
+      }
+      return Math.floor(Math.atan2(v, u) * 4) % 2 === 0 ? [hex('#9c9078'), hex('#b4a890'), hex('#c8bca2'), hex('#dad0b6')][t] : [hex('#a89c84'), hex('#c0b49a'), hex('#d4c8ac'), hex('#e4dac0')][t];
+    }
+    // Chata: glina (Afryka: ochra) i strzecha (Ameryka Łacińska: zielonkawa palmowa).
+    if (z < sciana) {
+      if (drzwi && z < sciana * 0.9) return hex('#2a2224');
+      return afryka ? [hex('#8a4e2a'), hex('#a8623a'), hex('#c07848'), hex('#d49060')][t] : [hex('#7a6448'), hex('#927a58'), hex('#a88e68'), hex('#bca27a')][t];
+    }
+    const zdzblo = (Math.round(x * 0.7 + z * 1.3) + Math.round(hash(x, Math.round(z), 3) * 2)) % 3 === 0;
+    const strzecha = afryka ? [hex('#7a6230'), hex('#96783a'), hex('#b09048'), hex('#c8a85a')] : [hex('#5e6a30'), hex('#727e3a'), hex('#8a9248'), hex('#a0a658')];
+    return zdzblo ? strzecha[Math.max(0, t - 1)] : strzecha[t];
+  };
+  for (let z = 0; z <= H; z += 0.5) {
+    const rr = promien(z), ox = cx + z * SKOS, oy = cy - z;
+    for (let j = Math.floor(-rr * 0.55) - 1; j <= Math.ceil(rr * 0.55) + 1; j++) for (let i = Math.floor(-rr) - 1; i <= Math.ceil(rr) + 1; i++) {
+      const u = i / rr, v = j / (rr * 0.55);
+      if (u * u + v * v > 1) continue;
+      ustaw(o, Math.round(ox + i), Math.round(oy + j), kolor(z, u, v, Math.round(ox + i), Math.round(oy + j)));
+    }
+  }
+  const tx = Math.round(cx + H * SKOS), ty = Math.round(cy - H);
+  if (n.ksztalt === 'kota') {
+    // Żerdzie wystające ponad szczyt i dymnik.
+    for (const [dx, dy] of [[-3, -6], [2, -7], [4, -5], [-1, -7]] as [number, number][]) linia(o, tx, ty + 2, tx + dx, ty + dy, KORA[1]);
+  } else if (n.ksztalt === 'jurta') {
+    for (let i = -2; i <= 2; i++) ustaw(o, tx + i, ty, hex('#7a5634'));
+    if (n.szef) for (let j = 1; j < 9; j++) ustaw(o, tx, ty - j, KORA[0]);
+    if (n.szef) for (let j = 0; j < 3; j++) for (let i = 1; i < 6 - j; i++) ustaw(o, tx + i, ty - 8 + j, CZERWIEN[2]);
+  } else {
+    for (let j = 1; j < 4; j++) ustaw(o, tx, ty - j, n.szef ? MOSIADZ[2] : KORA[1]);
+  }
+  obrysuj(o, OBRYS, (c) => mieszaj(c, OBRYS, 0.45));
+  return { o, kx: cx, ky: cy };
+}
 
 /** Wieża strażnicza: cztery nogi, pomost z barierką, daszek z gontu i mosiężna luneta. */
 export function rysujWieze(): Rysunek {

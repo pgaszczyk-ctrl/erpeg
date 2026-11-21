@@ -97,6 +97,10 @@ Pięć rozmiarów (`OBOZ.rozmiary`, wersja generatora 2): czujka 13 m (1 namiot,
 - Testy: Node (determinizm, bramy na ścieżkach, palisada nie w budynku, ścieżka przez obóz wolna, rumowiska/bagna przejezdne, 600 planów lochu z jaskinią), przeglądarka na Lublinie: wszystkie rozmiary i typy znalezione (bagno koło Zalewu Zemborzyckiego), zejście do jaskini z 34 mieszkańcami. Zrzuty: `zrzuty/typy-w-grze.png`, `zycie-obozu-gra.png`, `rozmiary-makieta.png`.
 - Nie zrobione: twierdza nie zmieściła się w lasach Lublina (wielki tak); potwory nie zwalniają w błocie (tylko bohater); ruiny i leśne legowisko; panel administratora.
 
+## Schronienia wg regionu (właściciel 21.11.2026: „namioty to czasem tylko szałasy, ale też zależnie od kraju”)
+
+`SCHRONIENIA` (content/siedliska.ts) na regionach `stylRegionu` (te same co budynki): umiarkowany (Polska) – płócienne namioty i szałasy z gałęzi; północ – stożkowe namioty z żerdzi i skór; śródziemnomorski/Bałkany – namioty, szałasy, niskie wełniane; strefa sucha – niskie wełniane namioty w pasy; Azja – jurty; Afryka – okrągłe chaty z ochrowej gliny i strzechy; Ameryka Łacińska – chaty z palmową strzechą. Szef ma większą wersję głównego kształtu regionu. Okrągłe kształty to bryły obrotowe (przekroje od ziemi do szczytu). `WERSJA_SIEDLISK` 4. Palisada wielkich obozów sprawdzana na całych odcinkach (nie tylko w wierzchołkach). Zrzuty: `zrzuty/schronienia-regiony.png`, `zrzuty/szalasy-gra.png`. Inne regiony niż Polska sprawdzone tylko na makiecie (bez map świata w kontenerze).
+
 ## Czego jeszcze nie ma (kolejne etapy, po akceptacji obozu)
 
 - Rumowisko, bagno (nawierzchnie z mnożnikiem prędkości: `CityMap.surfaceAt` + nowy rodzaj podłoża), leśne legowisko, ruiny – ten sam rejestr i ten sam pipeline, nowe `TypSiedliska`.

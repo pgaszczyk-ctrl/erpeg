@@ -36,6 +36,7 @@ import { wWielokacie } from '../siedliska/kolizje';
 import type { Siedlisko, TerenSiedliska } from '../siedliska/typy';
 import { session } from '../quests';
 import { tx } from '../i18n';
+import { stylRegionu } from '../content/styleRegionow';
 import { GROUND_DEPTH } from '../map/MapRenderer';
 import { rng } from '../rng';
 import type { RodzajWroga } from '../content/fabula';
@@ -243,7 +244,9 @@ export class Lowiska {
       let u = r() * wagi.reduce((a, [, w]) => a + w, 0), typ: TypSiedliska = wagi[0][0];
       for (const [k, w] of wagi) if ((u -= w) < 0) { typ = k; break; }
       const id = `${this.city.id}:${typ === 'oboz' ? 'oboz' : typ}:${key}`;
-      const s = typ === 'bagno' ? planujBagno(id, x, y, teren, M) : typ === 'rumowisko' ? planujRumowisko(id, x, y, teren, M) : planujOboz(id, x, y, teren, M);
+      const ll = this.city.toLatLon(x, y);
+      const region = Number.isFinite(ll.lat) ? stylRegionu(ll.lat, ll.lon).id : 'umiarkowany';
+      const s = typ === 'bagno' ? planujBagno(id, x, y, teren, M) : typ === 'rumowisko' ? planujRumowisko(id, x, y, teren, M) : planujOboz(id, x, y, teren, M, region);
       if (!s) continue;
       this.dodajOboz(s);
       return true;

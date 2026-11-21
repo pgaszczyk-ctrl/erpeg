@@ -2,7 +2,7 @@
 // niezależnie od postaci, logowania i kolejności wczytywania kafli (wołana dopiero, gdy cała okolica jest wczytana).
 // Bez Phasera i DOM-u (testy: scripts/tests/siedliska.mjs).
 import { rng } from '../rng';
-import { OBOZ, TEREN_SIEDLISK, MIESZKANCY_SIEDLISK, WERSJA_SIEDLISK, type RozmiarSiedliska } from '../content/siedliska';
+import { OBOZ, TEREN_SIEDLISK, MIESZKANCY_SIEDLISK, WERSJA_SIEDLISK, SCHRONIENIA, type RozmiarSiedliska, type KsztaltNamiotu } from '../content/siedliska';
 import type { RodzajWroga } from '../content/fabula';
 import type { Brama, Namiot, Pal, Rekwizyt, Siedlisko, Spawn, TerenSiedliska } from './typy';
 import { wWielokacie, odlegloscOdObrysu } from './kolizje';
@@ -36,7 +36,8 @@ function dobryPunkt(t: TerenSiedliska, x: number, y: number, M: number, margBud:
  * Obóz o środku (x, y) albo null, gdy miejsce się nie nadaje. `M` = px mapy na metr. `id` = stały identyfikator
  * (mapa + komórka + wersja generatora) – z niego ziarno.
  */
-export function planujOboz(id: string, x: number, y: number, t: TerenSiedliska, M: number): Siedlisko | null {
+/** `region` = id stylu regionu świata (content/styleRegionow.ts) – decyduje o kształtach schronień. */
+export function planujOboz(id: string, x: number, y: number, t: TerenSiedliska, M: number, region = 'umiarkowany'): Siedlisko | null {
   const seed = hashSiedliska(`${id}:v${WERSJA_SIEDLISK}`);
   const r = rng(seed);
   const T = TEREN_SIEDLISK;
@@ -91,6 +92,21 @@ export function planujOboz(id: string, x: number, y: number, t: TerenSiedliska, 
       if (!wSrodkuOk(x + Math.cos(a) * gl[i] * f, y + Math.sin(a) * gl[i] * f)) ok = false;
     }
     if (!ok) continue;
+    // Całe odcinki palisady (nie tylko wierzchołki) muszą omijać budynki i linie: zły odcinek ściąga oba końce do środka.
+    for (let it = 0; it < 8 && ok; it++) {
+      let zmiana = false;
+      for (let i = 0; i < N; i++) {
+        const j = (i + 1) % N, ai = (i / N) * TAU, aj = (j / N) * TAU;
+        const ax = x + Math.cos(ai) * gl[i], ay = y + Math.sin(ai) * gl[i], bx = x + Math.cos(aj) * gl[j], by = y + Math.sin(aj) * gl[j];
+        const L = Math.hypot(bx - ax, by - ay), k = Math.max(2, Math.ceil(L / (1.5 * M)));
+        let zly = false;
+        for (let q = 1; q < k && !zly; q++) if (!naPalisade(ax + ((bx - ax) * q) / k, ay + ((by - ay) * q) / k)) zly = true;
+        if (zly) { gl[i] *= 0.94; gl[j] *= 0.94; zmiana = true; }
+      }
+      if (gl.some((p) => p < R * OBOZ.minUdzial * 0.9)) ok = false;
+      if (!zmiana) break;
+    }
+    if (!ok) continue;
     const obrys: number[] = [];
     for (let i = 0; i < N; i++) {
       const a = (i / N) * TAU;
@@ -98,7 +114,7 @@ export function planujOboz(id: string, x: number, y: number, t: TerenSiedliska, 
     }
     // Pojedyncze budynki w środku (zajęte gospodarstwo, stodoła) – najwyżej P.zBudynkami.
     if (wielki && t.budynki(x - R * 1.3, y - R * 1.3, x + R * 1.3, y + R * 1.3).filter((b) => wWielokacie(obrys, (b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2)).length > P.zBudynkami!) continue;
-    const s = zbudujOboz(id, seed, rozmiar, x, y, obrys, gl, t, M, r, fazy[2]);
+    const s = zbudujOboz(id, seed, rozmiar, x, y, obrys, gl, t, M, r, fazy[2], region);
     if (s) return s;
   }
   return null;
@@ -117,7 +133,8 @@ function katRoznica(a: number, b: number) {
   return Math.min(d, TAU - d);
 }
 
-function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: number, y: number, obrys: number[], gl: number[], t: TerenSiedliska, M: number, r: () => number, faza: number): Siedlisko | null {
+function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: number, y: number, obrys: number[], gl: number[], t: TerenSiedliska, M: number, r: () => number, faza: number, region: string): Siedlisko | null {
+  const SCH = SCHRONIENIA[region] ?? SCHRONIENIA.umiarkowany;
   const P = OBOZ.rozmiary[rozmiar];
   const ile = ([lo, hi]: [number, number]) => lo + Math.floor(r() * (hi - lo + 1));
   const Rsr = gl.reduce((s, p) => s + p, 0) / gl.length;
@@ -227,14 +244,18 @@ function zbudujOboz(id: string, seed: number, rozmiar: RozmiarSiedliska, x: numb
     const pr = wOsiedlu ? (8 + r() * 9) * M : szefWOsiedlu ? (10 + r() * 3 + proby * 0.3) * M : naObrysie(x, y, gl, a).p * (pierscien[0] + r() * (pierscien[1] - pierscien[0]));
     // Kalenica północ–południe, wejście od południa: wolny przedsionek pod spodem.
     const duzySzef = szef && !ciasny;
-    const w = (duzySzef ? 7.4 : 5.4 + r() * 0.8) * M, d = (duzySzef ? 6.4 : 4.6 + r() * 0.8) * M;
+    const ksztalt: KsztaltNamiotu = szef ? SCH.szef : losujWage(SCH.wagi, r());
+    // Wymiary podstawy wg kształtu (okrągłe: w = d); szef większy.
+    const [bw, bd] = ({ namiot: [5.4, 4.6], szalas: [5.2, 3.8], kota: [5.2, 5.2], jurta: [6.2, 6.2], chata: [5.4, 5.4], beduin: [8.2, 5] } as Record<KsztaltNamiotu, [number, number]>)[ksztalt];
+    const wiecej = duzySzef ? 1.35 : 1 + r() * 0.15;
+    const w = bw * wiecej * M, d = bd * wiecej * M;
     const cx = og.x + Math.cos(a) * pr, cy = og.y + Math.sin(a) * pr;
     const x0 = cx - w / 2 - luz, y0 = cy - d / 2 - 1.5 * M, x1 = cx + w / 2 + luz, y1 = cy + d / 2 + (ciasny ? 2 : 3) * M;
     if (![[x0, y0], [x1, y0], [x0, y1], [x1, y1]].every(([px, py]) => wSrodku(px, py, luz))) continue;
     if (doOgniska(cx, cy) < (ciasny ? 3.5 : 6) * M + Math.min(w, d) / 2) continue;
     if (kolizja(x0, y0, x1, y1) || naLinii(x0, y0, x1, y1)) continue;
     zajete.push({ x0, y0, x1, y1 });
-    namioty.push({ x: cx, y: cy, w, d, szef, wariant: Math.floor(r() * 3) });
+    namioty.push({ x: cx, y: cy, w, d, szef, wariant: Math.floor(r() * 3), ksztalt, region });
     i++;
   }
   if (namioty.length < Math.min(2, ileN) || namioty.length < ileN * 0.6) return null;

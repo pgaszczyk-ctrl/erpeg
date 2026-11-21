@@ -20,7 +20,7 @@ export type RozmiarSiedliska = 'czujka' | 'maly' | 'sredni' | 'duzy' | 'warownia
  * Wersja generatora siedlisk: wchodzi do ziarna i do id, więc zmiana reguł daje nowe (ale znowu stałe) układy,
  * a stare zapisy (np. pokonany szef) po prostu przestają pasować – nic się nie psuje.
  */
-export const WERSJA_SIEDLISK = 3;
+export const WERSJA_SIEDLISK = 4;
 
 /** Teren, na którym obóz może stać, i czego musi unikać (obszary OSM w całym obrysie z marginesem). */
 export const TEREN_SIEDLISK = {
@@ -112,6 +112,24 @@ export const OBOZ = {
   sciezkaDoDrogiM: 90,
   /** Grubość kolizji palisady (px mapy, od osi). */
   grubosc: 1.6,
+};
+
+/**
+ * Schronienia w obozie zależą od regionu świata (src/content/styleRegionow.ts – te same regiony co budynki;
+ * właściciel 21.11.2026: „namioty to czasem tylko szałasy, ale też zależnie od kraju”). Wagi + kształt namiotu szefa.
+ * namiot = płócienny dwuspadowy, szalas = dwuspadowy z gałęzi i liści, kota = stożkowy z żerdzi i skór (północ),
+ * jurta = okrągła filcowa, chata = okrągła lepianka/chata ze strzechą, beduin = niski szeroki wełniany w pasy.
+ */
+export type KsztaltNamiotu = 'namiot' | 'szalas' | 'kota' | 'jurta' | 'chata' | 'beduin';
+export const SCHRONIENIA: Record<string, { wagi: [KsztaltNamiotu, number][]; szef: KsztaltNamiotu }> = {
+  umiarkowany: { wagi: [['namiot', 0.6], ['szalas', 0.4]], szef: 'namiot' },
+  polnoc: { wagi: [['kota', 0.65], ['szalas', 0.35]], szef: 'kota' },
+  srodziemnomorski: { wagi: [['namiot', 0.45], ['beduin', 0.25], ['szalas', 0.3]], szef: 'namiot' },
+  balkany: { wagi: [['namiot', 0.45], ['szalas', 0.35], ['beduin', 0.2]], szef: 'namiot' },
+  suchy: { wagi: [['beduin', 0.75], ['szalas', 0.25]], szef: 'beduin' },
+  azja: { wagi: [['jurta', 0.55], ['szalas', 0.45]], szef: 'jurta' },
+  afryka: { wagi: [['chata', 0.65], ['szalas', 0.35]], szef: 'chata' },
+  ameryka_lacinska: { wagi: [['chata', 0.5], ['szalas', 0.5]], szef: 'chata' },
 };
 
 /** Kto mieszka w siedlisku danego typu – wyłącznie istniejące wpisy bestiariusza (ENEMY_KINDS / STWORY). */

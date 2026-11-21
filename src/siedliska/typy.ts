@@ -1,7 +1,7 @@
 // Dane jednego siedliska (współrzędne w px mapy). Planer: plan.ts; kolizje: kolizje.ts;
 // podłoże w Web Workerze: ziemia.ts; obiekty świata: Widok.ts.
 import type { RodzajWroga } from '../content/fabula';
-import type { RozmiarSiedliska, TypSiedliska } from '../content/siedliska';
+import type { KsztaltNamiotu, RozmiarSiedliska, TypSiedliska } from '../content/siedliska';
 
 export interface Brama {
   /** Środek przejścia na obrysie. */
@@ -34,6 +34,10 @@ export interface Namiot {
   d: number;
   szef?: boolean;
   wariant: number;
+  /** Kształt schronienia (regionu świata); brak = płócienny namiot. */
+  ksztalt?: KsztaltNamiotu;
+  /** Region (do kolorów chaty: Afryka ochra, Ameryka Łacińska strzecha z palm). */
+  region?: string;
 }
 
 /** Rekwizyty: zapasy, siedziska przy ognisku i łupy (ukradzione zwoje miedzi, mosiężne rury, skrzynie z trybikami). */

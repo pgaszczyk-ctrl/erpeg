@@ -1886,7 +1886,7 @@ export class GameScene extends Phaser.Scene {
     if(!this.challenge)for(const n of this.training.visibleNpcs())add(`sport:${n.x}:${n.y}`,n,'talk',tx('Trener','Coach'),()=>this.talkSport(n));
     const robot=this.elzet?.interactionTarget();if(robot)out.push(robot);
     const wizard=this.story.wizardSpot();if(wizard)add('wizard',wizard,'talk',tx('Mag','Wizard'),()=>this.story.talkToWizard());
-    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??tx('Piwnica','Cellar'),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
+    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??(w.rodzaj==='jaskinia'?tx('Jaskinia','Cave'):tx('Piwnica','Cellar')),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
     if(this.loch) {
       const l=this.loch;
       add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));

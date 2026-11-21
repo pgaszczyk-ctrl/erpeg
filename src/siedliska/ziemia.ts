@@ -5,7 +5,7 @@
 import { hash, hex, ciemniej, mieszaj, OBRYS, type Obraz } from '../gen/wspolne';
 import { kolorPodloza, rodzajPostrzepiony, type Rodzaj } from '../gen/podloze';
 import type { Siedlisko } from './typy';
-import { WYS } from './rysunki';
+import { WYS, wysokoscNamiotu } from './rysunki';
 
 const KAMIEN = [hex('#6f6a70'), hex('#858087'), hex('#9a959b'), hex('#55505a')];
 const POPIOL = [hex('#3a3430'), hex('#4c4540'), hex('#5e5650')];
@@ -70,7 +70,7 @@ export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, r
   }
   for (const p of s.pale) if (p.brama) cienSlupa(p.x, p.y, WYS.slupBramy, 2);
   for (const n of s.namioty) {
-    const H = n.szef ? WYS.namiotSzefa : WYS.namiot;
+    const H = wysokoscNamiotu(n);
     // Cień dachu dwuspadowego (kalenica północ–południe): przekrój zwęża się ku kalenicy przesuniętej w stronę cienia.
     for (let k = 0; k <= H * 0.9; k += 0.5) {
       const hw = (n.w / 2) * (1 - k / (H * 0.9 + 1));

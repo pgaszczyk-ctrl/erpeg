@@ -124,6 +124,7 @@ export function planujRumowisko(id: string, x: number, y: number, t: TerenSiedli
   // Ścieżki są przejściem: głazy na nich znikają.
   const odSciezki = (px: number, py: number) => Math.min(...s.sciezki.map((sc) => { let d = Infinity; for (let i = 0; i + 3 < sc.pts.length; i += 2) { const ax = sc.pts[i], ay = sc.pts[i + 1], bx = sc.pts[i + 2], by = sc.pts[i + 3], L = (bx - ax) ** 2 + (by - ay) ** 2 || 1, u = Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / L)); d = Math.min(d, Math.hypot(px - ax - (bx - ax) * u, py - ay - (by - ay) * u)); } return d; }));
   for (let i = glazy.length - 1; i >= 0; i--) if (odSciezki(glazy[i].x, glazy[i].y) < glazy[i].r + 2.5 * M) glazy.splice(i, 1);
+  if (glazy.length < 10) return null; // za ciasno na rumowisko – lepiej nic niż kilka kamyków
   s.glazy = glazy;
   // Pod każdym głazem skała (drzewa i trawa nie wchodzą w kamień); między skupiskami zostaje teren.
   for (const g of glazy) skaly.push(g.x, g.y, g.r + 2 * M, g.r * 0.7 + 2 * M);
