@@ -1,0 +1,33 @@
+name: World map sample (Barcelona)
+
+# Barcelona (owner, 21 Nov 2026: check the danger signposts in Barcelona): from the Eixample's big
+# crossings up to the Collserola woods, where monster camps can stand.
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/world-sample-barcelona.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/install-pmtiles.sh
+      - name: Extract
+        run: |
+          set -euo pipefail
+          B=$(scripts/world-latest.sh)
+          mkdir -p data/world-sample
+          pmtiles extract "https://build.protomaps.com/$B" data/world-sample/barcelona.pmtiles --bbox=2.095,41.385,2.165,41.430 --maxzoom=15
+          ls -l data/world-sample/barcelona.pmtiles
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898341+github-actions[bot]@users.noreply.github.com"
+          git add data/world-sample/barcelona.pmtiles
+          git commit -m "World map sample: Barcelona" || echo "No changes"
+          git pull --rebase origin "${GITHUB_REF_NAME}" && git push
