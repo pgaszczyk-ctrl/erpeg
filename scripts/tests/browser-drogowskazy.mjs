@@ -81,7 +81,7 @@ try {
   // Zrzut: bohater przy znaku.
   const z = znaki[0];
   await g((z) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(z.x + 14, z.y + 10); s.cameras.main.setZoom(6); }, z);
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(6000);
   await page.waitForFunction(() => window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 60000 }).catch(() => {});
   await page.waitForTimeout(800);
   const widac = await g(() => [...window.__drogowskazy.znaki.values()].some((q) => q.img?.visible && q.napis));
@@ -91,9 +91,6 @@ try {
   await g((id) => { const s = window.__game.scene.getScene('game'); const q = [...window.__drogowskazy.znaki.values()].find((v) => v.id === id); s.czytajDrogowskaz(q); }, z.id);
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `work/drogowskazy/${tag}-okno.png` });
-  const prow = await g(() => { const u = window.__game.scene.getScene('ui'); return !!u.dialogAktualny; });
-  await g(() => { const u = window.__game.scene.getScene('ui'); u.dialogAktualny?.onChoose?.(0); });
-  console.log('okno', prow);
   assert.deepEqual(errors, []);
   console.log(`PASS drogowskazy (${tag})`);
 } finally {

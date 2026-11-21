@@ -92,7 +92,7 @@ export function nazwaCelu(s: Siedlisko, kind: RodzajWroga) {
 
 /** Pikselowy obrazek znaku: deska na słupku, niedbały stwór farbą i strzałka węglem w jednym z 8 kierunków. */
 function obrazZnaku(rys: RysunekZnaku, k: number) {
-  const W = 34, H = 40;
+  const W = 58, H = 50;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const g = c.getContext('2d')!;
@@ -101,44 +101,48 @@ function obrazZnaku(rys: RysunekZnaku, k: number) {
   let ziarno = 1 + rys.length * 31 + k * 7;
   const los = () => ((ziarno = (ziarno * 16807) % 2147483647) / 2147483647);
   // Słupek (dwa odcienie, światło z NW), wbity w ziemię.
-  for (let y = 16; y < H - 1; y++) {
-    px(16, y, INK); px(19, y, INK);
-    px(17, y, '#8c5d36'); px(18, y, '#5e3b22');
+  const sl = (W >> 1) - 2;
+  for (let y = 28; y < H - 1; y++) {
+    px(sl, y, INK); px(sl + 4, y, INK);
+    px(sl + 1, y, '#9a6a3e'); px(sl + 2, y, '#7a4f2d'); px(sl + 3, y, '#5a3820');
   }
-  for (let x = 15; x <= 20; x++) px(x, H - 1, '#3b2a1c');
-  // Deska: słoje, sęk, gwoździe, obwódka atramentem.
-  const x0 = 2, y0 = 2, x1 = W - 3, y1 = 18;
+  for (let x = sl - 1; x <= sl + 5; x++) px(x, H - 1, '#3b2a1c');
+  // Deska: dwie zbite deski, słoje, gwoździe, obwódka atramentem, lekko krzywo przybita.
+  const x0 = 2, y0 = 2, x1 = W - 3, y1 = 30;
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const brzeg = x === x0 || x === x1 || y === y0 || y === y1;
     if (brzeg) { px(x, y, INK); continue; }
-    const slój = Math.sin(x * 0.55 + Math.sin(y * 1.7) * 1.8 + y * 0.9) > 0.86;
-    const ton = y === y0 + 1 ? '#c08a55' : y === y1 - 1 ? '#6e4527' : slój ? '#7b4e2c' : (y + (x >> 3)) % 5 === 0 ? '#93633a' : '#a5703f';
+    if (y === 16) { px(x, y, '#5a3820'); continue; }
+    const slój = Math.sin(x * 0.42 + Math.sin(y * 1.3) * 2.2 + y * 0.7) > 0.88;
+    const ton = y === y0 + 1 || y === 17 ? '#c08a55' : y === y1 - 1 || y === 15 ? '#6e4527' : slój ? '#7b4e2c' : (y + (x >> 3)) % 7 === 0 ? '#93633a' : '#a5703f';
     px(x, y, ton);
   }
-  px(x0 + 2, y0 + 2, '#2a1d14'); px(x1 - 2, y0 + 2, '#2a1d14');
-  px(x0 + 2, y1 - 2, '#2a1d14'); px(x1 - 2, y1 - 2, '#2a1d14');
-  // Stwór: farba w pośpiechu – rzędy przesunięte o piksel, dziury, zacieki.
+  for (const [x, y] of [[x0 + 3, y0 + 3], [x1 - 3, y0 + 3], [x0 + 3, y1 - 3], [x1 - 3, y1 - 3]]) { px(x, y, '#2a1d14'); px(x + 1, y, '#d8c49a'); }
+  // Stwór: farba w pośpiechu, każdy piksel rysunku = 2×2, rzędy przesunięte, dziury, zacieki.
   const mask = RYSUNKI_ZNAKU[rys], sx = x0 + 3, sy = y0 + 3;
-  const farba = '#a3271a', farbaC = '#6f1a12';
+  const farba = '#a3271a', farbaC = '#6f1a12', farbaJ = '#c2392a';
   for (let r = 0; r < 12; r++) {
-    const dx = los() < 0.25 ? (los() < 0.5 ? -1 : 1) : 0;
+    const dx = los() < 0.3 ? (los() < 0.5 ? -1 : 1) : 0;
     for (let q = 0; q < 12; q++) {
-      if (mask[r][q] !== 'X' || los() < 0.06) continue;
-      const x = sx + q + dx, y = sy + Math.floor(r * 11 / 12);
-      if (y >= y1 - 1) continue;
-      px(x, y, los() < 0.2 ? farbaC : farba);
-      if (r >= 9 && los() < 0.12 && y + 2 < y1) { px(x, y + 1, farbaC); if (los() < 0.5) px(x, y + 2, farbaC); }
+      if (mask[r][q] !== 'X') continue;
+      for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) {
+        if (los() < 0.07) continue;
+        const x = sx + q * 2 + a + dx, y = sy + r * 2 + b;
+        if (y >= y1 - 1) continue;
+        px(x, y, los() < 0.15 ? farbaC : los() < 0.1 ? farbaJ : farba);
+      }
+      if (r >= 8 && los() < 0.16) { const x = sx + q * 2 + dx, y = sy + r * 2 + 2; for (let d = 0; d < 1 + Math.floor(los() * 3) && y + d < y1 - 1; d++) px(x, y + d, farbaC); }
     }
   }
-  // Strzałka węglem (prawa połowa deski), grubość 3 piksele, grot.
-  const cx = x1 - 8, cy = Math.round((y0 + y1) / 2), a = (k * Math.PI) / 4, ux = Math.cos(a), uy = Math.sin(a);
-  const wegiel = '#241812';
-  for (let y = y0 + 2; y <= y1 - 2; y++) for (let x = cx - 7; x <= x1 - 2; x++) {
+  // Strzałka węglem (prawa połowa deski), gruba, z grotem.
+  const cx = x1 - 13, cy = Math.round((y0 + y1) / 2), a = (k * Math.PI) / 4, ux = Math.cos(a), uy = Math.sin(a);
+  const wegiel = '#241812', wegielJ = '#3a2a22';
+  for (let y = y0 + 2; y <= y1 - 2; y++) for (let x = cx - 12; x <= x1 - 2; x++) {
     const rx = x - cx, ry = y - cy;
     const u = rx * ux + ry * uy, v = -rx * uy + ry * ux;
-    const trzon = u >= -6 && u <= 1.5 && Math.abs(v) <= 1;
-    const grot = u > 0.5 && u <= 6 && Math.abs(v) <= (6 - u) * 0.95 + 0.4;
-    if ((trzon || grot) && los() > 0.04) px(x, y, wegiel);
+    const trzon = u >= -10 && u <= 2 && Math.abs(v) <= 1.6;
+    const grot = u > 1 && u <= 10 && Math.abs(v) <= (10 - u) * 0.85 + 0.5;
+    if ((trzon || grot) && los() > 0.05) px(x, y, los() < 0.15 ? wegielJ : wegiel);
   }
   return c;
 }
@@ -237,9 +241,9 @@ export class Drogowskazy {
     const klucz = `drogowskaz-${rys}-${k}`;
     if (!this.scene.textures.exists(klucz)) this.scene.textures.addCanvas(klucz, obrazZnaku(rys, k))?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     if (!this.scene.textures.exists('drogowskaz-cien')) {
-      const cc = document.createElement('canvas'); cc.width = 16; cc.height = 5;
+      const cc = document.createElement('canvas'); cc.width = 24; cc.height = 6;
       const g = cc.getContext('2d')!; g.fillStyle = 'rgba(30,26,36,0.35)';
-      for (let y = 0; y < 5; y++) { const w = Math.round(8 * Math.sqrt(1 - ((y - 2) / 2.6) ** 2)); g.fillRect(8 - w, y, w * 2, 1); }
+      for (let y = 0; y < 6; y++) { const w = Math.round(12 * Math.sqrt(1 - ((y - 2.5) / 3.1) ** 2)); g.fillRect(12 - w, y, w * 2, 1); }
       this.scene.textures.addCanvas('drogowskaz-cien', cc)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
     z.cien = this.scene.add.image(z.x + 1.5, z.y, 'drogowskaz-cien').setScale(0.5).setDepth(-1e7 + 2);
@@ -271,7 +275,7 @@ export class Drogowskazy {
     for (const z of this.znaki.values()) if (z !== najblizszy && z.napis) { z.napis.destroy(); z.napis = undefined; }
     if (najblizszy && !najblizszy.napis) {
       const z = najblizszy;
-      z.napis = this.scene.add.text(z.x, z.y - 22, this.opis(z), { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '22px', color: '#ffe9c7', stroke: '#1e1a24', strokeThickness: 5, align: 'center', wordWrap: { width: 520 } })
+      z.napis = this.scene.add.text(z.x, z.y - 34, this.opis(z), { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '22px', color: '#ffe9c7', stroke: '#1e1a24', strokeThickness: 5, align: 'center', wordWrap: { width: 520 } })
         .setOrigin(0.5, 1).setScale(0.25).setResolution(2).setDepth(1_040_000);
     }
   }
