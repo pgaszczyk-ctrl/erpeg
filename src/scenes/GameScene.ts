@@ -180,6 +180,13 @@ import { ZASOBY, zasoby, wydajStamine, wydajMane, udzialStaminy, wyczerpany, reg
 import { ustawZasobyHud, ustawInterakcjeHud } from '../ui/hudLive';
 import { comicHud } from '../ui/comicHud';
 import { comicBurst } from '../ui/comicBurst';
+import { OprawaWalki, kolorySmugi } from '../walka/oprawa';
+import { DynamikaRuchu } from '../ruch';
+
+/** Footstep sound and dust colour by the ground under the boots (src/ruch.ts, audio/syntezaWalki.ts). */
+const DZWIEK_KROKU = { asfalt: 'krok-twardy', sciezka: 'krok-miekki', trawa: 'krok-miekki', las: 'krok-miekki', piasek: 'krok-piasek', bloto: 'krok-bloto', brod: 'krok-bloto' } as const;
+const KOLOR_KURZU = { asfalt: 0xb9b2a4, sciezka: 0xc8b49a, trawa: 0xa9b184, las: 0x9c8a66, piasek: 0xe0cc98, bloto: 0x6e5a3c, brod: 0x8fa8b0 } as const;
+import type { CombatSound } from '../audio/combatCatalog';
 import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
 
 const HEART_DROP_CHANCE = 0.25;
@@ -422,6 +429,10 @@ export class GameScene extends Phaser.Scene {
   private testRide!: TestRide;
   /** The hero as a live 3D model (TEST, src/ludzik3d.ts); none = the drawn sheet. */
   private ludzik3d?: Ludzik3D;
+  /** Combat presentation: sparks, trails, hit stop, shake, contact and fall sounds (walka/oprawa.ts). */
+  private oprawa?: OprawaWalki;
+  /** Movement feel: run-up/braking, look-ahead camera, dust, footsteps (src/ruch.ts). */
+  private ruch?: DynamikaRuchu;
   private stwory3d?: Stwory3D;
   private enemies: Enemy[] = [];
   private pickups: Phaser.GameObjects.Image[] = [];
@@ -657,6 +668,26 @@ export class GameScene extends Phaser.Scene {
     }
     // The 3D hero is on its way: the drawn one must not show first (Ludzik3D.update shows him back if it never comes).
     this.ludzik3d?.ukryjNaStart(this.player);
+    this.oprawa = new OprawaWalki(this, {
+      smuga: () => this.ludzik3d?.smuga ?? [],
+      bohater: () => ({ x: this.player.x, y: this.player.y, depth: this.player.depth }),
+      kolory: () => kolorySmugi(gear.equip.bron),
+      zatrzymajBohatera: (ms) => this.ludzik3d?.zamroz(ms),
+      dzwiek: (id, g = 1) => { this.combatAudio.at(id as CombatSound, 0, () => !this.leaving, g); },
+      odBohatera: (t) => !!t.fx.bohater,
+    });
+    this.ruch = new DynamikaRuchu(this, {
+      kurz: (x, y, kat, sila) => this.oprawa?.kurz(x, y, kat, sila, KOLOR_KURZU[this.city.surfaceAt(x, y)]),
+      kameraWolna: () => !this.loch && !this.walka?.aktywna && !artilleryTransit.active,
+    });
+    if (this.ludzik3d) this.ludzik3d.onKrok = () => {
+      const p = this.player, v = Math.hypot(p.vel.x, p.vel.y);
+      if (v < p.speed * 0.3) return;
+      const pod = this.city.surfaceAt(p.x, p.y);
+      this.combatAudio.at(DZWIEK_KROKU[pod], 0, () => !this.leaving && !p.isDead);
+      // A running step kicks up a little dust on soft ground.
+      if (pod !== 'asfalt' && v > p.speed * 0.8) this.oprawa?.kurz(p.x, p.y + 3, Math.atan2(-p.vel.y, -p.vel.x), 0.35, KOLOR_KURZU[pod]);
+    };
     this.player.hp = session.hp;
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
@@ -1117,8 +1148,11 @@ export class GameScene extends Phaser.Scene {
     beat();
 
     const cam = this.cameras.main;
-    cam.setBounds(this.city.minX, this.city.minY, this.city.width - this.city.minX, this.city.height - this.city.minY);
-    cam.startFollow(this.player, true, 0.15, 0.15);
+    // Underground the hero stays in the middle of the screen (owner, 20 Nov 2026): a dungeon map is small and the
+    // map's edge used to stop the camera, pushing the hero to the side by the walls; beyond the rock is darkness.
+    if (this.city.loch) cam.removeBounds();
+    else cam.setBounds(this.city.minX, this.city.minY, this.city.width - this.city.minX, this.city.height - this.city.minY);
+    cam.startFollow(this.player, true, this.city.loch ? 0.2 : 0.15, this.city.loch ? 0.2 : 0.15);
     cam.setRoundPixels(true);
     cam.setBackgroundColor(this.city.loch ? '#07070a' : '#1f4d24');
     this.fitZoom();
@@ -1347,9 +1381,11 @@ export class GameScene extends Phaser.Scene {
       if (this.stany.zatrucie) this.player.vel.scale(ATAKI_SMOKA.dym.spowolnienie); // a dragon's poison slows the walk
       if (now < this.spowolnienieDo) this.player.vel.scale(this.spowolnienie); // the boss's stomp (StworAI)
     }
+    this.ruch?.wygladz(this.player, dt, now);
     const bx = this.player.x;
     const by = this.player.y;
     this.moveActor(this.player, dt);
+    this.ruch?.kamera(this.player, dt);
     session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
     const podZiemia = !!this.loch;
     if (!podZiemia) this.story.update(dt, this.player.x !== bx || this.player.y !== by);
@@ -1537,6 +1573,7 @@ export class GameScene extends Phaser.Scene {
     if (live()) this.rysujHpNad();
     this.testRide.update(this.player, session.look.postac, session.name);
     this.ludzik3d?.update(this.player, dt);
+    this.oprawa?.update();
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     this.elzet?.update(now);
@@ -2151,7 +2188,9 @@ export class GameScene extends Phaser.Scene {
     // The weapon flies across only in a fight or at a training station; otherwise just a faint trace of the arm.
     if (!ranged || gathering) {
       this.animateMelee(swingAim, strong);
-      if (fighting || drill || strong) this.swingWeapon(swingAim, strong);
+      // The 3D hero swings his own weapon and leaves a blade trail; the flat flying picture is for the drawn hero.
+      if (this.ludzik3d?.widoczny) { /* the model's blow is the swing */ }
+      else if (fighting || drill || strong) this.swingWeapon(swingAim, strong);
       else this.faintSwing(swingAim);
     }
     // Old controls: a swing also talks, opens doors and stalls, calls a coachman. New controls (walka/live.ts):
@@ -2209,7 +2248,8 @@ export class GameScene extends Phaser.Scene {
       }
       const imb = imbueOf(gear.equip.bron)?.e;
       landed = true;
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * power * this.essenceBoost(imb, s))) this.onEnemyKilled(s);
+      const fx = { rodzaj: !gear.equip.bron || gear.equip.bron === 'kijek' ? 'tepe' as const : 'ostrze' as const, mocny: strong, bohater: true };
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * power * this.essenceBoost(imb, s), fx)) this.onEnemyKilled(s);
       else {
         this.essenceHit(imb, s, now);
         // A strong blow stuns for a moment (not dragons).
@@ -2442,7 +2482,7 @@ export class GameScene extends Phaser.Scene {
     const epoch = this.combatAudio.epoch;
     const sound = (ms: number) => { if (this.combatAudio.epoch === epoch) this.combatAudio.at(id, ms, () => !this.player.isDead && !this.leaving); };
     // The mixer fires when the arm reaches the sample's lead-in, also after an asynchronous weapon swap.
-    if (!this.ludzik3d?.atakuj(aim, sound, COMBAT_SOUNDS[id].cue * 1000)) sound(WALKA.ciosMs * (strong ? 1.6 : 1) * .206);
+    if (!this.ludzik3d?.atakuj(aim, sound, COMBAT_SOUNDS[id].cue * 1000, { mocny: strong })) sound(WALKA.ciosMs * (strong ? 1.6 : 1) * .206);
   }
 
   /**
@@ -6863,7 +6903,8 @@ export class GameScene extends Phaser.Scene {
       this.emitZasoby();
     }
     this.player.facing.set(dir.x, dir.y);
-    this.ludzik3d?.atakuj(Math.atan2(dir.y, dir.x));
+    this.ludzik3d?.atakuj(Math.atan2(dir.y, dir.x), undefined, 0, { strzal: skill });
+    if (skill === 'magia') this.oprawa?.dlon(this.player.x + dir.x * 4, this.player.y - 7 + dir.y * 2);
     if (sound) this.combatAudio.at(shotSound(skill, strong || this.bezKosztuStrzalu), 0, () => !this.player.isDead && !this.leaving);
     this.prolog?.shot(skill);
     const range = this.shotRange(skill, strong);
@@ -6875,6 +6916,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(1_040_000);
     // Held long enough: a strong shot (bigger, golden, harder).
     if (strong) sprite.setScale(1.5).setTint(0xffd84a);
+    this.oprawa?.sledz(sprite, skill === 'magia', strong);
     this.shots.push({ sprite, x: this.player.x, y: this.player.y, originX: this.player.x, originY: this.player.y, range,
       arc: live() && !strong && skillLevel(skill) <= 3 ? WALKA.dystans.lukLotuPx : 0,
       vx: dir.x * speed, vy: dir.y * speed, left: range, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus });
@@ -6886,7 +6928,7 @@ export class GameScene extends Phaser.Scene {
       const speed = Math.hypot(shot.vx, shot.vy);
       const step = Math.min(shot.left, speed * dt);
       const sp = shot.sprite;
-      let done = false;
+      let done = false, wTeren = false;
       // Small ordered steps: the first wall / creature stops the shot, even during a slow frame.
       const n = Math.max(1, Math.ceil(step / 2));
       for (let i = 0; i < n && !done; i++) {
@@ -6894,7 +6936,7 @@ export class GameScene extends Phaser.Scene {
         shot.x += shot.vx / speed * step / n;
         shot.y += shot.vy / speed * step / n;
         shot.left = Math.max(0, shot.left - step / n);
-        if (this.city.buildingAt(shot.x, shot.y) !== undefined) { done = true; break; }
+        if (this.city.buildingAt(shot.x, shot.y) !== undefined) { done = true; wTeren = true; break; }
         const foe = this.enemies.filter(e => !e.isDead && !e.inAir && !e.peaceful && !shot.missed.has(e)
           // The body / falling animation must never extend the shot's actual range.
           && Math.hypot(e.x - shot.originX, e.y - shot.originY) <= shot.range + 1e-7
@@ -6912,7 +6954,8 @@ export class GameScene extends Phaser.Scene {
           this.practiced(shot.skill);
           const imb = imbueOf(shot.weapon)?.e;
           const instant = shot.skill === 'luk' && !WALKA.bezNatychmiast.includes(foe.kindId) && !foe.duel && Math.random() < instaKillChance();
-          if (foe.hit(new Phaser.Math.Vector2(shot.originX, shot.originY), now, instant ? foe.hp : shot.damage * this.essenceBoost(imb, foe))) this.onEnemyKilled(foe);
+          const fx = { rodzaj: shot.skill === 'magia' ? 'magia' as const : 'strzala' as const, mocny: shot.strong, krytyk: instant, bohater: true };
+          if (foe.hit(new Phaser.Math.Vector2(shot.originX, shot.originY), now, instant ? foe.hp : shot.damage * this.essenceBoost(imb, foe), fx)) this.onEnemyKilled(foe);
           else this.essenceHit(imb, foe, now);
         } else if (this.training.hitAt(shot.x, shot.y, 8, shot.skill)) {
           done = true;
@@ -6922,7 +6965,10 @@ export class GameScene extends Phaser.Scene {
       const u = 1 - shot.left / shot.range;
       sp.setPosition(shot.x, shot.y - Math.sin(Math.PI * u) * shot.arc);
       if (shot.arc) sp.setRotation(Math.atan2(shot.vy - Math.cos(Math.PI * u) * Math.PI * shot.arc * speed / shot.range, shot.vx));
+      // A shot spent without a creature: it hits the wall, or drops to the ground at the end of its range.
+      if (!done && shot.left <= 1e-7) wTeren = true;
       done ||= shot.left <= 1e-7;
+      if (done && wTeren) this.oprawa?.uderzenieWTeren(shot.x, shot.y, Math.atan2(shot.vy, shot.vx), shot.skill === 'magia');
       if (done) {
         this.shots = this.shots.filter(x => x !== shot);
         // A spent shot falls and fades only; there are no more collision checks.
