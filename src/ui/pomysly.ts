@@ -65,7 +65,7 @@ export function przybijPomysl(ramka: HTMLElement, miejsce: HTMLElement = ramka) 
 `;
   ramka.append(styl);
   const kartka = document.createElement('button');
-  kartka.type = 'button'; kartka.className = 'tb-pomysl'; kartka.textContent = tx('mam pomysła!', 'i have an idea!');
+  kartka.type = 'button'; kartka.className = 'tb-pomysl'; kartka.textContent = tx('mam pomysł', 'i have an idea!');
   kartka.setAttribute('aria-description', tx('Otwiera formularz pomysłu', 'Opens the idea form'));
   const podpowiedz = document.createElement('span');
   podpowiedz.className = 'tb-pomysl-hint';
@@ -76,8 +76,8 @@ export function przybijPomysl(ramka: HTMLElement, miejsce: HTMLElement = ramka) 
     ramka.querySelectorAll('.tb-karta, .tb-kartka-duza').forEach(e => e.remove());
     const overlay = document.createElement('div'); overlay.className = 'tb-kartka-duza tb-pomysl-dialog';
     const papier = document.createElement('form'); papier.className = 'tb-papier';
-    papier.setAttribute('aria-label', tx('mam pomysła!', 'i have an idea!'));
-    const h = document.createElement('h3'); h.textContent = tx('mam pomysła!', 'i have an idea!');
+    papier.setAttribute('aria-label', tx('mam pomysł', 'i have an idea!'));
+    const h = document.createElement('h3'); h.textContent = tx('mam pomysł', 'i have an idea!');
     const select = document.createElement('select'); select.required = true; select.style.cssText = 'width:100%;min-height:44px;font:inherit;margin-bottom:10px';
     for (const [value, text] of [['rozwoj', tx('Pomysł na rozwój gry', 'Game development idea')], ['quest', tx('Pomysł na questa', 'Quest idea')]]) {
       const option = document.createElement('option'); option.value = value; option.textContent = text; select.append(option);

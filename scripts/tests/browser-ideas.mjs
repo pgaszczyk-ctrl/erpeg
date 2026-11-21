@@ -48,7 +48,7 @@ try {
   await page.screenshot({ path: `work/tablica-mapa${mobile ? '-tel' : ''}.png` });
 
   const button = page.locator('.tb-pomysl');
-  assert(await button.isVisible()); assert.equal(await button.textContent(), 'mam pomysła!');
+  assert(await button.isVisible()); assert.equal(await button.textContent(), 'mam pomysł');
   const rect = await button.boundingBox(); assert(rect.x >= 0 && rect.y >= 0 && rect.x+rect.width <= page.viewportSize().width);
   await page.screenshot({path:`work/ideas/${mobile?(process.env.PORTRAIT === '1'?'portrait':'phone'):'desktop'}-board.png`});
   assert(await page.evaluate(() => {
