@@ -6,13 +6,13 @@ import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { GEN_DOTS } from '../map/ziemia09';
 import { doCanvas } from '../gen/wspolne';
-import { rysujOdcinek, rysujNamiot, rysujWieze, rysujRekwizyt, rysujOgien, type Rysunek } from './rysunki';
+import { rysujOdcinek, rysujNamiot, rysujWieze, rysujRekwizyt, rysujOgien, rysujGlaz, rysujMartwe, rysujNadOgniem, type Rysunek } from './rysunki';
 import type { Pal, Siedlisko } from './typy';
 
 const WIDOK_M = 320, ZNIKA_M = 480;
 const G = GEN_DOTS;
 
-interface Postawione { obrazy: Phaser.GameObjects.Image[]; tekstury: string[]; ogien: Phaser.GameObjects.Image | null }
+interface Postawione { obrazy: Phaser.GameObjects.Image[]; tekstury: string[]; ognie: Phaser.GameObjects.Image[]; nad: (Phaser.GameObjects.Image | null)[]; rodzajNad: ('gar' | 'rozen' | null)[] }
 
 export class WidokSiedlisk {
   private postawione = new Map<string, Postawione>();
@@ -65,11 +65,27 @@ export class WidokSiedlisk {
       const k = `siedl:rek:${q.rodzaj}:${q.seed % 3}`;
       obrazy.push(this.obraz(k, rysujRekwizyt(q.rodzaj, q.seed % 3), q.x, q.y, q.y));
     }
+    // Rumowisko: głazy (każdy swój rysunek – różne bryły); bagno: martwe drzewa.
+    for (const [i, g] of (s.glazy ?? []).entries()) wlasna(`siedl:${s.id}:g${i}`, rysujGlaz(g.r * G, g.seed), g.x, g.y, g.y + g.r * 0.5);
+    for (const m of s.martwe ?? []) {
+      const k = `siedl:martwe:${m.seed % 5}`;
+      obrazy.push(this.obraz(k, rysujMartwe(m.seed % 5), m.x, m.y, m.y));
+    }
     for (let f = 0; f < 3; f++) this.tekstura(`siedl:ogien${f}`, rysujOgien(f));
     const rg = rysujOgien(0);
-    const ogien = this.obraz('siedl:ogien0', rg, s.ognisko.x, s.ognisko.y, s.ognisko.y + 1);
-    obrazy.push(ogien);
-    return { obrazy, tekstury, ogien };
+    const ognie = s.ogniska.map((o) => this.obraz('siedl:ogien0', rg, o.x, o.y, o.y + 1));
+    obrazy.push(...ognie);
+    // Gar albo rożen nad ogniem (3 klatki: bulgotanie / obracanie pieczeni).
+    const rodzajNad = s.nadOgniem ?? s.ogniska.map(() => null);
+    const nad = s.ogniska.map((o, i) => {
+      const w = rodzajNad[i];
+      if (!w) return null;
+      for (let f = 0; f < 3; f++) this.tekstura(`siedl:${w}${f}`, rysujNadOgniem(w, f));
+      const im = this.obraz(`siedl:${w}0`, rysujNadOgniem(w, 0), o.x, o.y, o.y + 2);
+      obrazy.push(im);
+      return im;
+    });
+    return { obrazy, tekstury, ognie, nad, rodzajNad };
   }
 
   private zdejmij(id: string) {
@@ -97,8 +113,28 @@ export class WidokSiedlisk {
         const b = o.getBounds();
         o.setVisible(b.right > widok.x && b.x < widok.right && b.bottom > widok.y && b.y < widok.bottom);
       }
-      if (p.ogien?.visible) p.ogien.setTexture(`siedl:ogien${this.klatka}`);
+      for (const [i, o] of p.ognie.entries()) {
+        if (!o.visible) continue;
+        o.setTexture(`siedl:ogien${(this.klatka + i) % 3}`);
+        const n = p.nad[i];
+        if (n) n.setTexture(`siedl:${p.rodzajNad[i]}${(this.klatka + i) % 3}`);
+        // Dym z ogniska, a znad garu biała para – rzadkie kłębki unoszące się i znikające.
+        if (Math.random() < 0.06) this.klab(o.x + (Math.random() - 0.5) * 3, o.y - (n ? 14 : 8), p.rodzajNad[i] === 'gar' ? 0xf2f0e8 : 0x8a8580);
+      }
     }
+  }
+
+  private klab(x: number, y: number, kolor: number) {
+    if (!this.scene.textures.exists('siedl:klab')) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 8;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#ffffff';
+      g.fillRect(2, 1, 4, 6); g.fillRect(1, 2, 6, 4);
+      this.scene.textures.addCanvas('siedl:klab', c)!.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
+    const k = this.scene.add.image(x, y, 'siedl:klab').setTint(kolor).setAlpha(0.55).setScale(0.35).setDepth(y + 30);
+    this.scene.tweens.add({ targets: k, y: y - 14, x: x + 3 + Math.random() * 3, alpha: 0, scale: 0.8, duration: 1600 + Math.random() * 600, onComplete: () => k.destroy() });
   }
 
   destroy() {

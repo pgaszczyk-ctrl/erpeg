@@ -6,7 +6,7 @@ import { nowy, hex, hash, ustaw, obrysuj, ciemniej, jasniej, mieszaj, OBRYS, typ
 import type { Namiot, Pal, RodzajRekwizytu } from './typy';
 
 /** Wysokości (px generatora). Bohater ma ok. 27 px. */
-export const WYS = { pal: 24, slupBramy: 33, namiot: 22, namiotSzefa: 28, wieza: 44 };
+export const WYS = { pal: 24, slupBramy: 33, namiot: 22, namiotSzefa: 28, wieza: 44, martwe: 46 };
 const SKOS = 0.35;
 
 /** Obraz z kotwicą: punkt świata (px generatora) leży w (kx, ky) obrazu. */
@@ -197,6 +197,36 @@ export function rysujRekwizyt(rodzaj: RodzajRekwizytu, seed: number): Rysunek {
       ustaw(o, bx + i, by - j, obr ? MOSIADZ[i < 0 ? 2 : 1] : DESKI[i < -2 ? 3 : i > 2 ? 0 : (i + 8) % 3 === 0 ? 1 : 2]);
     }
     for (let i = -3; i <= 3; i++) ustaw(o, bx + i, by - 11, DESKI[3]);
+  } else if (rodzaj === 'pienek') {
+    // Kłoda do siedzenia przy ognisku: leży na boku, czoło (słoje) do widza.
+    for (let j = 0; j < 5; j++) for (let i = -5; i <= 4; i++) ustaw(o, bx + i, by - j, KORA[j === 0 ? 0 : j === 4 ? 3 : 1 + (hash(i, j, seed) < 0.3 ? 1 : 0)]);
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 4; i++) { const e = Math.hypot(i - 1.5, j - 2); if (e <= 2.2) ustaw(o, bx + 4 + i, by - j, e < 0.9 ? KORA[2] : e < 1.6 ? CIECIE : jasniej(CIECIE)); }
+  } else if (rodzaj === 'zwoje') {
+    // Ukradzione zwoje miedzianego drutu: dwa-trzy kręgi jeden na drugim, z dziurą w środku.
+    const MIEDZ = [hex('#7a3a1e'), hex('#a8552c'), hex('#cf7a44'), hex('#f0b070')];
+    for (const [dx, dy, rr] of [[-3, 0, 5], [3, 0, 4.5], [0, -4, 4.5]] as [number, number, number][]) {
+      for (let j = -4; j <= 4; j++) for (let i = -6; i <= 6; i++) {
+        const e = Math.hypot(i / rr, j / (rr * 0.55));
+        if (e > 1 || e < 0.45) continue;
+        const k = (i + j * 2 + 40) % 3 === 0 ? 0 : j < 0 ? 3 - (e > 0.8 ? 1 : 0) : e > 0.8 ? 1 : 2;
+        ustaw(o, bx + dx + i, by - 3 + dy + j, MIEDZ[k]);
+      }
+    }
+  } else if (rodzaj === 'rury') {
+    // Wiązka ukradzionych mosiężnych rur z kołnierzami, związana sznurem.
+    for (const [dy, dx] of [[0, 0], [0, 4], [-3, 2]] as [number, number][]) {
+      for (let i = -7; i <= 6; i++) for (let j = 0; j < 3; j++) ustaw(o, bx + dx + i - 2, by - 2 + dy - j, MOSIADZ[j === 2 ? 2 : j === 1 ? 1 : 0]);
+      for (let j = -1; j < 4; j++) ustaw(o, bx + dx + 5, by - 2 + dy - j + 1, MOSIADZ[2]);
+      ustaw(o, bx + dx - 9, by - 3 + dy, hex('#2a2224'));
+    }
+    for (let j = 0; j < 7; j++) ustaw(o, bx + 1, by - j, hex('#9c8a68'));
+  } else if (rodzaj === 'lup') {
+    // Otwarta skrzynia pełna łupów: trybiki, mosiężne części, połyskujące monety.
+    bryla(o, bx, by, 10, 7, 6, () => hex('#2a2018'), (_x, y) => (y % 3 === 0 ? DESKI[0] : DESKI[2]), () => DESKI[1]);
+    for (const [dx, dy, c] of [[-3, -8, 2], [-1, -9, 1], [1, -8, 2], [3, -9, 0], [0, -10, 2], [-2, -10, 1]] as [number, number, number][]) ustaw(o, bx + dx + 2, by + dy, MOSIADZ[c]);
+    // Trybik wystający ze skrzyni.
+    for (let a = 0; a < 16; a++) { const r0 = a % 2 ? 3 : 2.2; ustaw(o, Math.round(bx - 2 + Math.cos((a / 16) * 6.28) * r0), Math.round(by - 10 + Math.sin((a / 16) * 6.28) * r0), MOSIADZ[a % 2 ? 1 : 2]); }
+    ustaw(o, bx - 2, by - 10, hex('#2a2224'));
   } else {
     // Stos drewna: trzy warstwy szczap czołami do widza.
     for (const [dx, dz] of [[-6, 0], [-1, 0], [4, 0], [-4, 4], [1, 4], [-1, 8]]) {
@@ -231,5 +261,118 @@ export function rysujOgien(klatka: number): Rysunek {
   }
   for (let k = 0; k < 3; k++) ustaw(o, bx - 3 + Math.floor(hash(k, klatka, 3) * 7), by - wys - 2 - k * 2, k % 2 ? POM : ZOL);
   obrysuj(o, OBRYS, (c) => mieszaj(c, OBRYS, 0.35));
+  return { o, kx: bx, ky: by };
+}
+
+const KAMIEN_G = [hex('#4a4650'), hex('#5f5a63'), hex('#77717a'), hex('#8f8891'), hex('#a8a1a8')];
+const MECH = [hex('#4f6a36'), hex('#62803f')];
+
+/**
+ * Głaz rumowiska: nieregularna bryła (zaokrąglony wielokąt o kilku ściankach) o wysokości ~0,9 promienia,
+ * ścianki oświetlone z północnego zachodu, pęknięcia, mech od północy. `r` = promień podstawy w px generatora.
+ */
+export function rysujGlaz(r: number, seed: number): Rysunek {
+  const h = r * (0.75 + hash(seed, 3, 1) * 0.45);
+  const W = Math.ceil(r * 2 + h * SKOS) + 8, H = Math.ceil(r * 1.3 + h) + 8;
+  const o = nowy(W, H);
+  const bx = 4 + r, by = H - 4 - r * 0.6;
+  const n = 7 + Math.floor(hash(seed, 1, 2) * 4);
+  // Wierzchołki podstawy i szczytu (szczyt mniejszy, przesunięty do góry w rzucie).
+  const kat = (i: number) => (i / n) * Math.PI * 2 + hash(seed, i, 5) * 0.4;
+  const pr = (i: number) => 0.8 + hash(seed, i, 6) * 0.25;
+  const pod: number[] = [], szc: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = kat(i), p = pr(i);
+    pod.push(bx + Math.cos(a) * r * p, by + Math.sin(a) * r * 0.6 * p);
+    szc.push(bx + Math.cos(a) * r * p * 0.55 + h * SKOS, by + Math.sin(a) * r * 0.6 * p * 0.55 - h);
+  }
+  // Ścianki boczne (każda krawędź podstawy ze szczytem), od tylnych do przednich; jasność z normalnej w rzucie.
+  const sciany = [...Array(n).keys()].sort((a, b) => Math.sin(kat(a)) - Math.sin(kat(b)));
+  for (const i of sciany) {
+    const j = (i + 1) % n;
+    const am = (kat(i) + kat(j)) / 2 + (j === 0 ? Math.PI : 0);
+    const swiatlo = -Math.cos(am) * 0.6 - Math.sin(am) * 0.5; // NW jasno
+    const k = Math.max(0, Math.min(3, Math.round(1.5 + swiatlo * 1.6)));
+    wielokat(o, [pod[i * 2], pod[i * 2 + 1], pod[j * 2], pod[j * 2 + 1], szc[j * 2], szc[j * 2 + 1], szc[i * 2], szc[i * 2 + 1]], (x, y) => (hash(x, y, seed) < 0.06 ? KAMIEN_G[Math.max(0, k - 1)] : KAMIEN_G[k]));
+  }
+  // Wierzch (najjaśniejszy) z mchem od północy.
+  wielokat(o, szc, (x, y) => (y < by - h - r * 0.15 && hash(x >> 1, y >> 1, seed) < 0.45 ? MECH[hash(x, y, 2) < 0.5 ? 0 : 1] : hash(x, y, seed + 1) < 0.08 ? KAMIEN_G[3] : KAMIEN_G[4]));
+  // Pęknięcie.
+  const cx = Math.round(bx + h * SKOS * 0.5), cy = Math.round(by - h * 0.5);
+  for (let i = 0; i < Math.max(3, h * 0.5); i++) ustaw(o, cx + Math.round(Math.sin(i + seed) * 1.2), cy - Math.round(h * 0.3) + i, KAMIEN_G[0]);
+  obrysuj(o, OBRYS, (c) => mieszaj(c, OBRYS, 0.45));
+  return { o, kx: bx, ky: by };
+}
+
+const MARTWE = [hex('#3e3530'), hex('#544840'), hex('#6c5e52'), hex('#857565')];
+
+/** Martwe drzewo bagna: szary, pochylony pień z kilkoma nagimi konarami, bez liści. */
+export function rysujMartwe(seed: number): Rysunek {
+  const H = WYS.martwe;
+  const o = nowy(40, H + 8);
+  const bx = 20, by = H + 4;
+  const pochyl = (hash(seed, 1, 9) - 0.5) * 0.5;
+  const galaz = (x: number, y: number, a: number, len: number, gr: number, g: number) => {
+    for (let i = 0; i < len; i++) {
+      const px = x + Math.cos(a) * i, py = y + Math.sin(a) * i;
+      for (let w = 0; w < gr; w++) ustaw(o, Math.round(px) + w, Math.round(py), MARTWE[w === 0 ? 3 : w === gr - 1 ? 0 : 1 + (hash(i, w, seed) < 0.3 ? 1 : 0)]);
+      if (g > 0 && i > len * 0.5 && hash(i, g, seed + 7) < 0.12) galaz(px, py, a + (hash(i, g, seed) < 0.5 ? -0.7 : 0.7), len * 0.5, Math.max(1, gr - 1), g - 1);
+    }
+  };
+  // Pień (od dołu do góry), korzenie przy ziemi.
+  galaz(bx - 2, by, -Math.PI / 2 + pochyl, H * 0.85, 4, 0);
+  for (const [a, l] of [[-0.3, 6], [Math.PI + 0.3, 6], [0.15, 4]] as [number, number][]) galaz(bx - 1, by - 1, a, l, 2, 0);
+  const tx = bx - 2 + Math.cos(-Math.PI / 2 + pochyl) * H * 0.85, ty = by + Math.sin(-Math.PI / 2 + pochyl) * H * 0.85;
+  for (let k = 0; k < 4; k++) {
+    const u = 0.45 + k * 0.15;
+    const px = bx - 2 + (tx - bx + 2) * u, py = by + (ty - by) * u;
+    galaz(px, py, -Math.PI / 2 + (k % 2 ? 0.9 : -0.9) + (hash(seed, k, 3) - 0.5) * 0.5, 9 + hash(seed, k, 4) * 7, 2, 1);
+  }
+  obrysuj(o, OBRYS, (c) => mieszaj(c, OBRYS, 0.4));
+  return { o, kx: bx, ky: by };
+}
+
+/**
+ * Co wisi nad ogniskiem (rysowane na ogniu, klatka 0–2): żelazny gar na trójnogu z bulgoczącym gulaszem
+ * albo rożen na dwóch rozwidlonych kijach z obracającą się pieczenią.
+ */
+export function rysujNadOgniem(wariant: 'gar' | 'rozen', klatka: number): Rysunek {
+  const o = nowy(34, 34);
+  const bx = 17, by = 27;
+  if (wariant === 'gar') {
+    // Trójnóg (trzy kije schodzące się nad ogniem) i łańcuch.
+    const apex = [bx + 1, by - 25];
+    linia(o, bx - 10, by + 1, apex[0], apex[1], KORA[2]);
+    linia(o, bx + 11, by + 1, apex[0], apex[1], KORA[1]);
+    linia(o, bx + 2, by - 4, apex[0], apex[1], KORA[0]);
+    for (let j = apex[1] + 1; j < by - 15; j++) ustaw(o, apex[0], j, j % 2 ? hex('#4a4a50') : hex('#77777f'));
+    // Gar: czarny brzuch, jaśniejszy brzeg, gulasz z bańkami.
+    for (let j = 0; j < 9; j++) for (let i = -6; i <= 6; i++) {
+      const w = j < 2 ? 6 : Math.round(6 - (j - 2) * 0.55);
+      if (Math.abs(i) > w) continue;
+      ustaw(o, bx + i + 1, by - 15 + j, j === 0 ? hex('#5a5a62') : i < -2 ? hex('#3c3c44') : hex('#24242a'));
+    }
+    for (let i = -5; i <= 5; i++) ustaw(o, bx + i + 1, by - 15, hex('#6b8a3a'));
+    for (const [dx, f] of [[-3, 0], [1, 1], [4, 2]] as [number, number][]) if ((klatka + f) % 3 !== 2) ustaw(o, bx + dx + 1, by - 16 - ((klatka + f) % 3), hex('#9ab85a'));
+    ustaw(o, bx - 5, by - 13, hex('#77777f')); ustaw(o, bx + 7, by - 13, hex('#77777f'));
+  } else {
+    // Rożen: dwa rozwidlone kije, poprzeczny pręt, pieczeń obracana (cień przesuwa się z klatką).
+    for (const sx of [-11, 11]) {
+      linia(o, bx + sx, by + 1, bx + sx, by - 14, KORA[1]);
+      ustaw(o, bx + sx - 1, by - 15, KORA[2]); ustaw(o, bx + sx + 1, by - 15, KORA[2]);
+      ustaw(o, bx + sx - 1, by - 16, KORA[2]); ustaw(o, bx + sx + 1, by - 16, KORA[2]);
+    }
+    linia(o, bx - 13, by - 14, bx + 14, by - 14, hex('#77777f'));
+    ustaw(o, bx + 15, by - 15, hex('#77777f')); ustaw(o, bx + 15, by - 13, hex('#77777f'));
+    const MIESO = [hex('#5a2a18'), hex('#8a4424'), hex('#b8682e'), hex('#e0a050')];
+    for (let j = -4; j <= 4; j++) for (let i = -7; i <= 7; i++) {
+      const e = Math.hypot(i / 7, j / 4.2);
+      if (e > 1) continue;
+      const s = Math.sin((i * 0.5) + klatka * 2.1) * 0.5 + (j < 0 ? 0.6 : -0.2);
+      ustaw(o, bx + i, by - 14 + j, MIESO[Math.max(0, Math.min(3, Math.round(1.4 + s * 1.4 - e)))]);
+    }
+    ustaw(o, bx - 8, by - 13, hex('#e8dcbc')); ustaw(o, bx + 8, by - 13, hex('#e8dcbc')); // kostki
+  }
+  obrysuj(o, OBRYS, (c) => mieszaj(c, OBRYS, 0.4));
   return { o, kx: bx, ky: by };
 }

@@ -14,7 +14,7 @@ const mobile = process.env.TELEFON === '1';
 const tag = mobile ? 'tel' : 'pc';
 const PORT = process.env.PORT || 4173;
 // Miejsca do szukania obozu: lasy i łąki na skraju Lublina (lat, lon).
-const SZUKAJ = [[51.2075, 22.4890], [51.1760, 22.5420], [51.2165, 22.4720], [51.1890, 22.4980], [51.2700, 22.6300], [51.2300, 22.6700], [51.1700, 22.5900], [51.2850, 22.5200], [51.2000, 22.6400], [51.2500, 22.4500]];
+const SZUKAJ = [[51.1950, 22.5550], [51.1830, 22.5100], [51.2150, 22.6050], [51.2620, 22.5900], [51.2075, 22.4890], [51.1760, 22.5420], [51.2165, 22.4720], [51.1890, 22.4980], [51.2700, 22.6300], [51.2300, 22.6700], [51.1700, 22.5900], [51.2850, 22.5200], [51.2000, 22.6400], [51.2500, 22.4500]];
 
 const browser = await chromium.launch({ executablePath: process.env.BROWSER_EXECUTABLE, args: ['--no-sandbox', '--enable-unsafe-swiftshader'], chromiumSandbox: false });
 const errors = [];
@@ -57,7 +57,7 @@ async function idzDo(g, page, x, y) {
 
 const plan = (g) => g(() => {
   const s = window.__game.scene.getScene('game');
-  return (s.lowiska?.siedliska ?? []).map((q) => ({ id: q.id, x: q.x, y: q.y, rozmiar: q.rozmiar, obrys: q.obrys, bramy: q.bramy, namioty: q.namioty.length, pale: q.pale.length, wieze: q.wieze.length, spawny: q.spawny.length }));
+  return (s.lowiska?.siedliska ?? []).map((q) => ({ id: q.id, typ: q.typ, jaskinia: q.jaskinia, glazy: q.glazy?.length ?? 0, x: q.x, y: q.y, rozmiar: q.rozmiar, obrys: q.obrys, bramy: q.bramy, namioty: q.namioty.length, pale: q.pale.length, wieze: q.wieze.length, spawny: q.spawny.length }));
 });
 
 try {
@@ -69,24 +69,46 @@ try {
     const p = await g(([lat, lon]) => window.__game.scene.getScene('game').city.fromLatLon(lat, lon), [lat, lon]);
     await idzDo(g, page, p.x, p.y);
     obozy = await plan(g);
-    console.log('szukam', lat, lon, '→ obozów', obozy.length, obozy.map((q) => q.rozmiar).join(','));
-    if (obozy.length && !process.env.WSZYSTKIE) break;
+    console.log('szukam', lat, lon, '→ siedlisk', obozy.length, obozy.map((q) => `${q.typ}/${q.rozmiar}`).join(','));
+    if (obozy.some((q) => q.typ === 'oboz') && !process.env.WSZYSTKIE) break;
   }
   // Zrzut każdego znalezionego rozmiaru z góry nad środkiem obozu (WSZYSTKIE=1).
   if (process.env.WSZYSTKIE) {
     const byly = new Set();
     for (const q of obozy) {
-      if (byly.has(q.rozmiar)) continue;
-      byly.add(q.rozmiar);
-      await idzDo(g, page, q.x, q.y + 8);
+      const klucz = q.typ === 'oboz' ? q.rozmiar : q.typ;
+      if (process.env.WSZYSTKIE && byly.size >= 9) break;
+      if (byly.has(klucz)) continue;
+      byly.add(klucz);
+      const sz = await g((id) => { const s = window.__game.scene.getScene('game'); const sd = s.lowiska.siedliska.find((k) => k.id === id); const p = sd.spawny.find((k) => k.rola === 'szef'); return { x: p.x, y: p.y }; }, q.id);
+      await idzDo(g, page, sz.x, sz.y + 6);
       await g(() => { const s = window.__game.scene.getScene('game'); for (const e of s.enemies) e.spokojny = true; s.player.protectUntil = 1e15; });
       await page.waitForTimeout(2500);
-      await page.screenshot({ path: `work/siedliska/${tag}-rozmiar-${q.rozmiar}.png` });
-      console.log('zrzut', q.rozmiar, q.id, 'namioty', q.namioty, 'wieże', q.wieze);
+      await page.screenshot({ path: `work/siedliska/${tag}-rozmiar-${klucz}.png` });
+      console.log('zrzut', klucz, q.id, 'namioty', q.namioty, 'wieże', q.wieze, 'głazy', q.glazy, 'jaskinia', !!q.jaskinia);
     }
+    // Zejście do jaskini (pierwsze siedlisko, które ją ma): prawdziwe wejście z LochyWejscia, loch rodzaju 'jaskinia'.
+    const zJaskinia = obozy.find((q) => q.jaskinia);
+    if (zJaskinia) {
+      await idzDo(g, page, zJaskinia.jaskinia.x, zJaskinia.jaskinia.y + 10);
+      await page.waitForTimeout(2500);
+      await page.screenshot({ path: `work/siedliska/${tag}-jaskinia-wejscie.png` });
+      const ok = await g((id) => { const s = window.__game.scene.getScene('game'); const w = s.lochy?.lista.find((q) => q.id === `${id}:jaskinia`); if (!w) return false; s.zejdzDoLochu(w); return true; }, zJaskinia.id);
+      assert(ok, 'wejście do jaskini zarejestrowane');
+      await page.waitForFunction(() => window.__game.scene.getScene('game').city?.loch?.rodzaj === 'jaskinia' && window.__game.scene.isActive('game'), null, { timeout: 60000 });
+      await page.waitForTimeout(4000);
+      await g(() => { const s = window.__game.scene.getScene('game'); for (const e of s.enemies) e.spokojny = true; s.player.protectUntil = 1e15; });
+      await page.screenshot({ path: `work/siedliska/${tag}-jaskinia.png` });
+      const ileWrogow = await g(() => window.__game.scene.getScene('game').enemies.filter((e) => !e.isDead).map((e) => e.kindId).join(','));
+      console.log('w jaskini:', ileWrogow);
+    }
+    const bledy = errors.filter((e) => !/ResizeObserver|AudioContext/.test(e));
+    console.log(bledy.length ? 'błędy strony: ' + bledy.join(' | ') : 'browser-siedliska (WSZYSTKIE): OK');
+    await browser.close();
+    process.exit(bledy.length ? 1 : 0);
   }
   assert(obozy.length, 'żaden obóz się nie zaplanował');
-  const o = obozy[0];
+  const o = obozy.find((q) => q.typ === 'oboz');
   console.log('obóz', o.id, o.rozmiar, 'namioty', o.namioty, 'pale', o.pale, 'wieże', o.wieze, 'spawny', o.spawny);
   const b = o.bramy[0];
   const M = 1.92;

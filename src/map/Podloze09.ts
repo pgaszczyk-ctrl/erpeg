@@ -8,6 +8,8 @@ import type { Sprite, DoZebrania, ZrodloPary, WielkoscMiasta } from '../gen';
 /** Obraz wysokiego budynku z Web Workera (px generatora) i jego wyloty pary. */
 export interface ObrazBudynku { obraz: HTMLCanvasElement; x0: number; y0: number; wyrzuty: ZrodloPary[] }
 import type { Drzewo09 } from './drzewa09';
+import type { Siedlisko } from '../siedliska/typy';
+import { obrysPlamy } from '../siedliska/kolizje';
 import { ustawOzdoby } from '../gen/budynki';
 
 // Ziemia z generatora (overhaul 09, ?wyglad=09): zamiast wzorów z plików grafika każdy piksel kawałka mapy
@@ -109,7 +111,7 @@ export function mapaRodzajow(
   rozmiar: number,
   perony: number[][] = [],
   /** Siedliska (src/siedliska) sięgające kawałka: wnętrze obrysu = klepisko, ścieżki = ziemna droga. */
-  siedliska: { obrys: number[]; sciezki: { pts: number[]; w: number }[] }[] = [],
+  siedliska: Pick<Siedlisko, 'obrys' | 'sciezki' | 'placki' | 'podstawa' | 'bloto' | 'plycizny' | 'oczka' | 'wyspy' | 'skaly'>[] = [],
 ): Omit<Zlecenie, 'budynki' | 'noc' | 'sciete' | 'tory' | 'perony' | 'pola' | 'miesiac' | 'zebrane' | 'dojrzale' | 'miasto'> {
   const N = rozmiar * GEN_DOTS;
   const S = N + 2 * MARGINES;
@@ -138,10 +140,34 @@ export function mapaRodzajow(
     g.moveTo(sd.obrys[0], sd.obrys[1]);
     for (let i = 2; i < sd.obrys.length; i += 2) g.lineTo(sd.obrys[i], sd.obrys[i + 1]);
     g.closePath();
-    g.fillStyle = g.strokeStyle = kolor('klepisko');
-    g.lineWidth = 3;
-    g.fill();
-    g.stroke();
+    g.fillStyle = g.strokeStyle = kolor(sd.podstawa && sd.podstawa !== 'brak' ? (sd.podstawa as Rodzaj09) : 'klepisko');
+    if (sd.podstawa === 'brak') { /* rumowisko: teren zostaje, tylko plamy skał */ } else if (sd.placki) {
+      // Wielki obóz: wydeptany pas wzdłuż palisady (~4 m z każdej strony) i placki pod namiotami/ogniskami – reszta zostaje.
+      g.lineWidth = 15;
+      g.stroke();
+      for (let i = 0; i < sd.placki.length; i += 3) {
+        g.beginPath();
+        g.arc(sd.placki[i], sd.placki[i + 1], sd.placki[i + 2], 0, Math.PI * 2);
+        g.fill();
+      }
+    } else {
+      g.lineWidth = 3;
+      g.fill();
+      g.stroke();
+    }
+    // Bagno: plamy błota, płycizny, głębokie oczka (woda – generator maluje brzegi), suche wysepki z trawą.
+    for (const [lista, r] of [[sd.skaly, 'skala'], [sd.bloto, 'bloto'], [sd.plycizny, 'plycizna'], [sd.oczka, 'woda'], [sd.wyspy, 'zarosla']] as [number[] | undefined, Rodzaj09][]) {
+      if (!lista) continue;
+      g.fillStyle = kolor(r);
+      for (let i = 0; i < lista.length; i += 4) {
+        const p = obrysPlamy(lista, i);
+        g.beginPath();
+        g.moveTo(p[0], p[1]);
+        for (let k = 2; k < p.length; k += 2) g.lineTo(p[k], p[k + 1]);
+        g.closePath();
+        g.fill();
+      }
+    }
     g.strokeStyle = kolor('droga');
     for (const sc of sd.sciezki) {
       g.beginPath();

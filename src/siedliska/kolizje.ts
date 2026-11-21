@@ -37,8 +37,11 @@ export function pudelka(s: Siedlisko, M: number) {
     const lx = w.x + dx * 2.6 * M, ly = w.y + dy * 1.8 * M;
     p.push(lx - 0.8, ly - 0.8, lx + 0.8, ly + 0.8);
   }
-  for (const q of s.rekwizyty) p.push(q.x - 1.4 * M, q.y - 0.9 * M, q.x + 1.4 * M, q.y + 0.9 * M);
-  p.push(s.ognisko.x - 1.8 * M, s.ognisko.y - 1.2 * M, s.ognisko.x + 1.8 * M, s.ognisko.y + 1.2 * M);
+  for (const q of s.rekwizyty) {
+    const w = q.rodzaj === 'pienek' ? 0.9 : 1.4, h = q.rodzaj === 'pienek' ? 0.5 : 0.9;
+    p.push(q.x - w * M, q.y - h * M, q.x + w * M, q.y + h * M);
+  }
+  for (const o of s.ogniska) p.push(o.x - 1.8 * M, o.y - 1.2 * M, o.x + 1.8 * M, o.y + 1.2 * M);
   PUDELKA.set(s, p);
   return p;
 }
@@ -54,9 +57,55 @@ export function zablokowaneW(s: Siedlisko, x: number, y: number, M: number) {
     if (odlOdcinka(x, y, ax, ay, bx, by) <= GRUBOSC) return true;
   }
   for (const p of s.pale) if (p.brama && Math.abs(p.x - x) < 1.4 && Math.abs(p.y - y) < 1.2) return true;
+  // Rumowisko: głazy (podstawa ~0,8 promienia, spłaszczona jak w rzucie); bagno: martwe pnie i głębokie oczka.
+  if (s.glazy) for (const g of s.glazy) if (((x - g.x) / (g.r * 0.85)) ** 2 + ((y - g.y) / (g.r * 0.6)) ** 2 < 1) return true;
+  if (s.martwe) for (const m of s.martwe) if (Math.abs(m.x - x) < 1.3 && Math.abs(m.y - y) < 1) return true;
+  if (s.oczka && wElipsach(s.oczka, x, y)) return true;
   const b = pudelka(s, M);
   for (let i = 0; i < b.length; i += 4) if (x > b[i] && x < b[i + 2] && y > b[i + 1] && y < b[i + 3]) return true;
   return false;
+}
+
+/**
+ * Plamy (woda, błoto, skały, wyspy) to elipsy [x, y, rx, ry] o poszarpanym brzegu: promień w kierunku θ mnożony przez
+ * `brzegPlamy` (ta sama funkcja przy malowaniu i kolizjach, więc kolizja leży dokładnie na narysowanym brzegu).
+ */
+export function brzegPlamy(cx: number, cy: number, th: number) {
+  const f = ((Math.round(cx) * 73856093) ^ (Math.round(cy) * 19349663)) >>> 0;
+  const a = (f % 628) / 100, b = ((f >>> 10) % 628) / 100;
+  return 1 + Math.sin(th * 3 + a) * 0.14 + Math.sin(th * 5 + b) * 0.08;
+}
+
+/** Czy punkt leży w którejś plamie [x, y, rx, ry, …] (poszarpany brzeg, brzegPlamy). */
+export function wElipsach(e: number[], x: number, y: number) {
+  for (let i = 0; i < e.length; i += 4) {
+    const u = (x - e[i]) / e[i + 2], v = (y - e[i + 1]) / e[i + 3];
+    const d2 = u * u + v * v;
+    if (d2 > 1.5) continue;
+    const k = brzegPlamy(e[i], e[i + 1], Math.atan2(v, u));
+    if (d2 < k * k) return true;
+  }
+  return false;
+}
+
+/** Obrys plamy jako wielokąt (do malowania mapy rodzajów). */
+export function obrysPlamy(e: number[], i: number, n = 28) {
+  const out: number[] = [];
+  for (let k = 0; k < n; k++) {
+    const th = (k / n) * Math.PI * 2, s = brzegPlamy(e[i], e[i + 1], th);
+    out.push(e[i] + Math.cos(th) * e[i + 2] * s, e[i + 1] + Math.sin(th) * e[i + 3] * s);
+  }
+  return out;
+}
+
+/** Podłoże siedliska w punkcie (bagno: błoto / bród w płyciźnie; suche wyspy i grobla – zwykłe). */
+export function podlozeW(s: Siedlisko, x: number, y: number): 'bloto' | 'brod' | null {
+  const R = s.ramka;
+  if (s.typ !== 'bagno' || x < R.x0 || x > R.x1 || y < R.y0 || y > R.y1) return null;
+  if (s.wyspy && wElipsach(s.wyspy, x, y)) return null;
+  if (s.plycizny && wElipsach(s.plycizny, x, y)) return 'brod';
+  if (s.bloto && wElipsach(s.bloto, x, y)) return 'bloto';
+  return null;
 }
 
 /** Czy odcinek a→b przecina palisadę (którąkolwiek ścianę). */

@@ -28,12 +28,14 @@
 
 import Phaser from 'phaser';
 import { PX_PER_M, ROAD_KINDS, distToPolyline, type CityMap, type Line } from '../map/CityMap';
-import { OBOZ, TEREN_SIEDLISK, WERSJA_SIEDLISK, ODNOWIENIE_SIEDLISK } from '../content/siedliska';
+import { OBOZ, TEREN_SIEDLISK, WERSJA_SIEDLISK, ODNOWIENIE_SIEDLISK, TYPY_SIEDLISK, type TypSiedliska } from '../content/siedliska';
 import { planujOboz } from '../siedliska/plan';
+import { planujRumowisko, planujBagno } from '../siedliska/planTypy';
 import { dodajSiedlisko } from '../siedliska/rejestr';
 import { wWielokacie } from '../siedliska/kolizje';
 import type { Siedlisko, TerenSiedliska } from '../siedliska/typy';
 import { session } from '../quests';
+import { tx } from '../i18n';
 import { GROUND_DEPTH } from '../map/MapRenderer';
 import { rng } from '../rng';
 import type { RodzajWroga } from '../content/fabula';
@@ -47,6 +49,9 @@ export interface LowiskoSpawn {
   x: number;
   y: number;
   kind: RodzajWroga;
+  /** Siedliska: szaleniec (czerwona aura) i mnożnik siły (Slime.power). */
+  berserk?: boolean;
+  moc?: number;
 }
 
 export type Warstwa = 'obrzeze' | 'glebia' | 'rdzen';
@@ -183,6 +188,30 @@ export class Lowiska {
       zablokowane: (x, y) => c.isBlocked(x, y),
       budynek: (x, y, r) => c.buildingWithin(x, y, r),
       linia: (x, y, r) => linie(x, y, r).some((l) => distToPolyline(l.pts, x, y) < r + l.width / 2),
+      liniaTwarda: (x, y, r) => linie(x, y, r).some((l) => !OBOZ.przechodnie.includes(l.kind) && distToPolyline(l.pts, x, y) < r + l.width / 2),
+      budynki: (x0, y0, x1, y1) => c.query({ x0, y0, x1, y1 }).buildings.filter((b) => !b.open).map((b) => ({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 })),
+      przeciecia: (obrys) => {
+        let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+        for (let i = 0; i < obrys.length; i += 2) { bx0 = Math.min(bx0, obrys[i]); by0 = Math.min(by0, obrys[i + 1]); bx1 = Math.max(bx1, obrys[i]); by1 = Math.max(by1, obrys[i + 1]); }
+        const out: { x: number; y: number; szer: number }[] = [];
+        const n = obrys.length / 2;
+        for (const l of c.query({ x0: bx0, y0: by0, x1: bx1, y1: by1 }).lines) {
+          if (!OBOZ.przechodnie.includes(l.kind)) continue;
+          for (let k = 0; k + 3 < l.pts.length; k += 2) {
+            const ax = l.pts[k], ay = l.pts[k + 1], bx = l.pts[k + 2], by = l.pts[k + 3];
+            for (let i = 0; i < n; i++) {
+              const cx = obrys[i * 2], cy = obrys[i * 2 + 1], dx = obrys[((i + 1) % n) * 2], dy = obrys[((i + 1) % n) * 2 + 1];
+              const den = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+              if (Math.abs(den) < 1e-9) continue;
+              const u = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / den, v = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / den;
+              if (u >= 0 && u <= 1 && v >= 0 && v <= 1) out.push({ x: ax + (bx - ax) * u, y: ay + (by - ay) * u, szer: l.width });
+            }
+          }
+        }
+        // Stała kolejność (niezależna od kolejności kafli): po kącie wokół środka obrysu.
+        const sx = (bx0 + bx1) / 2, sy = (by0 + by1) / 2;
+        return out.sort((a, b) => Math.atan2(a.y - sy, a.x - sx) - Math.atan2(b.y - sy, b.x - sx));
+      },
       glowna: (x, y, r) => this.glownaBlisko(x, y, r),
       droga: (x, y, r) => {
         let best: { x: number; y: number } | null = null, bd = r;
@@ -205,7 +234,16 @@ export class Lowiska {
     for (let t = 0; t < 18; t++) {
       const x = (cx + 0.3 + r() * 0.4) * this.komorka, y = (cy + 0.3 + r() * 0.4) * this.komorka;
       if (this.nearAvoid(x, y, T.odMiejscM)) continue;
-      const s = planujOboz(`${this.city.id}:oboz:${key}`, x, y, teren, M);
+      // Typ wg terenu: przy mokradłach i wodzie najczęściej bagno, gdzie indziej obóz albo rumowisko (stałe ziarno komórki).
+      const mokro = this.city.areaKindsAt(x, y).includes('wetland') || [60, 120].some((d) => [0, 1, 2, 3, 4, 5, 6, 7].some((k) => {
+        const a = (k / 8) * Math.PI * 2, q = this.city.areaKindsAt(x + Math.cos(a) * d * M, y + Math.sin(a) * d * M);
+        return q.includes('water') || q.includes('wetland');
+      }));
+      const wagi: [TypSiedliska, number][] = mokro ? [['bagno', 0.6], ['oboz', 0.25], ['rumowisko', 0.15]] : TYPY_SIEDLISK.filter(([k]) => k !== 'bagno');
+      let u = r() * wagi.reduce((a, [, w]) => a + w, 0), typ: TypSiedliska = wagi[0][0];
+      for (const [k, w] of wagi) if ((u -= w) < 0) { typ = k; break; }
+      const id = `${this.city.id}:${typ === 'oboz' ? 'oboz' : typ}:${key}`;
+      const s = typ === 'bagno' ? planujBagno(id, x, y, teren, M) : typ === 'rumowisko' ? planujRumowisko(id, x, y, teren, M) : planujOboz(id, x, y, teren, M);
       if (!s) continue;
       this.dodajOboz(s);
       return true;
@@ -219,17 +257,26 @@ export class Lowiska {
     this.siedliska.push(s);
     const R = Math.max(...s.obrys.map((v, i) => (i % 2 ? Math.abs(v - s.y) : Math.abs(v - s.x))));
     const wolne = s.spawny.filter((q) => q.rola === 'czlonek');
+    const moc = s.stwory.moc;
     const czl: LowiskoSpawn[] = s.stwory.czlonkowie.map((kind, i) => ({ ...wolne[i % Math.max(1, wolne.length)], kind }))
-      .map((q, i) => ({ x: q.x + (i >= wolne.length ? 2 * M : 0), y: q.y, kind: q.kind }));
+      .map((q, i) => ({ x: q.x + (i >= wolne.length ? 2 * M : 0), y: q.y, kind: q.kind, berserk: s.stwory.berserk[i], moc }));
     const szef = s.spawny.find((q) => q.rola === 'szef')!;
     const obst = s.spawny.filter((q) => q.rola === 'obstawa');
     const grupaSzefa: LowiskoSpawn[] = [{ x: szef.x, y: szef.y, kind: s.stwory.szef }];
     for (let i = 0; i < s.stwory.ileObstawy; i++) {
       const o = obst[i] ?? { x: szef.x + (i ? 3 : -3) * M, y: szef.y + 2 * M };
-      grupaSzefa.push({ x: o.x, y: o.y, kind: s.stwory.obstawa });
+      grupaSzefa.push({ x: o.x, y: o.y, kind: s.stwory.obstawa, moc });
     }
+    grupaSzefa[0].moc = moc;
     const baza = { r: R * 1.7, warstwa: 'obrzeze' as Warstwa, gen: 0, spots: null, alive: new Set<number>(), members: new Map<number, unknown>(), clearedAtS: null };
-    if (wolne.length) this.pakiety.push({ ...baza, id: `${s.id}:mieszkancy`, x: s.x, y: s.y, stale: czl, odnowienieS: ODNOWIENIE_SIEDLISK.zwykliS });
+    // Wielkie obozy: mieszkańcy w czterech ćwiartkach – budzą się ci, do których bohater podchodzi, nie cały obóz naraz.
+    const cwiartki = R > 60 * M ? 4 : 1;
+    for (let q = 0; q < cwiartki && wolne.length; q++) {
+      const czesc = cwiartki === 1 ? czl : czl.filter((p) => Math.floor(((Math.atan2(p.y - s.y, p.x - s.x) + Math.PI) / (Math.PI * 2)) * 4) % 4 === q);
+      if (!czesc.length) continue;
+      const cx = czesc.reduce((a, p) => a + p.x, 0) / czesc.length, cy = czesc.reduce((a, p) => a + p.y, 0) / czesc.length;
+      this.pakiety.push({ ...baza, alive: new Set(), members: new Map(), r: cwiartki === 1 ? baza.r : R * 1.1, id: `${s.id}:mieszkancy${cwiartki === 1 ? '' : q}`, x: cx, y: cy, stale: czesc, odnowienieS: ODNOWIENIE_SIEDLISK.zwykliS });
+    }
     this.pakiety.push({ ...baza, alive: new Set(), members: new Map(), id: `${s.id}:szef`, x: s.x, y: s.y, stale: grupaSzefa, szef: `siedlisko:${s.id}`, odnowienieS: ODNOWIENIE_SIEDLISK.zwykliS });
   }
 
@@ -484,7 +531,9 @@ export class Lowiska {
     // Wejście do obozu: krótkie ostrzeżenie (raz na wejście).
     const sd = this.siedliska.length ? this.siedliskoW(px, py) : null;
     if ((sd?.id ?? null) !== this.ostatnieSiedlisko) {
-      if (sd) this.powiedz('⛺ Obóz bandytów – herszt ma tu swój namiot. Uważaj!');
+      if (sd) this.powiedz(sd.typ === 'bagno' ? tx('🌫 Bagno – błoto spowalnia, a w głębokiej wodzie nie przejdziesz. W sercu mieszka wodnik.', '🌫 A swamp – mud slows you down and deep water blocks the way. A water spirit lives at its heart.')
+        : sd.typ === 'rumowisko' ? tx('🪨 Rumowisko – między skałami czają się wargi, w środku coś stuka kopytami.', '🪨 A rubble field – wargs lurk between the rocks, and something clatters its hooves in the middle.')
+        : tx('⛺ Obóz bandytów – herszt ma tu swój namiot. Uważaj!', '⛺ A bandit camp – the chieftain has his tent here. Careful!'));
       this.ostatnieSiedlisko = sd?.id ?? null;
     }
     // Wejście w mocniejszą warstwę: krótkie ostrzeżenie.

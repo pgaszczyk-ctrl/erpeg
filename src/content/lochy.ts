@@ -7,7 +7,7 @@
 import type { RodzajWroga } from './fabula';
 import { tx } from '../i18n';
 
-export type RodzajLochu = 'krypta' | 'podziemia';
+export type RodzajLochu = 'krypta' | 'podziemia' | 'jaskinia';
 
 export interface OpisLochu {
   nazwa: string;
@@ -60,6 +60,25 @@ export const LOCHY: Record<RodzajLochu, OpisLochu> = {
       akcent: '#8a5e44',
     },
     nagroda: { monety: [60, 120], exp: 110, mikstura: 1, diament: 0.02 },
+  },
+  // Jaskinia pod wielkim obozem bandytów (siedliska, właściciel 21.11.2026: „zejście do podziemi generowane jak lochy,
+  // tyle że to jaskinia; i trudniejsze potworki”): nieregularne komnaty, kręte korytarze, wargi i Mosiężny Kozioł.
+  jaskinia: {
+    get nazwa() { return tx('Jaskinia pod obozem', 'Cave under the camp'); },
+    get wejscie() { return tx('Za namiotem herszta skały rozstępują się w czarną szczelinę. Z dołu dochodzi warczenie i stukot kopyt o kamień.\n\nZejść do jaskini?', 'Behind the chieftain\'s tent the rocks part into a black crack. Growling and the clatter of hooves on stone rise from below.\n\nGo down into the cave?'); },
+    wezly: [[4, 4], [6, 5]],
+    potwory: ['warg', 'bandyta', 'warg', 'szkielet', 'zombie', 'bandyta'],
+    straznik: 'koziol',
+    obstawa: ['warg', 'warg', 'bandyta'],
+    kolory: {
+      plyta: ['#4f4438', '#5a4d3f', '#463c32', '#605345'],
+      spoina: '#2b241e',
+      wierzch: '#1d1915',
+      lico: '#6b5b48',
+      licoCien: '#43372b',
+      akcent: '#6f8a7a',
+    },
+    nagroda: { monety: [160, 320], exp: 320, mikstura: 2, diament: 0.06 },
   },
 };
 

@@ -29,7 +29,7 @@ export const MARGINES = 40;
 export type Rodzaj09 = Rodzaj | 'peron' | 'targ';
 export const RODZAJE: Rodzaj09[] = [
   'trawa', 'laka', 'park', 'las_lisciasty', 'las_iglasty', 'bruk', 'chodnik', 'plac', 'droga', 'piasek', 'woda',
-  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron', 'targ', 'klepisko',
+  'pole_orka', 'pole_zboze', 'zarosla', 'parking', 'cmentarz', 'mokradlo', 'skala', 'tory', 'peron', 'targ', 'klepisko', 'bloto', 'plycizna',
 ];
 const PERON_ID = RODZAJE.indexOf('peron'), TORY_ID = RODZAJE.indexOf('tory'), TARG_ID = RODZAJE.indexOf('targ');
 
@@ -373,7 +373,9 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   } : rodzajW;
   // Siedliska: żadnego drzewa w obrysie ani tuż za palisadą (konstrukcje stoją na wykarczowanym terenie).
   const sdl = (z.siedliska ?? []).filter((q) => q.ramka.x1 > X0 - 60 && q.ramka.x0 < X0 + N + 60 && q.ramka.y1 > Y0 - 20 && q.ramka.y0 < Y0 + N + 110);
-  const wSiedlisku = (x: number, y: number) => sdl.some((q) => x > q.ramka.x0 - 20 && x < q.ramka.x1 + 20 && y > q.ramka.y0 - 20 && y < q.ramka.y1 + 20 && (wWielokacie(q.obrys, x, y) || odlegloscOdObrysu(q.obrys, x, y) < 16));
+  // Wielkie obozy (placki): w środku zostaje co trzecie drzewo między wydeptanymi plackami (klepisko i tak go nie ma).
+  const wSiedlisku = (x: number, y: number) => sdl.some((q) => x > q.ramka.x0 - 20 && x < q.ramka.x1 + 20 && y > q.ramka.y0 - 20 && y < q.ramka.y1 + 20 &&
+    (odlegloscOdObrysu(q.obrys, x, y) < 16 || (wWielokacie(q.obrys, x, y) && hash(x >> 3, y >> 3, 4417) >= (q.placki ? 0.33 : q.drzewa ?? 0))));
   const drzewa = rozstawDrzewa(X0 - 48, Y0 - 8, N + 96, N + 96, rodzajDrzew, z.klimat ?? 'umiarkowany', (x, y) =>
     !wObrysie(x, y) && !(sdl.length && wSiedlisku(x, y)) && ![[OD_SCIAN, 0], [-OD_SCIAN, 0], [0, OD_SCIAN], [0, -OD_SCIAN], [0, -2 * OD_SCIAN], [OD_SCIAN, -OD_SCIAN], [-OD_SCIAN, -OD_SCIAN]].some(([dx, dy]) => wObrysie(x + dx, y + dy)));
   const sciete = new Set(z.sciete);

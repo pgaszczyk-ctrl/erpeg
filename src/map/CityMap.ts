@@ -34,7 +34,7 @@ const LINE_WIDTH_M: Record<string, number> = {
   major: 14, medium: 11, minor: 7, service: 4, track: 3, pedestrian: 6, path: 2.5, steps: 2.5,
   rail: 3, tram: 2.5, river: 14, stream: 3, ditch: 1.5, platform: 4,
 };
-export type Surface = 'asfalt' | 'sciezka' | 'trawa' | 'las' | 'piasek';
+export type Surface = 'asfalt' | 'sciezka' | 'trawa' | 'las' | 'piasek' | 'bloto' | 'brod';
 export const ROAD_KINDS = new Set(['major', 'medium', 'minor', 'service', 'track', 'pedestrian', 'path', 'steps']);
 /** Roads walked at full speed (the rest are paths and dirt tracks). */
 const PAVED_ROADS = new Set(['major', 'medium', 'minor', 'service', 'pedestrian']);
@@ -596,6 +596,8 @@ export class CityMap {
    */
   siedliska: Siedlisko[] = [];
   przeszkoda: ((x: number, y: number) => boolean) | null = null;
+  /** Podłoże siedliska w punkcie (bagno: błoto/bród), null = zwykłe – ustawia src/siedliska/rejestr.ts. */
+  podlozeSiedliska: ((x: number, y: number) => Surface | null) | null = null;
   /** Słuchacze nowych siedlisk (MapRenderer odświeża kawałki pod nimi). */
   readonly siedliskaSluchacze = new Set<(s: Siedlisko) => void>();
 
@@ -1215,6 +1217,8 @@ export class CityMap {
   }
 
   private surfaceNow(x: number, y: number): Surface {
+    const sd = this.podlozeSiedliska?.(x, y);
+    if (sd) return sd;
     let path = false;
     for (const l of this.lineGrid.at(x, y)) {
       if (!ROAD_KINDS.has(l.kind) || distToPolyline(l.pts, x, y) > l.width / 2) continue;

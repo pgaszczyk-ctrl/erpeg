@@ -116,6 +116,7 @@ import { Lowiska } from './Lowiska';
 import { siedliska } from '../siedliska/wlacznik';
 import { WidokSiedlisk } from '../siedliska/Widok';
 import { przejscieSiedlisk } from '../siedliska/rejestr';
+import type { Siedlisko } from '../siedliska/typy';
 import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
@@ -976,6 +977,9 @@ export class GameScene extends Phaser.Scene {
           (sp, p) => {
             const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
             e.lowisko = true;
+            // Settlements (src/siedliska): stronger residents in big camps, some berserkers – same bestiary, EXP and loot.
+            if (sp.moc && sp.moc !== 1) { e.power = (e.power ?? 1) * sp.moc; e.hp = Math.max(1, Math.round(e.hp * sp.moc)); }
+            if (sp.berserk) e.makeBerserk(BERSERKER.zycie * (sp.moc ?? 1), BERSERKER.auraKolor, BERSERKER.mrugMs, BERSERKER.predkosc);
             e.lowiskoHome = { x: p.x, y: p.y, r: p.r };
             e.roam = 20;
             return e;
@@ -998,7 +1002,10 @@ export class GameScene extends Phaser.Scene {
     if (this.lowiska) this.lowiska.obozy = siedliska() && !this.city.loch && !demo.on;
     this.widokSiedlisk = this.lowiska?.obozy ? new WidokSiedlisk(this, this.city) : null;
     if (this.widokSiedlisk) {
-      const naSiedlisko = (sd: { x: number; y: number; ramka: { x0: number; x1: number } }) => this.streets.usunPrzySiedlisku(sd.x, sd.y, (sd.ramka.x1 - sd.ramka.x0) / 2 + 60 * PX_PER_M);
+      const naSiedlisko = (sd: Siedlisko) => {
+        this.streets.usunPrzySiedlisku(sd.x, sd.y, (sd.ramka.x1 - sd.ramka.x0) / 2 + 60 * PX_PER_M);
+        this.jaskiniaSiedliska(sd);
+      };
       this.city.siedliskaSluchacze.add(naSiedlisko);
       this.events.once('shutdown', () => this.city.siedliskaSluchacze.delete(naSiedlisko));
       // Settlements already on this (cached) map from an earlier scene.
@@ -1025,6 +1032,7 @@ export class GameScene extends Phaser.Scene {
     // Dungeons (content/lochy.ts): entrances on the surface, or – underground – the maze, its monsters and chest.
     this.lochy?.destroy();
     this.lochy = live() && !demo.on && !this.city.loch ? new LochyWejscia(this, this.city) : undefined;
+    if (this.widokSiedlisk) for (const sd of this.city.siedliska) this.jaskiniaSiedliska(sd);
     this.loch?.destroy();
     this.loch = this.city.loch
       ? new LochWnetrze({
@@ -4229,6 +4237,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Down the stairs: the dungeon is its own small map (src/loch/mapa.ts), like walking onto another map. */
+  /** A big camp's cave (src/siedliska, `Siedlisko.jaskinia`): an ordinary dungeon entrance of the kind 'jaskinia'. */
+  private jaskiniaSiedliska(sd: Siedlisko) {
+    if (!sd.jaskinia || !this.lochy) return;
+    this.lochy.dodajSiedliskowe({ id: `${sd.id}:jaskinia`, rodzaj: 'jaskinia', x: sd.jaskinia.x, y: sd.jaskinia.y, seed: sd.seed, przy: tx('obóz bandytów', 'bandit camp') });
+  }
+
   private async zejdzDoLochu(w: WejscieLochu) {
     if (this.travelling) return;
     this.travelling = true;

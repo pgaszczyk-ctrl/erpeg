@@ -23,9 +23,14 @@ export function doGeneratora(s: Siedlisko, G: number): Siedlisko {
     sciany: sk(s.sciany),
     namioty: s.namioty.map((n) => ({ ...n, x: n.x * G, y: n.y * G, w: n.w * G, d: n.d * G })),
     ognisko: { x: s.ognisko.x * G, y: s.ognisko.y * G },
+    ogniska: s.ogniska.map((o) => ({ x: o.x * G, y: o.y * G })),
+    placki: s.placki?.map((v) => v * G),
     wieze: s.wieze.map((w) => ({ x: w.x * G, y: w.y * G })),
     rekwizyty: s.rekwizyty.map((q) => ({ ...q, x: q.x * G, y: q.y * G })),
     sciezki: s.sciezki.map((q) => ({ pts: sk(q.pts), w: q.w * G })),
+    glazy: s.glazy?.map((q) => ({ ...q, x: q.x * G, y: q.y * G, r: q.r * G })),
+    martwe: s.martwe?.map((q) => ({ ...q, x: q.x * G, y: q.y * G })),
+    oczka: s.oczka?.map((v) => v * G), skaly: s.skaly?.map((v) => v * G), plycizny: s.plycizny?.map((v) => v * G), bloto: s.bloto?.map((v) => v * G), wyspy: s.wyspy?.map((v) => v * G),
     spawny: [],
   };
 }
@@ -74,6 +79,13 @@ export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, r
   }
   for (const w of s.wieze) for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) cienSlupa(w.x + dx * 10, w.y + dy * 7, WYS.wieza, 1);
   for (const q of s.rekwizyty) cienSlupa(q.x, q.y, 6, 3);
+  // Głazy: cień bryły (elipsa podstawy przesunięta w stronę cienia o wysokość głazu).
+  for (const g of s.glazy ?? []) {
+    const h = g.r * 0.9;
+    for (let k = 0; k <= h; k += 1) for (let yy = -g.r * 0.6; yy <= g.r * 0.6; yy++) for (let xx = -g.r * 0.85; xx <= g.r * 0.85; xx++)
+      if ((xx / (g.r * 0.85)) ** 2 + (yy / (g.r * 0.6)) ** 2 < 1) plamka(g.x + xx + k * 0.6, g.y + yy + k * 0.3);
+  }
+  for (const m of s.martwe ?? []) cienSlupa(m.x, m.y, WYS.martwe, 1);
   // Cień nie pada na samą podstawę konstrukcji (ona przykrywa ziemię).
   for (const n of s.namioty) for (let yy = -n.d / 2; yy <= n.d / 2; yy++) for (let xx = -n.w / 2; xx <= n.w / 2; xx++) {
     const i = Math.round(n.x + xx) - X0, j = Math.round(n.y + yy) - Y0;
@@ -87,6 +99,7 @@ export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, r
       const x = X0 + i, y = Y0 + j;
       const h = hash(x, y, 4401);
       if (h > 0.012) continue;
+      if (rodzajW && rodzajW(x, y) !== 'klepisko') continue;
       if (h < 0.004) o.px[j * N + i] = ciemniej(o.px[j * N + i]);
       else if (h < 0.008) o.px[j * N + i] = DRZAZGA[h < 0.006 ? 0 : 1];
       else o.px[j * N + i] = KAMIEN[Math.floor(hash(x, y, 4402) * 3)];
@@ -95,7 +108,8 @@ export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, r
   for (let k = 0; k < cien.length; k++) if (cien[k]) o.px[k] = ciemniej(o.px[k]);
 
   // Palenisko: przypalona ziemia, popiół, pierścień kamieni.
-  const fx = s.ognisko.x, fy = s.ognisko.y;
+  for (const og of s.ogniska) {
+  const fx = og.x, fy = og.y;
   for (let dy = -14; dy <= 14; dy++) for (let dx = -18; dx <= 18; dx++) {
     const i = Math.round(fx + dx) - X0, j = Math.round(fy + dy) - Y0;
     if (i < 0 || j < 0 || i >= N || j >= N) continue;
@@ -109,5 +123,6 @@ export function malujSiedlisko(o: Obraz, X0: number, Y0: number, s: Siedlisko, r
       const brzeg = Math.abs(e - 5.8) > 0.9 || hash(kamien, 0, 4404) < 0.08;
       o.px[k] = brzeg ? OBRYS : KAMIEN[(kamien + (dy < 0 ? 2 : 0) + (dx < 0 ? 1 : 0)) % 3];
     } else if (e < 13 && hash(x, y, 4405) < 1.2 - e / 11) o.px[k] = mieszaj(o.px[k], POPIOL[0], 0.45);
+  }
   }
 }

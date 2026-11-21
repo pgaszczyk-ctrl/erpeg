@@ -94,6 +94,20 @@ function tekstury(scene: Phaser.Scene) {
     c.fillStyle = '#4a4a50'; c.fillRect(24, 9, 10, 2); c.fillRect(24, 21, 10, 2);
     c.fillStyle = '#c9a14a'; c.fillRect(32, 15, 2, 2);
   });
+  // Jaskinia (siedliska): skalny pagór z czarną szczeliną, mech i kości u wejścia.
+  plotno('loch-wej-jaskinia', 44, 34, (c) => {
+    const skala = ['#4e4438', '#6b5b48', '#857259', '#9c8668'];
+    c.fillStyle = ink; c.beginPath(); c.ellipse(22, 20, 21, 14, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skala[1]; c.beginPath(); c.ellipse(22, 20, 20, 13, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skala[2]; c.beginPath(); c.ellipse(19, 16, 15, 9, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skala[3]; c.fillRect(10, 9, 9, 2); c.fillRect(26, 11, 6, 2);
+    c.fillStyle = skala[0]; c.fillRect(32, 22, 8, 3); c.fillRect(4, 24, 6, 3);
+    // Szczelina.
+    c.fillStyle = ink; c.beginPath(); c.ellipse(22, 25, 10, 8, 0, Math.PI, 0); c.fill(); c.fillRect(12, 25, 20, 5);
+    c.fillStyle = '#0b0a09'; c.beginPath(); c.ellipse(22, 25, 8.5, 6.5, 0, Math.PI, 0); c.fill(); c.fillRect(13.5, 25, 17, 4);
+    c.fillStyle = '#5c7a42'; c.fillRect(6, 15, 4, 2); c.fillRect(34, 15, 3, 2); c.fillRect(15, 7, 3, 1);
+    c.fillStyle = '#d9d2bf'; c.fillRect(31, 30, 4, 1); c.fillRect(33, 29, 1, 3);
+  });
   // Schody w górę (w lochu), od góry: stopnie jaśniejące ku wyjściu.
   plotno('loch-schody', 48, 40, (c) => {
     c.fillStyle = ink; c.fillRect(0, 0, 48, 40);
@@ -275,6 +289,11 @@ export class LochyWejscia {
     this.pokaz(w);
   }
 
+  /** A settlement's cave (src/siedliska): one fixed entrance per camp, shown like the others when the hero is near. */
+  dodajSiedliskowe(w: WejscieLochu) {
+    if (!this.lista.some((q) => q.id === w.id)) this.lista.push(w);
+  }
+
   /** Takes an entrance away (a mission stage that is over). */
   usun(id: string) {
     const i = this.lista.findIndex((q) => q.id === id);
@@ -302,7 +321,8 @@ export class LochyWejscia {
       img.setTexture('loch-piwnica-z').setOrigin(PIWNICZKA.origin[0], PIWNICZKA.origin[1]).setScale(PIWNICZKA.skala)
         .setPosition(w.x, w.y + PIWNICZKA.nizej).setDepth(w.y - 2);
     };
-    if (s.textures.exists('loch-piwnica-z')) piwnica();
+    if (w.rodzaj === 'jaskinia') img.setOrigin(0.5, 0.82).setScale(0.75).setDepth(w.y + 2); // skalny otwór, nie piwniczka
+    else if (s.textures.exists('loch-piwnica-z')) piwnica();
     else void wczytajPiwniczke(s).then((ok) => ok && piwnica());
     // Zimna poświata – żeby zejście było widać z daleka (ADD, powolny oddech).
     const blask = s.add.image(w.x, w.y - 1, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0x8ab8ff).setDisplaySize(40, 30).setDepth(w.y - 7).setAlpha(0.25);
@@ -346,7 +366,7 @@ export interface LochHost {
   scene: Phaser.Scene;
   /** Use the existing surface transition, keeping the character and entrance position. */
   wyjdz: () => void;
-  spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean };
+  spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean; hp: number; power?: number };
   toast: (t: string, ms?: number) => void;
   /** Numer logowania – stan lochu (pokonani, skrzynia) trwa tylko do następnego. */
   nonce: string | number;
@@ -429,6 +449,20 @@ export class LochWnetrze {
       if (!pod(tx, ty)) continue;
       const X = tx * t, Y = ty * t;
       const blok = ((Math.floor((tx + (Math.floor(ty / 2) % 2)) / 2) * 73856093) ^ (Math.floor(ty / 2) * 19349663)) >>> 0;
+      if (p.rodzaj === 'jaskinia') {
+        // Skała: plamy po 3×3 kratki bez spoin, drobne kamyki, gdzieniegdzie mokry połysk.
+        const pl = ((Math.floor(tx / 3) * 73856093) ^ (Math.floor(ty / 3) * 19349663)) >>> 0;
+        x.fillStyle = K.plyta[pl % K.plyta.length];
+        x.fillRect(X, Y, t, t);
+        for (let i = 0; i < 4; i++) {
+          x.fillStyle = r() < 0.5 ? K.plyta[(pl + 1 + i) % K.plyta.length] : K.spoina;
+          x.fillRect(X + Math.floor(r() * (t - 3)), Y + Math.floor(r() * (t - 2)), 2 + Math.floor(r() * 3), 2);
+        }
+        if (r() < 0.04) { x.fillStyle = 'rgba(150,200,220,0.18)'; x.fillRect(X + 2, Y + 4, t - 5, 3); }
+        if (!pod(tx, ty - 1)) { x.fillStyle = 'rgba(0,0,0,0.38)'; x.fillRect(X, Y, t, 5); }
+        if (!pod(tx - 1, ty)) { x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(X, Y, 4, t); }
+        continue;
+      }
       x.fillStyle = K.plyta[blok % K.plyta.length];
       x.fillRect(X, Y, t, t);
       // Drobny szum.
@@ -473,6 +507,15 @@ export class LochWnetrze {
         x.fillRect(X, yL, t, hL);
         x.fillStyle = K.licoCien;
         x.fillRect(X, Y + t - 2, t, 2);
+        if (p.rodzaj === 'jaskinia') {
+          // Lico skały: nieregularne bryły zamiast cegieł.
+          for (let i = 0; i < 5; i++) {
+            x.fillStyle = r() < 0.5 ? K.licoCien : 'rgba(255,240,210,0.10)';
+            x.fillRect(X + Math.floor(r() * (t - 4)), yL + Math.floor(r() * (hL - 3)), 3 + Math.floor(r() * 5), 2 + Math.floor(r() * 2));
+          }
+          if (r() < 0.1) { x.fillStyle = K.akcent; x.fillRect(X + Math.floor(r() * (t - 4)), yL + 1, 4, 2); }
+          continue;
+        }
         // Kamienie / cegły.
         const rz = p.rodzaj === 'podziemia' ? 3 : 2;
         const hR = Math.floor(hL / rz);
@@ -530,6 +573,25 @@ export class LochWnetrze {
           for (let i = 3; i < 12; i += 4) for (let j = 0; j <= i; j++) x.fillRect(X + (lewa ? j : t - 1 - j), Y + i - j, 1, 1);
           break;
         }
+        case 'stalagmit':
+          x.fillStyle = ink; x.fillRect(X + 5, Y + 2, 6, 13); x.fillRect(X + 3, Y + 10, 10, 5);
+          x.fillStyle = '#7d6b55'; x.fillRect(X + 6, Y + 3, 4, 11); x.fillRect(X + 4, Y + 11, 8, 3);
+          x.fillStyle = '#a08a6c'; x.fillRect(X + 6, Y + 3, 1, 10);
+          x.fillStyle = '#4e4134'; x.fillRect(X + 9, Y + 6, 1, 8);
+          break;
+        case 'krysztal':
+          x.fillStyle = ink; x.fillRect(X + 3, Y + 4, 10, 10);
+          x.fillStyle = '#5fc7c0'; x.fillRect(X + 4, Y + 8, 3, 5); x.fillRect(X + 7, Y + 5, 3, 8); x.fillRect(X + 10, Y + 9, 2, 4);
+          x.fillStyle = '#c6fff6'; x.fillRect(X + 8, Y + 6, 1, 4); x.fillRect(X + 5, Y + 9, 1, 2);
+          x.fillStyle = 'rgba(120,255,230,0.18)'; x.fillRect(X, Y + 2, t, t - 2);
+          break;
+        case 'grzybki':
+          for (const [dx, dy] of [[3, 9], [8, 6], [11, 10]]) {
+            x.fillStyle = '#d8d0b8'; x.fillRect(X + dx + 1, Y + dy + 2, 1, 3);
+            x.fillStyle = '#9fe36a'; x.fillRect(X + dx, Y + dy, 3, 2);
+            x.fillStyle = 'rgba(160,255,110,0.25)'; x.fillRect(X + dx - 2, Y + dy - 2, 7, 6);
+          }
+          break;
         case 'kaluza':
           x.fillStyle = 'rgba(40,60,80,0.55)';
           x.fillRect(X + 2, Y + 6, 12, 5); x.fillRect(X + 4, Y + 4, 8, 9);
@@ -595,6 +657,8 @@ export class LochWnetrze {
       const k = p.komnaty[l.komnata];
       const R = Math.max(k.x1 - k.x0, k.y1 - k.y0) * T * 0.9 + 4 * T;
       const e = this.h.spawn(l.x, l.y, l.kind, { x: (k.cx + 0.5) * T, y: (k.cy + 0.5) * T, r: R });
+      // Jaskinia pod wielkim obozem: groźniejsza niż krypta (właściciel: „trudniejsze potworki”) – życie i ciosy ×1,4.
+      if (p.rodzaj === 'jaskinia' && !this.plan.tutorial) { e.power = (e.power ?? 1) * 1.4; e.hp = Math.max(1, Math.round(e.hp * 1.4)); }
       this.zywi.set(e, i);
     });
   }

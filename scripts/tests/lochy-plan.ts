@@ -4,7 +4,7 @@ import { planLochu, podloga } from '../../src/loch/plan';
 
 let zle = 0;
 const t0 = performance.now();
-for (const rodzaj of ['krypta', 'podziemia'] as const) {
+for (const rodzaj of ['krypta', 'podziemia', 'jaskinia'] as const) {
   for (let seed = 1; seed <= 300; seed++) {
     const p = planLochu(rodzaj, seed * 7919);
     const q = planLochu(rodzaj, seed * 7919);
