@@ -1999,7 +1999,7 @@ export class GameScene extends Phaser.Scene {
     const label = sign?.place.kind === 'shop' || sign?.place.kind === 'gear' ? tx('Otwórz sklep', 'Open shop') : t.label;
     // Short and small: a long church name used to cover the hero (report #14).
     this.interactionLabel.setText(label.length > 26 ? `${label.slice(0, 25).trimEnd()}…` : label)
-      .setPosition(bounds?.centerX ?? t.x, (bounds?.top ?? head ?? t.y-h)-3).setVisible(true);
+      .setPosition(bounds?.centerX ?? t.x, t.id.startsWith('znak:') ? t.y + 9 : (bounds?.top ?? head ?? t.y-h)-3).setVisible(true); // a signpost's painting stays readable
     ustawInterakcjeHud(true, label);
   }
   private worldTargetAt(sx:number,sy:number, outOfReach = false):WorldInteraction|null {
