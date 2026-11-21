@@ -56,9 +56,15 @@ export const LUDZIK_3D = {
    * A shot starts its clip just before that moment, so the release shows as the projectile appears. */
   /** Running (owner, 21 Nov 2026: „wszystko chodzi sztywno”): the chest leans forward at full speed (radians), the bob
    * per step grows from podskokPx to biegPodskokPx, and on starting/stopping the body leans a moment more. */
-  biegPochylenie: 0.17,
+  biegPochylenie: 0.08,
   biegPodskokPx: 2,
-  rozpedPochylenie: 0.12,
+  rozpedPochylenie: 0.07,
+  /** Arms in the run's rhythm (owner, 21 Nov 2026: „sztywny, musi ruszać rękami w rytm biegu”): each arm swings about
+   * its shoulder opposite to its leg (radians at full speed), the forearm bends at the elbow while running, and the
+   * chest turns a little against the hips with every step. */
+  biegRece: 0.72,
+  biegLokiec: 0.7,
+  biegSkret: 0.1,
   /** Standing still the chest breathes (radians, seconds per breath; drawn in a few steps only, to spare phones). */
   oddech: 0.035,
   oddechS: 2.8,
@@ -482,6 +488,33 @@ export class Ludzik3D {
     }
   }
 
+  /** Running arms: each arm swings opposite to its own leg (read from the walk clip's live pose, so it always keeps the
+   * legs' rhythm), elbows bent, and the chest twists with the step. Held weapons follow the hand they're nearest. */
+  private receWBiegu(g: Gotowy, sila: number, biodra: THREE.Vector3, gora: string[]) {
+    const three = g.three;
+    const pos = (n: string) => g.model.getObjectByName(n)?.position.clone();
+    const X = new three.Vector3(1, 0, 0), Y = new three.Vector3(0, 1, 0);
+    const bron = ['WeaponMesh', 'BowStringTop', 'BowStringBottom'].filter((n) => g.model.getObjectByName(n));
+    const hL = pos('handL'), hR = pos('handR'), w = pos('WeaponMesh');
+    const bronL = !!(w && hL && hR && w.distanceTo(hL) < w.distanceTo(hR));
+    let skret = 0;
+    for (const strona of ['L', 'R'] as const) {
+      const udo = pos('thigh' + strona), kolano = pos('shin' + strona), bark = pos('upper' + strona), lokiec = pos('fore' + strona);
+      if (!udo || !kolano || !bark) continue;
+      // The leg's swing: how far the knee is ahead of the hip (+Z = forward), as a share of the thigh's length.
+      const noga = Math.max(-1, Math.min(1, (kolano.z - udo.z) / Math.max(1e-3, udo.distanceTo(kolano)) * 1.6));
+      const reka = ['upper' + strona, 'fore' + strona, 'hand' + strona, ...((strona === 'L') === bronL ? bron : [])];
+      // Positive turn about +X sends the hand back: arm back while its leg is forward.
+      this.obroc(g, reka, X, LUDZIK_3D.biegRece * sila * noga, bark);
+      if (lokiec) {
+        const l = g.model.getObjectByName('fore' + strona)!.position.clone();
+        this.obroc(g, reka.slice(1), X, -LUDZIK_3D.biegLokiec * sila, l);
+      }
+      skret += (strona === 'L' ? 1 : -1) * noga;
+    }
+    this.obroc(g, gora, Y, LUDZIK_3D.biegSkret * sila * skret * 0.5, biodra);
+  }
+
   /** The procedural part of a blow, on top of the clip's pose: chest turned with the cut, the arm over the head (C),
    * a small lean for the bow's recoil and the mage's push, and the visual step forward. */
   private ruchCiosu(g: Gotowy, c: Cios) {
@@ -631,6 +664,7 @@ export class Ludzik3D {
       const biodra = pos('thighL').add(pos('thighR')).multiplyScalar(0.5);
       const gora = ['core', 'head', 'upperL', 'foreL', 'handL', 'upperR', 'foreR', 'handR', 'WeaponMesh', 'BowStringTop', 'BowStringBottom'];
       let pochyl = LUDZIK_3D.biegPochylenie * Math.min(1, szyb) + LUDZIK_3D.rozpedPochylenie * this.rozped;
+      if (idzie) this.receWBiegu(g, Math.min(1, szyb), biodra, gora);
       if (!idzie) {
         // Breathing in a few steps (each step is a new picture; a smooth breath would redraw all the time).
         const n = LUDZIK_3D.oddechKrokow;

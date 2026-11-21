@@ -174,6 +174,24 @@ export class Lowiska {
     this.planPark(cx, cy, r);
   }
 
+  /** Drogowskazy (src/drogowskazy): cell size, whether a cell may hold a settlement at all (only the first roll of its
+   * fixed seed, no terrain needed), planning a far cell on demand once its tiles are in, and the cell's settlement. */
+  get komorkaPx() { return this.komorka; }
+  mozeSiedlisko(cx: number, cy: number) {
+    return this.obozy && rng(hashSeed(`${this.city.id}:siedlisko:v${WERSJA_SIEDLISK}:${cx},${cy}`))() <= OBOZ.szansa;
+  }
+  zaplanowana(cx: number, cy: number) { return this.planned.has(`${cx},${cy}`); }
+  zaplanuj(cx: number, cy: number) {
+    const K = this.komorka;
+    if (!this.city.ready({ x0: cx * K, y0: cy * K, x1: (cx + 1) * K, y1: (cy + 1) * K })) return false;
+    this.planCell(cx, cy);
+    return true;
+  }
+  siedliskoKomorki(cx: number, cy: number) {
+    const k = `:${cx},${cy}`;
+    return this.siedliska.find((s) => s.id.endsWith(k)) ?? null;
+  }
+
   /** Siedliska włączone (src/siedliska/wlacznik.ts) – ustawia GameScene. */
   obozy = false;
   /** Siedliska tej sceny (też dla testów). */

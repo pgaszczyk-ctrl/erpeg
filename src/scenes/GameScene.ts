@@ -115,6 +115,7 @@ import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, t
 import { Lowiska } from './Lowiska';
 import { siedliska } from '../siedliska/wlacznik';
 import { WidokSiedlisk } from '../siedliska/Widok';
+import { Drogowskazy, type Drogowskaz } from '../drogowskazy/Drogowskazy';
 import { przejscieSiedlisk } from '../siedliska/rejestr';
 import type { Siedlisko } from '../siedliska/typy';
 import { PrologRekruta } from './PrologRekruta';
@@ -548,6 +549,8 @@ export class GameScene extends Phaser.Scene {
   private lowiska: Lowiska | null = null;
   /** Siedliska (src/siedliska): palisady, namioty, wieże i ogniska jako obiekty świata. */
   private widokSiedlisk: WidokSiedlisk | null = null;
+  /** Danger signposts at big crossings pointing to the nearest medium+ settlement (src/drogowskazy). */
+  private drogowskazy: Drogowskazy | null = null;
   /** Dungeon entrances around the hero on the surface (live fight only) and, underground, the dungeon itself. */
   private prolog?: PrologRekruta;
   /** Elzet 10, the owner's robot quest (Lublin, live fight only). */
@@ -1032,6 +1035,10 @@ export class GameScene extends Phaser.Scene {
     // Siedliska (obozy z palisadą) planuje to samo co łowiska – na tej samej siatce komórek, ale jako część mapy.
     if (this.lowiska) this.lowiska.obozy = siedliska() && !this.city.loch && !demo.on;
     this.widokSiedlisk = this.lowiska?.obozy ? new WidokSiedlisk(this, this.city) : null;
+    this.drogowskazy?.destroy();
+    this.drogowskazy = this.lowiska?.obozy && new URLSearchParams(location.search).get('drogowskazy') !== '0'
+      ? new Drogowskazy(this, this.city, this.lowiska, { widac: (x, y) => pointInPolygon(this.vision, x, y) })
+      : null;
     if (this.widokSiedlisk) {
       const naSiedlisko = (sd: Siedlisko) => {
         this.streets.usunPrzySiedlisku(sd.x, sd.y, (sd.ramka.x1 - sd.ramka.x0) / 2 + 60 * PX_PER_M);
@@ -1490,6 +1497,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.streets.update(this.player.x, this.player.y, now);
     this.widokSiedlisk?.update(this.player.x, this.player.y, now, this.cameras.main.worldView);
+    this.drogowskazy?.update(this.player.x, this.player.y, now);
     if (!lingering && !this.story.busy) this.spotkania?.update(now);
     }
     if (!this.loch) this.clearHomeArea(); // underground the arrival spot is no safe home
@@ -1944,6 +1952,7 @@ export class GameScene extends Phaser.Scene {
     for(const w of this.wozy)add(`coach:${w.p.id}`,w.img,'use',w.p.name,()=>this.openCoach(w.p));
     for(const a of this.artillery?.interactionStops()??[])add(`artillery:${a.stop.id}`,a,a.metro?'enter':'use',a.stop.name,()=>this.otworzStacje(a.stop));
     for(const b of this.city.tablice)add(`board:${b.x}:${b.y}`,b,'use',tx('Tablica','Noticeboard'),()=>this.otworzTablice(b));
+    for(const z of this.drogowskazy?.widoczne()??[])add(`znak:${z.id}`,z,'use',tx('Drogowskaz','Signpost'),()=>this.czytajDrogowskaz(z));
     return out.filter(t=>Math.hypot(t.x-this.player.x,t.y-this.player.y)<INTERAKCJA_PX+4&&pointInPolygon(this.vision,t.x,t.y));
   }
 
@@ -1990,7 +1999,7 @@ export class GameScene extends Phaser.Scene {
     const label = sign?.place.kind === 'shop' || sign?.place.kind === 'gear' ? tx('Otwórz sklep', 'Open shop') : t.label;
     // Short and small: a long church name used to cover the hero (report #14).
     this.interactionLabel.setText(label.length > 26 ? `${label.slice(0, 25).trimEnd()}…` : label)
-      .setPosition(bounds?.centerX ?? t.x, (bounds?.top ?? head ?? t.y-h)-3).setVisible(true);
+      .setPosition(bounds?.centerX ?? t.x, t.id.startsWith('znak:') ? t.y + 9 : (bounds?.top ?? head ?? t.y-h)-3).setVisible(true); // a signpost's painting stays readable
     ustawInterakcjeHud(true, label);
   }
   private worldTargetAt(sx:number,sy:number, outOfReach = false):WorldInteraction|null {
@@ -7998,6 +8007,19 @@ export class GameScene extends Phaser.Scene {
     const l = nearest(this.lowiska?.lowiska ?? []);
     if (l) out.push({ label: tx('🐺 Łowisko – walka i łup', '🐺 Hunting ground – fights and loot'), nazwa: tx('Łowisko', 'Hunting ground'), x: l.x, y: l.y });
     return out;
+  }
+
+  /** A danger signpost read with E/ACT/click: what lives where, and the arrow can lead there. */
+  private czytajDrogowskaz(z: Drogowskaz) {
+    const c = z.cel;
+    if (!c || !this.drogowskazy) return;
+    const opis = this.drogowskazy.opis(z);
+    this.dialog({
+      title: tx('🪧 Drogowskaz', '🪧 Signpost'),
+      text: tx(`Ktoś niedbale namalował na desce stwora i strzałkę.\n\n${opis}`, `Someone has hastily painted a creature and an arrow on the plank.\n\n${opis}`),
+      buttons: [tx('🧭 Prowadź', '🧭 Guide me'), tx('Odejdź', 'Leave')],
+      onChoose: (i) => { if (i === 0) this.prowadzDo({ nazwa: opis.replace(/^⚠ /, '').split(' – ')[0], ...this.city.toLatLon(c.s.x, c.s.y), rodzaj: 'cel', km: 0 }); },
+    });
   }
 
   /** Map screen „🧭 Prowadź”: the arrow points to this hub (null = stop guiding). */
