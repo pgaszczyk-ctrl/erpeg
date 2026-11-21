@@ -27,7 +27,16 @@
 // ============================================================================
 
 import Phaser from 'phaser';
-import { PX_PER_M, type CityMap } from '../map/CityMap';
+import { PX_PER_M, ROAD_KINDS, distToPolyline, type CityMap, type Line } from '../map/CityMap';
+import { OBOZ, TEREN_SIEDLISK, WERSJA_SIEDLISK, ODNOWIENIE_SIEDLISK, TYPY_SIEDLISK, type TypSiedliska } from '../content/siedliska';
+import { planujOboz } from '../siedliska/plan';
+import { planujRumowisko, planujBagno } from '../siedliska/planTypy';
+import { dodajSiedlisko } from '../siedliska/rejestr';
+import { wWielokacie } from '../siedliska/kolizje';
+import type { Siedlisko, TerenSiedliska } from '../siedliska/typy';
+import { session } from '../quests';
+import { tx } from '../i18n';
+import { stylRegionu } from '../content/styleRegionow';
 import { GROUND_DEPTH } from '../map/MapRenderer';
 import { rng } from '../rng';
 import type { RodzajWroga } from '../content/fabula';
@@ -41,6 +50,9 @@ export interface LowiskoSpawn {
   x: number;
   y: number;
   kind: RodzajWroga;
+  /** Siedliska: szaleniec (czerwona aura) i mnożnik siły (Slime.power). */
+  berserk?: boolean;
+  moc?: number;
 }
 
 export type Warstwa = 'obrzeze' | 'glebia' | 'rdzen';
@@ -59,6 +71,12 @@ export interface Pakiet {
   members: Map<number, unknown>;
   /** Wartość `czasAktywny()` w chwili rozbicia; null = grupa wciąż aktywna. */
   clearedAtS: number | null;
+  /** Siedlisko (src/siedliska): stały skład i stałe punkty z planu (każda generacja taka sama). */
+  stale?: LowiskoSpawn[];
+  /** Grupa szefa siedliska: klucz w session.daily, pod którym zapisany jest czas pokonania szefa (przeżywa logowanie). */
+  szef?: string;
+  /** Własny czas odnowienia (s aktywnej gry). */
+  odnowienieS?: number;
 }
 
 export interface Lowisko {
@@ -130,6 +148,9 @@ export class Lowiska {
     if (this.planned.has(key)) return;
     this.planned.add(key);
     const E = LOWISKA_EPI;
+    // Siedlisko (obóz z palisadą) ma pierwszeństwo: komórka z obozem nie dostaje łowiska. Obóz leży w środkowej
+    // części komórki, więc nigdy nie zachodzi na łowiska sąsiednich komórek (ich zasięg ≤ 0,15 komórki + promień).
+    if (this.obozy && this.planujObozW(cx, cy, key)) return;
     const r = rng(hashSeed(`${this.city.id}:lowisko-epi:${key}`));
     if (r() > E.szansa) return;
     const R = E.promienM * M;
@@ -151,6 +172,126 @@ export class Lowiska {
       return;
     }
     this.planPark(cx, cy, r);
+  }
+
+  /** Siedliska włączone (src/siedliska/wlacznik.ts) – ustawia GameScene. */
+  obozy = false;
+  /** Siedliska tej sceny (też dla testów). */
+  siedliska: Siedlisko[] = [];
+  private ostatnieSiedlisko: string | null = null;
+
+  /** Pytania planera o teren – odpowiada prawdziwa mapa (te same co przy łowiskach, ale na całym obrysie). */
+  private teren(): TerenSiedliska {
+    const c = this.city;
+    const linie = (x: number, y: number, r: number) => c.query({ x0: x - r - 30, y0: y - r - 30, x1: x + r + 30, y1: y + r + 30 }).lines;
+    return {
+      rodzaje: (x, y) => c.areaKindsAt(x, y),
+      zablokowane: (x, y) => c.isBlocked(x, y),
+      budynek: (x, y, r) => c.buildingWithin(x, y, r),
+      linia: (x, y, r) => linie(x, y, r).some((l) => distToPolyline(l.pts, x, y) < r + l.width / 2),
+      liniaTwarda: (x, y, r) => linie(x, y, r).some((l) => !OBOZ.przechodnie.includes(l.kind) && distToPolyline(l.pts, x, y) < r + l.width / 2),
+      budynki: (x0, y0, x1, y1) => c.query({ x0, y0, x1, y1 }).buildings.filter((b) => !b.open).map((b) => ({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1 })),
+      przeciecia: (obrys) => {
+        let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+        for (let i = 0; i < obrys.length; i += 2) { bx0 = Math.min(bx0, obrys[i]); by0 = Math.min(by0, obrys[i + 1]); bx1 = Math.max(bx1, obrys[i]); by1 = Math.max(by1, obrys[i + 1]); }
+        const out: { x: number; y: number; szer: number }[] = [];
+        const n = obrys.length / 2;
+        for (const l of c.query({ x0: bx0, y0: by0, x1: bx1, y1: by1 }).lines) {
+          if (!OBOZ.przechodnie.includes(l.kind)) continue;
+          for (let k = 0; k + 3 < l.pts.length; k += 2) {
+            const ax = l.pts[k], ay = l.pts[k + 1], bx = l.pts[k + 2], by = l.pts[k + 3];
+            for (let i = 0; i < n; i++) {
+              const cx = obrys[i * 2], cy = obrys[i * 2 + 1], dx = obrys[((i + 1) % n) * 2], dy = obrys[((i + 1) % n) * 2 + 1];
+              const den = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
+              if (Math.abs(den) < 1e-9) continue;
+              const u = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / den, v = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / den;
+              if (u >= 0 && u <= 1 && v >= 0 && v <= 1) out.push({ x: ax + (bx - ax) * u, y: ay + (by - ay) * u, szer: l.width });
+            }
+          }
+        }
+        // Stała kolejność (niezależna od kolejności kafli): po kącie wokół środka obrysu.
+        const sx = (bx0 + bx1) / 2, sy = (by0 + by1) / 2;
+        return out.sort((a, b) => Math.atan2(a.y - sy, a.x - sx) - Math.atan2(b.y - sy, b.x - sx));
+      },
+      glowna: (x, y, r) => this.glownaBlisko(x, y, r),
+      droga: (x, y, r) => {
+        let best: { x: number; y: number } | null = null, bd = r;
+        for (const l of linie(x, y, r)) {
+          if (!ROAD_KINDS.has(l.kind) || l.kind === 'major' || l.bridge) continue;
+          const q = najblizszyNaLinii(l, x, y);
+          const d = Math.hypot(q.x - x, q.y - y) - l.width / 2;
+          if (d < bd) { bd = d; best = q; }
+        }
+        return best;
+      },
+    };
+  }
+
+  /** Obóz w komórce (stałe ziarno: mapa + komórka + wersja generatora); true = jest. */
+  private planujObozW(cx: number, cy: number, key: string) {
+    const r = rng(hashSeed(`${this.city.id}:siedlisko:v${WERSJA_SIEDLISK}:${key}`));
+    if (r() > OBOZ.szansa) return false;
+    const T = TEREN_SIEDLISK, teren = this.teren();
+    for (let t = 0; t < 18; t++) {
+      const x = (cx + 0.3 + r() * 0.4) * this.komorka, y = (cy + 0.3 + r() * 0.4) * this.komorka;
+      if (this.nearAvoid(x, y, T.odMiejscM)) continue;
+      // Typ wg terenu: przy mokradłach i wodzie najczęściej bagno, gdzie indziej obóz albo rumowisko (stałe ziarno komórki).
+      const mokro = this.city.areaKindsAt(x, y).includes('wetland') || [60, 120].some((d) => [0, 1, 2, 3, 4, 5, 6, 7].some((k) => {
+        const a = (k / 8) * Math.PI * 2, q = this.city.areaKindsAt(x + Math.cos(a) * d * M, y + Math.sin(a) * d * M);
+        return q.includes('water') || q.includes('wetland');
+      }));
+      const wagi: [TypSiedliska, number][] = mokro ? [['bagno', 0.6], ['oboz', 0.25], ['rumowisko', 0.15]] : TYPY_SIEDLISK.filter(([k]) => k !== 'bagno');
+      let u = r() * wagi.reduce((a, [, w]) => a + w, 0), typ: TypSiedliska = wagi[0][0];
+      for (const [k, w] of wagi) if ((u -= w) < 0) { typ = k; break; }
+      const id = `${this.city.id}:${typ === 'oboz' ? 'oboz' : typ}:${key}`;
+      const ll = this.city.toLatLon(x, y);
+      const region = Number.isFinite(ll.lat) ? stylRegionu(ll.lat, ll.lon).id : 'umiarkowany';
+      const s = typ === 'bagno' ? planujBagno(id, x, y, teren, M) : typ === 'rumowisko' ? planujRumowisko(id, x, y, teren, M) : planujOboz(id, x, y, teren, M, region);
+      if (!s) continue;
+      this.dodajOboz(s);
+      return true;
+    }
+    return false;
+  }
+
+  /** Obóz na mapie (rejestr → podłoże i kolizje) i jego dwie grupy: mieszkańcy i szef z obstawą. */
+  private dodajOboz(s: Siedlisko) {
+    dodajSiedlisko(this.city, s);
+    this.siedliska.push(s);
+    const R = Math.max(...s.obrys.map((v, i) => (i % 2 ? Math.abs(v - s.y) : Math.abs(v - s.x))));
+    const wolne = s.spawny.filter((q) => q.rola === 'czlonek');
+    const moc = s.stwory.moc;
+    const czl: LowiskoSpawn[] = s.stwory.czlonkowie.map((kind, i) => ({ ...wolne[i % Math.max(1, wolne.length)], kind }))
+      .map((q, i) => ({ x: q.x + (i >= wolne.length ? 2 * M : 0), y: q.y, kind: q.kind, berserk: s.stwory.berserk[i], moc }));
+    const szef = s.spawny.find((q) => q.rola === 'szef')!;
+    const obst = s.spawny.filter((q) => q.rola === 'obstawa');
+    const grupaSzefa: LowiskoSpawn[] = [{ x: szef.x, y: szef.y, kind: s.stwory.szef }];
+    for (let i = 0; i < s.stwory.ileObstawy; i++) {
+      const o = obst[i] ?? { x: szef.x + (i ? 3 : -3) * M, y: szef.y + 2 * M };
+      grupaSzefa.push({ x: o.x, y: o.y, kind: s.stwory.obstawa, moc });
+    }
+    grupaSzefa[0].moc = moc;
+    const baza = { r: R * 1.7, warstwa: 'obrzeze' as Warstwa, gen: 0, spots: null, alive: new Set<number>(), members: new Map<number, unknown>(), clearedAtS: null };
+    // Wielkie obozy: mieszkańcy w czterech ćwiartkach – budzą się ci, do których bohater podchodzi, nie cały obóz naraz.
+    const cwiartki = R > 60 * M ? 4 : 1;
+    for (let q = 0; q < cwiartki && wolne.length; q++) {
+      const czesc = cwiartki === 1 ? czl : czl.filter((p) => Math.floor(((Math.atan2(p.y - s.y, p.x - s.x) + Math.PI) / (Math.PI * 2)) * 4) % 4 === q);
+      if (!czesc.length) continue;
+      const cx = czesc.reduce((a, p) => a + p.x, 0) / czesc.length, cy = czesc.reduce((a, p) => a + p.y, 0) / czesc.length;
+      this.pakiety.push({ ...baza, alive: new Set(), members: new Map(), r: cwiartki === 1 ? baza.r : R * 1.1, id: `${s.id}:mieszkancy${cwiartki === 1 ? '' : q}`, x: cx, y: cy, stale: czesc, odnowienieS: ODNOWIENIE_SIEDLISK.zwykliS });
+    }
+    this.pakiety.push({ ...baza, alive: new Set(), members: new Map(), id: `${s.id}:szef`, x: s.x, y: s.y, stale: grupaSzefa, szef: `siedlisko:${s.id}`, odnowienieS: ODNOWIENIE_SIEDLISK.zwykliS });
+  }
+
+  /** Szef siedliska pokonany niedawno (czas rzeczywisty, z zapisu). */
+  private szefOdpoczywa(klucz: string) {
+    const d = session.daily[klucz];
+    return !!d && Date.now() / 60000 - d.n < ODNOWIENIE_SIEDLISK.szefMin;
+  }
+
+  /** Siedlisko, w którego obrysie stoi punkt. */
+  siedliskoW(x: number, y: number) {
+    return this.siedliska.find((s) => x > s.ramka.x0 && x < s.ramka.x1 && y > s.ramka.y0 && y < s.ramka.y1 && wWielokacie(s.obrys, x, y)) ?? null;
   }
 
   /** Miejski park (owner: „nawet w miejskich parkach mogą czasem być”): małe łowisko z samym obrzeżem. */
@@ -221,6 +362,14 @@ export class Lowiska {
 
   /** Skład nowej generacji grupy. */
   private makeSpots(p: Pakiet) {
+    if (p.stale) {
+      p.spots = p.stale.map((q) => ({ ...q }));
+      p.alive = new Set(p.spots.map((_, i) => i));
+      // Szef pokonany niedawno (zapis): grupa bez niego – sama obstawa.
+      if (p.szef && this.szefOdpoczywa(p.szef)) p.alive.delete(0);
+      p.members = new Map();
+      return;
+    }
     const E = LOWISKA_EPI;
     const r = rng(hashSeed(`${p.id}:${p.gen}`));
     const spots: LowiskoSpawn[] = [];
@@ -262,6 +411,7 @@ export class Lowiska {
         if (m !== e) continue;
         p.members.delete(i);
         p.alive.delete(i);
+        if (p.szef && i === 0) session.daily[p.szef] = { d: 'szef', n: Math.floor(Date.now() / 60000), a: 0 };
         if (!p.alive.size) p.clearedAtS = this.czasAktywny();
         return;
       }
@@ -371,7 +521,7 @@ export class Lowiska {
     for (const p of this.pakiety) {
       if (p.clearedAtS !== null) {
         const widoczna = Math.hypot(p.x - px, p.y - py) < widocznePx;
-        const czekaj = p.warstwa === 'rdzen' ? LOWISKA_EPI.bossOdnowienieS : LOWISKA.odnowieniePoS;
+        const czekaj = p.odnowienieS ?? (p.warstwa === 'rdzen' ? LOWISKA_EPI.bossOdnowienieS : LOWISKA.odnowieniePoS);
         if (widoczna || czas - p.clearedAtS < czekaj) continue;
         p.spots = null; // nowa generacja przy następnym spawnAll
         p.clearedAtS = null;
@@ -381,6 +531,14 @@ export class Lowiska {
       else this.despawnAll(p);
     }
 
+    // Wejście do obozu: krótkie ostrzeżenie (raz na wejście).
+    const sd = this.siedliska.length ? this.siedliskoW(px, py) : null;
+    if ((sd?.id ?? null) !== this.ostatnieSiedlisko) {
+      if (sd) this.powiedz(sd.typ === 'bagno' ? tx('🌫 Bagno – błoto spowalnia, a w głębokiej wodzie nie przejdziesz. W sercu mieszka wodnik.', '🌫 A swamp – mud slows you down and deep water blocks the way. A water spirit lives at its heart.')
+        : sd.typ === 'rumowisko' ? tx('🪨 Rumowisko – między skałami czają się wargi, w środku coś stuka kopytami.', '🪨 A rubble field – wargs lurk between the rocks, and something clatters its hooves in the middle.')
+        : tx('⛺ Obóz bandytów – herszt ma tu swój namiot. Uważaj!', '⛺ A bandit camp – the chieftain has his tent here. Careful!'));
+      this.ostatnieSiedlisko = sd?.id ?? null;
+    }
     // Wejście w mocniejszą warstwę: krótkie ostrzeżenie.
     const w = this.warstwaW(px, py);
     if (w !== this.ostatniaWarstwa) {
@@ -395,4 +553,16 @@ export class Lowiska {
   destroy() {
     for (const l of this.lowiska) this.bezMgly(l);
   }
+}
+
+/** Najbliższy punkt linii łamanej. */
+function najblizszyNaLinii(l: Line, x: number, y: number) {
+  let best = { x: l.pts[0], y: l.pts[1] }, bd = Infinity;
+  for (let i = 0; i + 3 < l.pts.length; i += 2) {
+    const ax = l.pts[i], ay = l.pts[i + 1], dx = l.pts[i + 2] - ax, dy = l.pts[i + 3] - ay, L = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L));
+    const qx = ax + dx * t, qy = ay + dy * t, d = Math.hypot(qx - x, qy - y);
+    if (d < bd) { bd = d; best = { x: qx, y: qy }; }
+  }
+  return best;
 }

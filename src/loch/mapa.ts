@@ -18,7 +18,7 @@ export function idLochu(l: IdLochu) {
 }
 
 export function czytajIdLochu(id: string): IdLochu | null {
-  const m = /^loch:(prolog:|misja:)?(krypta|podziemia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
+  const m = /^loch:(prolog:|misja:)?(krypta|podziemia|jaskinia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
   if (!m) return null;
   return { tutorial: m[1] === 'prolog:', misja: m[1] === 'misja:', rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]) };
 }

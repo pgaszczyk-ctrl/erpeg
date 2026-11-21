@@ -9,6 +9,7 @@ import { PX_PER_M, pointInRings, type CityMap, type Area, type Building } from '
 import { DRZEWA, LAS, WARZYWA, type Owoc } from '../content/sklepy';
 import { SPORT } from '../content/sport';
 import type { RodzajWroga } from '../content/fabula';
+import { wWielokacie } from '../siedliska/kolizje';
 import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_MGLA, GANG_MUSZKI, GANG_WIES, BERSERKER, OBSTAWA_HERSZTA, GRUPKA_SLABA, stanGangu, type RodzajGangu } from '../content/gangi';
 
 /** Green land where the weakest groups are wolves instead of imps (new controls test). */
@@ -269,6 +270,8 @@ export class Forest {
       if (kind === 'drzewo' && WYGLAD_09) continue;
       if (!this.city.areaKindsAt(x, y).includes('forest')) continue;
       if (!this.city.isFree(x, y, 5, 5) || this.city.roadAt(x, y)) continue;
+      // Not on a settlement's trodden ground (src/siedliska: the forest there was cleared for the camp).
+      if (this.city.siedliska.some((sd) => x > sd.ramka.x0 && x < sd.ramka.x1 && y > sd.ramka.y0 && y < sd.ramka.y1 && wWielokacie(sd.obrys, x, y))) continue;
       // Not right on top of another mushroom or the tree.
       if (list.some((o) => Math.abs(o.x - x) < 8 && Math.abs(o.y - y) < 8)) continue;
       list.push({ id, x, y, kind, left: LAS.uderzenNaDrzewo });
@@ -509,11 +512,21 @@ export class StreetEnemies {
           if (t < 9 && !this.nearRoad(x, y, GANG_WIES.odDrogiM * PX_PER_M)) continue;
           // Not on top of another gang.
           if (this.gangs.some((g) => Math.hypot(g.x - x, g.y - y) < (g.r + kind.promienM * PX_PER_M) * 0.6)) continue;
+          // Not in a monster settlement (src/siedliska): the camp has its own residents.
+          if (this.city.siedliska.some((sd) => Math.hypot(sd.x - x, sd.y - y) < kind.promienM * PX_PER_M + 80 * PX_PER_M)) continue;
           this.gangs.push({ id: `${key}:${ki}:${i}`, kind, x, y, r: kind.promienM * PX_PER_M, spots: null, alive: new Set(), members: new Map(), boss: 'none', clearedAt: 0 });
           break;
         }
       }
     });
+  }
+
+  /**
+   * A settlement appeared (src/siedliska): gangs planned on that spot earlier this session and not met yet go away
+   * (gangs are per-login and random, settlements are fixed – the camp wins). Gangs already fighting stay.
+   */
+  usunPrzySiedlisku(x: number, y: number, r: number) {
+    this.gangs = this.gangs.filter((g) => g.members.size > 0 || g.clearedAt > 0 || Math.hypot(g.x - x, g.y - y) >= g.r + r || (this.dropMist(g), false));
   }
 
   private nearRoad(x: number, y: number, r: number) {

@@ -45,6 +45,8 @@ export interface StworHost {
   origin?: (s: Slime, node: string, now: number) => { x: number; y: number } | undefined;
   sounds?: CombatAudio;
   attackMarker?: (s: Slime) => number | undefined;
+  /** Punkt pośredni, gdy prosta droga przecina ścianę siedliska (palisada): brama (src/siedliska/kolizje.ts obejscie). */
+  przejscie?: (ax: number, ay: number, bx: number, by: number) => { x: number; y: number } | null;
 }
 
 type Stan = 'patrol' | 'podejscie' | 'czeka' | 'zapowiedz' | 'atak' | 'odpoczynek' | 'powrot';
@@ -181,7 +183,8 @@ export class StworAI {
           this.stan = 'patrol';
           return;
         }
-        this.idz(this.home.x, this.home.y, P.predkosc);
+        const wb = this.h.przejscie?.(s.x, s.y, this.home.x, this.home.y);
+        this.idz(wb ? wb.x : this.home.x, wb ? wb.y : this.home.y, P.predkosc);
         if (odDomu < this.home.r * 0.9 && dist < P.wzrokM * M * 0.8) this.stan = 'podejscie';
         return;
       }
@@ -191,6 +194,13 @@ export class StworAI {
         if (!provoked && dist > P.gubiM * M) {
           s.vel.set(0, 0);
           this.stan = 'patrol';
+          return;
+        }
+        // Za palisadą: najpierw do bramy, bez doskoku w ścianę.
+        const obejdz = this.h.przejscie?.(s.x, s.y, this.h.player.x, this.h.player.y);
+        if (obejdz) {
+          this.stan = 'podejscie';
+          this.idz(obejdz.x, obejdz.y, P.predkosc);
           return;
         }
         const atak = this.wybierzAtak(now, dist);

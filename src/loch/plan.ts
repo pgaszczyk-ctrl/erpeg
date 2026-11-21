@@ -36,7 +36,7 @@ export interface PlanLochu {
   /** Pochodnie na licu ściany (kratka ściany, nad którą jest podłoga od południa). */
   pochodnie: { x: number; y: number }[];
   /** Ozdoby na podłodze (kratki). */
-  ozdoby: { x: number; y: number; co: 'kosci' | 'czaszka' | 'trumna' | 'beczka' | 'skrzynka' | 'pajeczyna' | 'kaluza'; r: number }[];
+  ozdoby: { x: number; y: number; co: 'kosci' | 'czaszka' | 'trumna' | 'beczka' | 'skrzynka' | 'pajeczyna' | 'kaluza' | 'stalagmit' | 'krysztal' | 'grzybki'; r: number }[];
 }
 
 export function hashLochu(s: string) {
@@ -53,15 +53,37 @@ export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): 
   const cols = tutorial ? 2 : losuj(O.wezly[0][0], O.wezly[1][0]);
   const rows = tutorial ? 2 : losuj(O.wezly[0][1], O.wezly[1][1]);
   const S = L.odstep, kMax = L.komnata[1];
-  const M = L.sciana + 2;
+  const M = L.sciana + 2 + (rodzaj === 'jaskinia' ? 3 : 0);
   const w = M * 2 + (cols - 1) * S + kMax + 2;
   const h = M * 2 + (rows - 1) * S + kMax + 2;
   const g = new Uint8Array(w * h);
   const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : g[y * w + x]);
   const kop = (x0: number, y0: number, x1: number, y1: number) => {
-    for (let y = Math.max(1, y0); y < Math.min(h - 1, y1); y++) for (let x = Math.max(1, x0); x < Math.min(w - 1, x1); x++) g[y * w + x] = 1;
+    const b = rodzaj === 'jaskinia' ? L.sciana + 1 : 1; // jaskinia: krzywe korytarze nie dochodzą do brzegu planu
+    for (let y = Math.max(b, y0); y < Math.min(h - b, y1); y++) for (let x = Math.max(b, x0); x < Math.min(w - b, x1); x++) g[y * w + x] = 1;
   };
 
+  const jaskinia = rodzaj === 'jaskinia';
+  // Jaskinia: komnata = elipsa o poszarpanym brzegu, korytarz = kręta smuga zmiennej szerokości.
+  const kopElipse = (cx: number, cy: number, rx: number, ry: number) => {
+    const fa = r() * 6.28, fb = r() * 6.28;
+    for (let y = Math.floor(cy - ry - 2); y <= Math.ceil(cy + ry + 2); y++) for (let x = Math.floor(cx - rx - 2); x <= Math.ceil(cx + rx + 2); x++) {
+      const a = Math.atan2(y - cy, x - cx);
+      const brzeg = 1 + Math.sin(a * 3 + fa) * 0.12 + Math.sin(a * 5 + fb) * 0.08;
+      if (((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= brzeg * brzeg) kop(x, y, x + 1, y + 1);
+    }
+  };
+  const kopKrety = (ax: number, ay: number, bx: number, by: number) => {
+    const L = Math.hypot(bx - ax, by - ay), n = Math.max(4, Math.ceil(L / 2));
+    const nx = -(by - ay) / (L || 1), ny = (bx - ax) / (L || 1);
+    const amp = (r() - 0.5) * L * 0.35, faza = r() * 6.28;
+    for (let i = 0; i <= n; i++) {
+      const u = i / n, off = Math.sin(u * Math.PI) * amp + Math.sin(u * 9 + faza) * 1.2;
+      const px = ax + (bx - ax) * u + nx * off, py = ay + (by - ay) * u + ny * off;
+      const p = 1 + (r() < 0.3 ? 1 : 0);
+      kop(Math.round(px) - p, Math.round(py) - p, Math.round(px) + p + 1, Math.round(py) + p + 1);
+    }
+  };
   // Węzły: środki z małym przesunięciem.
   const n = cols * rows;
   const wx: number[] = [], wy: number[] = [];
@@ -122,7 +144,8 @@ export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): 
     else if (duza) { bw = losuj(L.komnata[0], kMax); bh = losuj(L.komnata[0], kMax); }
     else bw = bh = L.korytarz;
     const x0 = wx[k] - Math.floor(bw / 2), y0 = wy[k] - Math.floor(bh / 2);
-    kop(x0, y0, x0 + bw, y0 + bh);
+    if (jaskinia && duza) kopElipse(wx[k], wy[k], bw / 2 + 0.5, bh / 2 + 0.5);
+    else kop(x0, y0, x0 + bw, y0 + bh);
     komnaty.push({ x0, y0, x1: x0 + bw, y1: y0 + bh, cx: wx[k], cy: wy[k], glebokosc: dist[k] / maxD, wejscie: k === wej, skarb: k === skarb, duza });
   }
   // Korytarze (w kształcie L).
@@ -132,10 +155,27 @@ export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): 
     const ax = wx[a], ay = wy[a], bx = wx[b], by = wy[b];
     const poziom = (y: number, xa: number, xb: number) => kop(Math.min(xa, xb) - pol, y - pol, Math.max(xa, xb) + pol + 1, y + pol + 1);
     const pion = (x: number, ya: number, yb: number) => kop(x - pol, Math.min(ya, yb) - pol, x + pol + 1, Math.max(ya, yb) + pol + 1);
-    if (najpierwPoziomo) { poziom(ay, ax, bx); pion(bx, ay, by); }
+    if (jaskinia) kopKrety(ax, ay, bx, by);
+    else if (najpierwPoziomo) { poziom(ay, ax, bx); pion(bx, ay, by); }
     else { pion(ax, ay, by); poziom(by, ax, bx); }
   }
 
+  // Jaskinia: wygładzenie skał (tylko dokładanie podłogi, więc nic się nie rozłącza) – obłe ściany zamiast prostokątów.
+  if (jaskinia) for (let pass = 0; pass < 2; pass++) {
+    const dodaj: number[] = [];
+    for (let y = L.sciana + 1; y < h - L.sciana - 1; y++) for (let x = L.sciana + 1; x < w - L.sciana - 1; x++) {
+      if (g[y * w + x]) continue;
+      let n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) n += at(x + dx, y + dy);
+      if (n >= 5) dodaj.push(y * w + x);
+    }
+    for (const i of dodaj) g[i] = 1;
+  }
+  if (jaskinia) for (const k of komnaty) {
+    // Komnata = rzeczywisty zasięg podłogi wokół środka (do pochodni, ozdób i skrzyni).
+    let y0 = k.cy; while (at(k.cx, y0 - 1)) y0--;
+    k.y0 = y0;
+  }
   // Schody w górę: środek komnaty wejściowej, przy jej północnej ścianie; bohater staje 2 kratki niżej.
   const kw = komnaty[wej];
   const schody = { x: kw.cx, y: kw.y0 + 1 };
@@ -194,7 +234,9 @@ export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): 
       if (!wolne(x, y)) continue;
       const co = rodzaj === 'krypta'
         ? (['kosci', 'czaszka', 'trumna', 'kaluza'] as const)[Math.floor(r() * 4)]
-        : (['beczka', 'skrzynka', 'kosci', 'kaluza'] as const)[Math.floor(r() * 4)];
+        : rodzaj === 'jaskinia'
+          ? (['stalagmit', 'krysztal', 'kosci', 'kaluza', 'grzybki', 'stalagmit'] as const)[Math.floor(r() * 6)]
+          : (['beczka', 'skrzynka', 'kosci', 'kaluza'] as const)[Math.floor(r() * 4)];
       ozdoby.push({ x, y, co, r: r() });
     }
   }

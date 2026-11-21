@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '21.11.2026', tytul: { pl: 'Stałe siedliska potworów', en: 'Monster settlements' },
+    tresc: { pl: 'Z dala od miast powstały stałe obozy bandytów: od małej czujki po wielką twierdzę z palisadą, wieżami, namiotami, ogniskami, garami i rożnami, a czasem z wejściem do jaskini pełnej potworów. Kształt schronień zależy od kraju – szałasy, jurty, chaty albo wełniane namioty. Są też rumowiska głazów z wilkami i wargami oraz bagna z błotem, które spowalnia. Herszt pokonany wraca dopiero po kilku godzinach.', en: 'Far from towns there are now permanent bandit camps: from a small lookout to a great fortress with a palisade, towers, tents, campfires, cauldrons and roasts, sometimes with a cave full of monsters. Shelters depend on the country – brush huts, yurts, round huts or wool tents. There are also boulder fields with wolves and wargs, and swamps with slowing mud. A defeated chief comes back only after a few hours.' },
+  },
+  {
     data: '20.11.2026', tytul: { pl: 'Mosiądz, dzwonnice i bluszcz', en: 'Brass, belfries and ivy' },
     tresc: { pl: 'Dachy ratuszy, bibliotek i uczelni bywają mosiężne, miedziane albo patynowane, z lukarnami i mosiężną listwą. Szkoły mają drewniane dzwonnice z dzwonem, niektóre domy okrągłe wieżyczki, stare mury porasta bluszcz, a na dachach bloków stoją drewniane zbiorniki na wodę, świetliki i kominki. Wieże przechylają się teraz tak jak ściany.', en: 'Town hall, library and university roofs are brass, copper or green with patina, with dormers and a brass ridge. Schools have wooden belfries with a bell, some houses round turrets, ivy climbs old walls, and tower-block roofs carry wooden water tanks, skylights and stacks. Towers now lean like the walls.' },
   },

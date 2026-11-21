@@ -113,6 +113,10 @@ import { updateGameCursor, mountGameCursor } from '../ui/gameCursor';
 import { hold, mouse, consumeRelease, consumeHeal, consumeInteraction, consumeStrong, worldInteraction, type WorldInteraction } from '../controls';
 import { Forest, Orchards, StreetEnemies, Training, SPORTY_TEX, type SportNpc, type Station, type ForestSpot } from './Ambient';
 import { Lowiska } from './Lowiska';
+import { siedliska } from '../siedliska/wlacznik';
+import { WidokSiedlisk } from '../siedliska/Widok';
+import { przejscieSiedlisk } from '../siedliska/rejestr';
+import type { Siedlisko } from '../siedliska/typy';
 import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
@@ -535,6 +539,8 @@ export class GameScene extends Phaser.Scene {
   private spotkania: Spotkania | null = null;
   /** Łowiska test pilot (scenes/Lowiska.ts, content/lowiska.ts; ?lowiska=1): wolf packs in real forests. */
   private lowiska: Lowiska | null = null;
+  /** Siedliska (src/siedliska): palisady, namioty, wieże i ogniska jako obiekty świata. */
+  private widokSiedlisk: WidokSiedlisk | null = null;
   /** Dungeon entrances around the hero on the surface (live fight only) and, underground, the dungeon itself. */
   private prolog?: PrologRekruta;
   /** Elzet 10, the owner's robot quest (Lublin, live fight only). */
@@ -983,6 +989,9 @@ export class GameScene extends Phaser.Scene {
           (sp, p) => {
             const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
             e.lowisko = true;
+            // Settlements (src/siedliska): stronger residents in big camps, some berserkers – same bestiary, EXP and loot.
+            if (sp.moc && sp.moc !== 1) { e.power = (e.power ?? 1) * sp.moc; e.hp = Math.max(1, Math.round(e.hp * sp.moc)); }
+            if (sp.berserk) e.makeBerserk(BERSERKER.zycie * (sp.moc ?? 1), BERSERKER.auraKolor, BERSERKER.mrugMs, BERSERKER.predkosc);
             e.lowiskoHome = { x: p.x, y: p.y, r: p.r };
             e.roam = 20;
             return e;
@@ -1001,6 +1010,19 @@ export class GameScene extends Phaser.Scene {
           (t) => this.toast(t, 2600),
         )
       : null;
+    // Siedliska (obozy z palisadą) planuje to samo co łowiska – na tej samej siatce komórek, ale jako część mapy.
+    if (this.lowiska) this.lowiska.obozy = siedliska() && !this.city.loch && !demo.on;
+    this.widokSiedlisk = this.lowiska?.obozy ? new WidokSiedlisk(this, this.city) : null;
+    if (this.widokSiedlisk) {
+      const naSiedlisko = (sd: Siedlisko) => {
+        this.streets.usunPrzySiedlisku(sd.x, sd.y, (sd.ramka.x1 - sd.ramka.x0) / 2 + 60 * PX_PER_M);
+        this.jaskiniaSiedliska(sd);
+      };
+      this.city.siedliskaSluchacze.add(naSiedlisko);
+      this.events.once('shutdown', () => this.city.siedliskaSluchacze.delete(naSiedlisko));
+      // Settlements already on this (cached) map from an earlier scene.
+      for (const sd of this.city.siedliska) naSiedlisko(sd);
+    }
 
     this.listyAreny = [];
     if (arenaOn() && !demo.on) api.arenaListy(session.token).then((l) => { this.listyAreny = Array.isArray(l) ? l : []; }).catch(() => {});
@@ -1022,6 +1044,7 @@ export class GameScene extends Phaser.Scene {
     // Dungeons (content/lochy.ts): entrances on the surface, or – underground – the maze, its monsters and chest.
     this.lochy?.destroy();
     this.lochy = live() && !demo.on && !this.city.loch ? new LochyWejscia(this, this.city) : undefined;
+    if (this.widokSiedlisk) for (const sd of this.city.siedliska) this.jaskiniaSiedliska(sd);
     this.loch?.destroy();
     this.loch = this.city.loch
       ? new LochWnetrze({
@@ -1437,13 +1460,15 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.training.update(this.player.x, this.player.y, now, (x, y) => this.streets.blocks(x, y));
-    this.streets.update(this.player.x, this.player.y, now);
     if (this.lowiska) {
       // Active-simulation clock for łowiska respawns: only advances here, i.e. never while paused/hidden/in
       // a dialog (this line isn't reached then – same guards as the rest of this method).
+      // Before the gangs: a settlement planned this frame keeps them off its spot.
       this.lowiskaCzasS += dt;
       this.lowiska.update(this.player.x, this.player.y);
     }
+    this.streets.update(this.player.x, this.player.y, now);
+    this.widokSiedlisk?.update(this.player.x, this.player.y, now, this.cameras.main.worldView);
     if (!lingering && !this.story.busy) this.spotkania?.update(now);
     }
     if (!this.loch) this.clearHomeArea(); // underground the arrival spot is no safe home
@@ -1877,7 +1902,7 @@ export class GameScene extends Phaser.Scene {
     if(!this.challenge)for(const n of this.training.visibleNpcs())add(`sport:${n.x}:${n.y}`,n,'talk',tx('Trener','Coach'),()=>this.talkSport(n));
     const robot=this.elzet?.interactionTarget();if(robot)out.push(robot);
     const wizard=this.story.wizardSpot();if(wizard)add('wizard',wizard,'talk',tx('Mag','Wizard'),()=>this.story.talkToWizard());
-    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??tx('Piwnica','Cellar'),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
+    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??(w.rodzaj==='jaskinia'?tx('Jaskinia','Cave'):tx('Piwnica','Cellar')),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
     if(this.loch) {
       const l=this.loch;
       add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
@@ -2617,6 +2642,7 @@ export class GameScene extends Phaser.Scene {
       origin: (s, node, now) => this.stwory3d?.socket(s, node, now),
       sounds: this.combatAudio,
       attackMarker: (s) => this.stwory3d?.attackMarkerMs(s, 'impact'),
+      przejscie: (ax, ay, bx, by) => przejscieSiedlisk(this.city, ax, ay, bx, by),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
         const pending = this.wilkCarry + poPancerzu(obrazenie * session.level.obrazenia, defense(), fizyczne);
@@ -4230,6 +4256,12 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Down the stairs: the dungeon is its own small map (src/loch/mapa.ts), like walking onto another map. */
+  /** A big camp's cave (src/siedliska, `Siedlisko.jaskinia`): an ordinary dungeon entrance of the kind 'jaskinia'. */
+  private jaskiniaSiedliska(sd: Siedlisko) {
+    if (!sd.jaskinia || !this.lochy) return;
+    this.lochy.dodajSiedliskowe({ id: `${sd.id}:jaskinia`, rodzaj: 'jaskinia', x: sd.jaskinia.x, y: sd.jaskinia.y, seed: sd.seed, przy: tx('obóz bandytów', 'bandit camp') });
+  }
+
   private async zejdzDoLochu(w: WejscieLochu) {
     if (this.travelling) return;
     this.travelling = true;
