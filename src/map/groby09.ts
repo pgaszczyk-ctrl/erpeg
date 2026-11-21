@@ -6,6 +6,10 @@ import { hash, hex, mieszaj, type Obraz, type Rodzaj } from '../gen';
 
 /** Kwatera (px generatora: 2 na px mapy): szerokość × wysokość z odstępem; co `alejkaCo` kolumna i co `przejazdCo` rząd puste. */
 const GROB = { kx: 12, ky: 20, alejkaCo: 5, przejazdCo: 4, zajete: 0.86 };
+/** Nieład jak na prawdziwych cmentarzach (właściciel, 21.11.2026: „za równiutko, powinny być bardziej chaotycznie”):
+ * każdy rząd lekko przesunięty, groby różnej wielkości i wysunięte w swojej kwaterze, czasem grób podwójny,
+ * puste miejsca w grupkach, a co jakiś czas cała kwatera skręcona o piksel w dół lub w górę. */
+const NIELAD = { rzad: 2, podwojny: 0.11, pusteGrupy: 0.22 };
 
 const KAMIENIE = ['#8c8f96', '#62666e', '#34353c', '#b3a88f', '#a7aab0', '#7d7468'].map(hex);
 const JASNY = ['#b4b7bd', '#878b93', '#55575f', '#d3c8ae', '#c9ccd1', '#9e9586'].map(hex);
@@ -29,14 +33,28 @@ export function malujGroby(o: Obraz, X0: number, Y0: number, N: number, rodzajW:
   const rect = (x: number, y: number, w: number, h: number, c: number) => {
     for (let b = 0; b < h; b++) for (let a = 0; a < w; a++) set(x + a, y + b, c);
   };
-  // Kwatery dotykające kawałka (z zapasem na cień).
-  for (let gy = Math.floor((Y0 - ky) / ky); gy <= Math.floor((Y0 + N) / ky); gy++) {
+  // Kwatery dotykające kawałka (z zapasem na cień i podwójne groby).
+  const podwojny = (gx: number, gy: number) => {
+    const m = GROB.alejkaCo;
+    return ((gx % m) + m) % m !== m - 1 && ((gx + 1) % m + m) % m !== 0 && hash(gx, gy, 4407) < NIELAD.podwojny;
+  };
+  for (let gy = Math.floor((Y0 - ky * 2) / ky); gy <= Math.floor((Y0 + N) / ky); gy++) {
     if (((gy % GROB.przejazdCo) + GROB.przejazdCo) % GROB.przejazdCo === 0) continue;
-    for (let gx = Math.floor((X0 - kx) / kx); gx <= Math.floor((X0 + N) / kx); gx++) {
+    // Cały rząd przesunięty o kilka pikseli (rzędy nigdy nie są w jednej linii).
+    const przesRzedu = Math.round((hash(gy, 0, 4405) - 0.5) * 2 * NIELAD.rzad);
+    for (let gx = Math.floor((X0 - kx * 2) / kx); gx <= Math.floor((X0 + N) / kx); gx++) {
       if (((gx % GROB.alejkaCo) + GROB.alejkaCo) % GROB.alejkaCo === 0) continue;
-      if (hash(gx, gy, 4401) > GROB.zajete) continue;
-      const x = gx * kx + 2, y = gy * ky + 3;
-      const w = 8, h = 14;
+      if (podwojny(gx - 1, gy)) continue; // miejsce zajęte przez podwójny grób z lewej
+      // Puste miejsca w grupkach (kwatery 3×2 rzadziej zajęte) i pojedyncze dziury.
+      const grupa = hash(Math.floor(gx / 3), Math.floor(gy / 2), 4406) < NIELAD.pusteGrupy ? 0.45 : 0;
+      if (hash(gx, gy, 4401) > GROB.zajete - grupa) continue;
+      const dw = podwojny(gx, gy);
+      const w = dw ? kx + 7 + Math.floor(hash(gx, gy, 4408) * 2) : 7 + Math.floor(hash(gx, gy, 4408) * 3);
+      const h = 12 + Math.floor(hash(gx, gy, 4409) * 4);
+      const luzX = Math.max(0, (dw ? 2 * kx : kx) - w - 1), luzY = Math.max(0, ky - h - 3);
+      const x = gx * kx + Math.floor(hash(gx, gy, 4411) * (luzX + 1)) + przesRzedu;
+      const y = gy * ky + 1 + Math.floor(hash(gx, gy, 4412) * (luzY + 1)) + (hash(gx >> 2, gy, 4413) < 0.3 ? 1 : 0);
+      const c = (w >> 1) - 1; // środek grobu (krzyż/znicz)
       // Cała kwatera (z obrzeżem) na cmentarzu – nie na ścieżce, drodze ani w budynku.
       if (![[-1, -1], [w, -1], [-1, h], [w, h], [w >> 1, h >> 1]].every(([a, b]) => rodzajW(x + a, y + b) === 'cmentarz')) continue;
       const r = hash(gx, gy, 4402);
@@ -47,9 +65,9 @@ export function malujGroby(o: Obraz, X0: number, Y0: number, N: number, rodzajW:
           if (brzeg && (a === 0 || a === w - 1) && (b === 5 || b === h - 1)) continue;
           set(x + a, y + b, brzeg ? KRAWEDZ : b < 8 ? ZIEMIA_J : ZIEMIA);
         }
-        for (let b = 0; b < 7; b++) set(x + 3, y + b, DREWNO), set(x + 4, y + b, DREWNO);
-        rect(x + 1, y + 2, 6, 1, DREWNO);
-        for (let b = 1; b < 8; b++) cien(x + 5, y + b, 0.3);
+        for (let b = 0; b < 7; b++) set(x + c, y + b, DREWNO), set(x + c + 1, y + b, DREWNO);
+        rect(x + c - 2, y + 2, 6, 1, DREWNO);
+        for (let b = 1; b < 8; b++) cien(x + c + 2, y + b, 0.3);
         continue;
       }
       const k = Math.floor(hash(gx, gy, 4403) * KAMIENIE.length);
@@ -64,10 +82,10 @@ export function malujGroby(o: Obraz, X0: number, Y0: number, N: number, rodzajW:
       }
       if (r < 0.42) {
         // Krzyż w głowie grobu.
-        for (let b = 0; b < 6; b++) { set(x + 3, y + b, jas); set(x + 4, y + b, kam); }
-        rect(x + 1, y + 1, 6, 1, jas);
-        rect(x + 1, y + 2, 6, 1, kam);
-        set(x + 2, y + 6, KRAWEDZ); set(x + 5, y + 6, KRAWEDZ);
+        for (let b = 0; b < 6; b++) { set(x + c, y + b, jas); set(x + c + 1, y + b, kam); }
+        rect(x + c - 2, y + 1, 6, 1, jas);
+        rect(x + c - 2, y + 2, 6, 1, kam);
+        set(x + c - 1, y + 6, KRAWEDZ); set(x + c + 2, y + 6, KRAWEDZ);
       } else {
         // Nagrobek: zaokrąglona tablica.
         for (let b = 0; b < 5; b++) for (let a = 0; a < w; a++) {
@@ -76,17 +94,18 @@ export function malujGroby(o: Obraz, X0: number, Y0: number, N: number, rodzajW:
           set(x + a, y + b, brzeg ? KRAWEDZ : b === 1 ? jas : kam);
         }
         // Napis (dwie kreski).
-        rect(x + 2, y + 2, 4, 1, mieszaj(kam, KRAWEDZ, 0.45));
+        rect(x + 2, y + 2, w - 4, 1, mieszaj(kam, KRAWEDZ, 0.45));
       }
       // Znicz albo kwiaty.
       const s = hash(gx, gy, 4404);
       if (s < 0.38) {
-        set(x + 3 + (s < 0.2 ? 0 : 1), y + 8, ZNICZ);
-        set(x + 3 + (s < 0.2 ? 0 : 1), y + 9, ZNICZ);
-        set(x + 3 + (s < 0.2 ? 0 : 1), y + 7, PLOMYK);
+        const zx = x + c + (s < 0.2 ? 0 : 1) + (dw ? (s < 0.1 ? -4 : 4) : 0);
+        set(zx, y + 8, ZNICZ);
+        set(zx, y + 9, ZNICZ);
+        set(zx, y + 7, PLOMYK);
       } else if (s < 0.68) {
         for (let q = 0; q < 3; q++) {
-          const a = 1 + Math.floor(hash(gx, gy, 4410 + q) * (w - 2)), b = 7 + Math.floor(hash(gx, gy, 4420 + q) * 5);
+          const a = 1 + Math.floor(hash(gx, gy, 4410 + q) * (w - 2)), b = 7 + Math.floor(hash(gx, gy, 4420 + q) * (h - 9));
           set(x + a, y + b, KWIATY[Math.floor(hash(gx, gy, 4430 + q) * KWIATY.length)]);
         }
       }
