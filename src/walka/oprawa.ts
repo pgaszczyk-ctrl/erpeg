@@ -172,6 +172,12 @@ export class OprawaWalki {
     this.host.dzwiek(magia ? 'hit-magic' : 'hit-wall', magia ? 0.5 : 0.8);
   }
 
+  /** Dust from the boots (a skid, a start, a running step): a small puff and a few grains, no sound. */
+  kurz(x: number, y: number, kat: number, sila = 1, kolor = 0xc8b49a) {
+    if (this.lekko && sila < 0.5) return;
+    this.dodaj({ typ: 'pyl', x, y, kat, ms: 200 + 140 * sila, kolor, kolor2: 0x7a6648, n: Math.round(2 + 3 * sila), r: 2.5 + 2.5 * sila, mocny: false });
+  }
+
   /** The mage's hand lights up as the spell leaves it. */
   dlon(x: number, y: number) {
     const k = this.host.kolory();

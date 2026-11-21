@@ -54,6 +54,15 @@ export const LUDZIK_3D = {
   /** Where in the donor clips the arrow leaves the string / the spell leaves the hand (share of the clip; measured from
    * the files: bowstring snaps back at 0.70–0.74 s of 1.19 s, the mage's hand thrusts at ~0.45 s of 1.51 s).
    * A shot starts its clip just before that moment, so the release shows as the projectile appears. */
+  /** Running (owner, 21 Nov 2026: „wszystko chodzi sztywno”): the chest leans forward at full speed (radians), the bob
+   * per step grows from podskokPx to biegPodskokPx, and on starting/stopping the body leans a moment more. */
+  biegPochylenie: 0.17,
+  biegPodskokPx: 2,
+  rozpedPochylenie: 0.12,
+  /** Standing still the chest breathes (radians, seconds per breath; drawn in a few steps only, to spare phones). */
+  oddech: 0.035,
+  oddechS: 2.8,
+  oddechKrokow: 6,
   lukWypuszczenie: 0.6,
   lukStart: 0.53,
   magiaWypuszczenie: 0.31,
@@ -248,6 +257,11 @@ export class Ludzik3D {
   private zamrozDo = -Infinity;
   /** The blade's way through the air while it cuts (map px), read by walka/oprawa.ts for the trail. */
   readonly smuga: PunktSmugi[] = [];
+  /** Called on every footfall (two per walking cycle): footstep sounds and dust (GameScene). */
+  onKrok?: () => void;
+  private ostatniaFaza = 0;
+  private bylaSzybkosc = 0;
+  private rozped = 0;
   /** Is a blow being played now (for the trail's and the effects' timing). */
   get atakuje() { return !!this.cios; }
   /** Hit stop: the blow holds its pose for ms (never stacks). */
@@ -596,11 +610,38 @@ export class Ludzik3D {
     this.emitAttackSound();
     // A small bob per step (two per walking cycle), in sheet pixels.
     const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
-    g.model.position.set(0, (Math.abs(Math.sin(faza * Math.PI * 2)) * LUDZIK_3D.podskokPx * LUDZIK_3D.gestosc) / g.jednostkaPx, 0);
+    // Share of the hero's base speed (1 = walking at 70 km/h, the run look comes in with it).
+    const baza = (this.scene as Phaser.Scene & { player?: Player }).player?.speed ?? 37;
+    const szyb = Math.min(1.3, Math.sqrt(v2) / Math.max(1, baza));
+    // A start or a stop leans the body a moment (a quick change of speed), easing back.
+    this.rozped += (Math.min(1, Math.abs(szyb - this.bylaSzybkosc) * 4) - this.rozped) * Math.min(1, s * 6);
+    this.rozped *= Math.exp(-s * 5);
+    this.bylaSzybkosc = szyb;
+    const podskok = LUDZIK_3D.podskokPx + (LUDZIK_3D.biegPodskokPx - LUDZIK_3D.podskokPx) * Math.min(1, szyb);
+    g.model.position.set(0, (Math.abs(Math.sin(faza * Math.PI * 2)) * podskok * LUDZIK_3D.gestosc) / g.jednostkaPx, 0);
+    // Footfalls: the walking cycle crosses 0 and ½.
+    if (g.chodNogi.isRunning()) {
+      if (Math.floor(faza * 2) !== Math.floor(this.ostatniaFaza * 2)) this.onKrok?.();
+      this.ostatniaFaza = faza;
+    }
+    let oddechKrok = -1;
     if (this.cios) this.ruchCiosu(g, this.cios);
+    else {
+      const pos = (n: string) => g.model.getObjectByName(n)?.position.clone() ?? new g.three.Vector3();
+      const biodra = pos('thighL').add(pos('thighR')).multiplyScalar(0.5);
+      const gora = ['core', 'head', 'upperL', 'foreL', 'handL', 'upperR', 'foreR', 'handR', 'WeaponMesh', 'BowStringTop', 'BowStringBottom'];
+      let pochyl = LUDZIK_3D.biegPochylenie * Math.min(1, szyb) + LUDZIK_3D.rozpedPochylenie * this.rozped;
+      if (!idzie) {
+        // Breathing in a few steps (each step is a new picture; a smooth breath would redraw all the time).
+        const n = LUDZIK_3D.oddechKrokow;
+        oddechKrok = Math.floor(((performance.now() / 1000 / LUDZIK_3D.oddechS) % 1) * n);
+        pochyl += LUDZIK_3D.oddech * Math.sin((oddechKrok / n) * Math.PI * 2);
+      }
+      this.obroc(g, gora, new g.three.Vector3(1, 0, 0), pochyl, biodra);
+    }
     // A new picture only when it would look different (turned, a step further, a blow), at most klatekNaS a second;
     // standing still nothing is drawn at all.
-    const podpis = `${this.equipmentKey}|${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${this.cios ? `${this.cios.wariant}:${Math.round(this.cios.p * 60)}` : '-'}|${atakuje}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
+    const podpis = `${this.equipmentKey}|${Math.round(this.kat * 40)}|${g.chodNogi.isRunning() ? Math.round(g.chodNogi.time * 24) : '-'}|${g.chodGora.isRunning() ? Math.round(g.chodGora.time * 24) : '-'}|${this.cios ? `${this.cios.wariant}:${Math.round(this.cios.p * 60)}` : '-'}|${atakuje}|${oddechKrok}|${Math.round(this.rozped * 8)}|${this.swiatla?.amb.intensity}|${this.swiatla?.sun.intensity}`;
     this.odKlatki += s;
     const naS = atakuje ? LUDZIK_3D.klatekNaSWAtaku : LUDZIK_3D.klatekNaS;
     if (podpis !== this.podpis && (this.odKlatki >= 1 / naS || !this.pokazany)) {

@@ -50,7 +50,7 @@ export class Player extends Phaser.GameObjects.Sprite {
   boost = 0;
   reach = 1;
   private invulnerableUntil = 0;
-  private stunnedUntil = 0;
+  stunnedUntil = 0;
 
   /** `texture`/`anim`: the player's own drawn hero ('hero-me' / 'me'), or the default one. */
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string = TEX.hero, private anim = 'hero') {

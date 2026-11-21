@@ -27,6 +27,10 @@ export const COMBAT_SOUNDS = {
   'death-kosci': { variants: 2, cue: 0, gain: .5, synth: true },
   'death-magia': { variants: 2, cue: 0, gain: .45, synth: true },
   'death-metal': { variants: 2, cue: 0, gain: .45, synth: true },
+  'krok-twardy': { variants: 3, cue: 0, gain: .16, synth: true },
+  'krok-miekki': { variants: 3, cue: 0, gain: .18, synth: true },
+  'krok-piasek': { variants: 3, cue: 0, gain: .16, synth: true },
+  'krok-bloto': { variants: 3, cue: 0, gain: .18, synth: true },
 } as const;
 export type CombatSound = keyof typeof COMBAT_SOUNDS;
 export const meleeSound = (weapon: string | null | undefined, strong: boolean): CombatSound =>

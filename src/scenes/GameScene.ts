@@ -181,6 +181,11 @@ import { ustawZasobyHud, ustawInterakcjeHud } from '../ui/hudLive';
 import { comicHud } from '../ui/comicHud';
 import { comicBurst } from '../ui/comicBurst';
 import { OprawaWalki, kolorySmugi } from '../walka/oprawa';
+import { DynamikaRuchu } from '../ruch';
+
+/** Footstep sound and dust colour by the ground under the boots (src/ruch.ts, audio/syntezaWalki.ts). */
+const DZWIEK_KROKU = { asfalt: 'krok-twardy', sciezka: 'krok-miekki', trawa: 'krok-miekki', las: 'krok-miekki', piasek: 'krok-piasek', bloto: 'krok-bloto', brod: 'krok-bloto' } as const;
+const KOLOR_KURZU = { asfalt: 0xb9b2a4, sciezka: 0xc8b49a, trawa: 0xa9b184, las: 0x9c8a66, piasek: 0xe0cc98, bloto: 0x6e5a3c, brod: 0x8fa8b0 } as const;
 import type { CombatSound } from '../audio/combatCatalog';
 import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
 
@@ -426,6 +431,8 @@ export class GameScene extends Phaser.Scene {
   private ludzik3d?: Ludzik3D;
   /** Combat presentation: sparks, trails, hit stop, shake, contact and fall sounds (walka/oprawa.ts). */
   private oprawa?: OprawaWalki;
+  /** Movement feel: run-up/braking, look-ahead camera, dust, footsteps (src/ruch.ts). */
+  private ruch?: DynamikaRuchu;
   private stwory3d?: Stwory3D;
   private enemies: Enemy[] = [];
   private pickups: Phaser.GameObjects.Image[] = [];
@@ -669,6 +676,18 @@ export class GameScene extends Phaser.Scene {
       dzwiek: (id, g = 1) => { this.combatAudio.at(id as CombatSound, 0, () => !this.leaving, g); },
       odBohatera: (t) => !!t.fx.bohater,
     });
+    this.ruch = new DynamikaRuchu(this, {
+      kurz: (x, y, kat, sila) => this.oprawa?.kurz(x, y, kat, sila, KOLOR_KURZU[this.city.surfaceAt(x, y)]),
+      kameraWolna: () => !this.loch && !this.walka?.aktywna && !artilleryTransit.active,
+    });
+    if (this.ludzik3d) this.ludzik3d.onKrok = () => {
+      const p = this.player, v = Math.hypot(p.vel.x, p.vel.y);
+      if (v < p.speed * 0.3) return;
+      const pod = this.city.surfaceAt(p.x, p.y);
+      this.combatAudio.at(DZWIEK_KROKU[pod], 0, () => !this.leaving && !p.isDead);
+      // A running step kicks up a little dust on soft ground.
+      if (pod !== 'asfalt' && v > p.speed * 0.8) this.oprawa?.kurz(p.x, p.y + 3, Math.atan2(-p.vel.y, -p.vel.x), 0.35, KOLOR_KURZU[pod]);
+    };
     this.player.hp = session.hp;
     Slime.tempo = session.level.tempo;
     this.npcs = new Npcs(this, this.city, today());
@@ -1362,9 +1381,11 @@ export class GameScene extends Phaser.Scene {
       if (this.stany.zatrucie) this.player.vel.scale(ATAKI_SMOKA.dym.spowolnienie); // a dragon's poison slows the walk
       if (now < this.spowolnienieDo) this.player.vel.scale(this.spowolnienie); // the boss's stomp (StworAI)
     }
+    this.ruch?.wygladz(this.player, dt, now);
     const bx = this.player.x;
     const by = this.player.y;
     this.moveActor(this.player, dt);
+    this.ruch?.kamera(this.player, dt);
     session.stats.m += Math.hypot(this.player.x - bx, this.player.y - by) / PX_PER_M;
     const podZiemia = !!this.loch;
     if (!podZiemia) this.story.update(dt, this.player.x !== bx || this.player.y !== by);

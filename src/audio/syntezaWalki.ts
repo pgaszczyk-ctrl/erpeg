@@ -119,6 +119,23 @@ const PRZEPISY: Record<string, { dl: number; gen: (sr: number, v: number) => Gen
     const n = szum(113 + v), hp = filtr('hp', 3000, 0.7, sr), a = slizg(520 + v * 30, 500, 1, sr), b = slizg(1310, 1290, 1, sr), c = slizg(2210, 2190, 1, sr);
     return (t) => (a(t) + b(t) * 0.6 + c(t) * 0.4) * obw(t, 0.001, 0.12) * 0.35 + hp(n()) * Math.sin(Math.PI * Math.min(1, Math.max(0, t - 0.05) / 0.5)) * 0.35;
   } },
+  // Footsteps (owner, 21 Nov 2026): quiet, short, by the ground under the boots.
+  'krok-twardy': { dl: 0.09, gen: (sr, v) => {
+    const n = szum(131 + v), bp = filtr('bp', 1500 + v * 250, 1.6, sr), th = slizg(130 + v * 10, 90, 0.03, sr);
+    return (t) => bp(n()) * obw(t, 0.001, 0.014) * 1.3 + th(t) * obw(t, 0.002, 0.025) * 0.5;
+  } },
+  'krok-miekki': { dl: 0.12, gen: (sr, v) => {
+    const n = szum(141 + v), lp = filtr('lp', 650 + v * 90, 0.8, sr), bp = filtr('bp', 2600, 1.2, sr);
+    return (t) => lp(n()) * obw(t, 0.004, 0.035) * 1.6 + bp(n()) * obw(t - 0.01, 0.003, 0.02) * 0.35;
+  } },
+  'krok-piasek': { dl: 0.14, gen: (sr, v) => {
+    const n = szum(151 + v), hp = filtr('hp', 2800 + v * 300, 0.8, sr), lp = filtr('lp', 500, 0.8, sr), los = szum(7 + v);
+    return (t) => hp(n()) * obw(t, 0.006, 0.05) * (0.6 + 0.4 * Math.abs(los())) + lp(n()) * obw(t, 0.003, 0.03) * 0.8;
+  } },
+  'krok-bloto': { dl: 0.16, gen: (sr, v) => {
+    const n = szum(161 + v), lp = filtr('lp', 420, 0.9, sr), sq = slizg(320 + v * 30, 140, 0.08, sr);
+    return (t) => lp(n()) * obw(t, 0.005, 0.05) * 1.5 + sq(t) * obw(t - 0.02, 0.01, 0.04) * 0.35;
+  } },
 };
 
 export const SYNTEZA = Object.keys(PRZEPISY);
