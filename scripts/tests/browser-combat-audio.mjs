@@ -36,7 +36,8 @@ for (const phone of [false,true]) {
  await page.goto('http://127.0.0.1:4173/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=1&mieszkancy3d=0#postac=Jam&kod=ANGELIKA');
  await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&window.__game.scene.getScene('game').ludzik3d?.widoczny&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
  if(phone)await page.locator('.hs-atak').tap();else await page.keyboard.press('Space');
- await page.waitForFunction(()=>window.__game.scene.getScene('game').combatAudio.ready===41,null,{timeout:30000});
+// 41 recorded files + 26 variants the game synthesises itself (audio/syntezaWalki.ts, 20 Nov 2026).
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').combatAudio.ready===67,null,{timeout:30000});
  await g(()=>{const s=window.__game.scene.getScene('game');s.player.x+=180;s.cameras.main.setZoom(4);});
  const reset=()=>g(()=>{const s=window.__game.scene.getScene('game');s.combatAudio.stop();
   for(const e of [...s.enemies]){s.wilki.get(e)?.destroy();s.wilki.delete(e);e.destroy();}s.enemies=[];for(const q of s.shots)q.sprite.destroy();s.shots=[];
@@ -98,6 +99,7 @@ for (const phone of [false,true]) {
   if(kind==='wilk'){
    for(const id of ['wolf-growl','wolf-leap','wolf-bite'])assert(result.sounds.some(s=>s.id===id));
    const jaw=result.sounds.find(s=>s.id==='wolf-bite'),frame=result.trace.find(t=>Number.isFinite(t.impact));
+   console.log('jaw vs impact ms',frame&&jaw.actionAt-frame.impact);
    assert(frame&&Math.abs(jaw.actionAt-frame.impact)<70,'jaw sound follows the rendered GLB impact clock');
   }
   enemyResults.push({kind,sounds:result.sounds});

@@ -218,9 +218,9 @@ export class OprawaWalki {
       if (c.t - a.t > 90) continue; // a gap (paused frame): no ribbon across it
       const w = 1 - (now - c.t) / OPRAWA.smugaMs;
       if (w <= 0) continue;
-      g.fillStyle(k.poswiata, 0.32 * w);
+      g.fillStyle(k.poswiata, 0.45 * w);
       g.fillPoints([new Phaser.Math.Vector2(a.ix, a.iy), new Phaser.Math.Vector2(a.x, a.y), new Phaser.Math.Vector2(c.x, c.y), new Phaser.Math.Vector2(c.ix, c.iy)], true);
-      g.lineStyle(1.1, k.ostrze, 0.85 * w);
+      g.lineStyle(1.4, k.ostrze, 0.95 * w);
       g.lineBetween(a.x, a.y, c.x, c.y);
     }
   }

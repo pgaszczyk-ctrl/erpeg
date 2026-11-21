@@ -99,7 +99,7 @@ type Gotowy = {
 };
 
 /** One blow being played (the clip is driven by hand: `p` 0 → 1 over `D` seconds). */
-type Cios = { rodzaj: 'miecz' | 'luk' | 'magia'; wariant: 0 | 1 | 2; p: number; D: number; gora: boolean };
+type Cios = { rodzaj: 'miecz' | 'luk' | 'magia'; wariant: 0 | 1 | 2; p: number; D: number; gora: boolean; kat: number };
 /** A point of the blade trail: blade tip and the blade's middle in map px, when, in front of the body or behind. */
 export type PunktSmugi = { x: number; y: number; ix: number; iy: number; t: number; przod: boolean };
 
@@ -275,7 +275,7 @@ export class Ludzik3D {
       const v = new three.Vector3(x, y, z);
       if (v.lengthSq() > d) { d = v.lengthSq(); czubek = v; }
     }
-    return { mesh, czubek, srodek: czubek.clone().multiplyScalar(0.4) };
+    return { mesh, czubek, srodek: czubek.clone().multiplyScalar(0.22) };
   }
   private attackSound?: { fn: (remainingMs: number) => void; leadMs: number };
   private baseHead?: THREE.BufferGeometry;
@@ -436,7 +436,7 @@ export class Ludzik3D {
     }
     const p0 = rodzaj === 'luk' ? LUDZIK_3D.lukStart : rodzaj === 'magia' ? LUDZIK_3D.magiaStart : 0;
     const gora = g.chodNogi.isRunning();
-    this.cios = { rodzaj, wariant, p: p0, D: dur / speed, gora };
+    this.cios = { rodzaj, wariant, p: p0, D: dur / speed, gora, kat: this.kat };
     this.smuga.length = 0;
     const a = gora ? g.atakGora : g.atak;
     a.reset().play();
@@ -552,8 +552,9 @@ export class Ludzik3D {
       if (mx * mx + my * my > 4 && mx * mx + my * my < 1e6) { vx = mx; vy = my; fx = mx; fy = my; }
     }
     const v2 = vx * vx + vy * vy;
-    // Turn towards the walking direction (screen down = towards the camera = model's +Z).
-    const cel = Math.atan2(fx, fy);
+    // Turn towards the walking direction (screen down = towards the camera = model's +Z); during a blow he keeps
+    // facing where he strikes (owner, 20 Nov 2026: the cut must go at the enemy, not where he last walked).
+    const cel = this.cios ? this.cios.kat : Math.atan2(fx, fy);
     let d = cel - this.kat;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     this.kat += d * (1 - Math.exp(-s * LUDZIK_3D.obrot));
