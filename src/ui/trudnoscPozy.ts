@@ -9,7 +9,10 @@ import { tx } from '../i18n';
 const S = (d: string, w = 5) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
 const G = (x: number, y: number, r: number) => `<circle cx="${x}" cy="${y}" r="${r}" fill="currentColor"/>`;
 
-/** 48×48 pictograms, ground at y 44, facing right. */
+/** Width/height of the cut masks public/ui/trudnosc/poza_<n>.png (scripts/trudnosc-pozy.py). */
+const PROPORCJE = [99 / 160, 104 / 160, 121 / 160, 138 / 160, 117 / 160];
+
+/** 48×48 pictograms (older code drawing, kept for pozaSvg), ground at y 44, facing right. */
 const POZY: string[] = [
   // Raczkujący maluch: big head, on hands and knees.
   G(35, 23, 5.5) + S('M13 29 L28 28', 8) + S('M27 30 L29 43', 4.5) + S('M14 30 L15 42 L6 42', 5),
@@ -35,26 +38,35 @@ function dodajStyl() {
   if (styl) return;
   styl = true;
   const s = document.createElement('style');
+  const url = (i: number) => `url("${import.meta.env.BASE_URL}ui/trudnosc/poza_${i}.png")`;
   s.textContent = `
-  .tr-os { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); margin: 6px 4px 2px; padding: 10px 0 22px;
-    touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
-  .tr-os:focus-visible { outline: 2px solid #f7c531; outline-offset: 1px; }
-  .tr-tor { position: absolute; left: 4%; right: 4%; bottom: 10px; height: 4px; background: #a77f3c;
-    box-shadow: 0 -2px 0 #1e1a24, 0 2px 0 #1e1a24, inset 0 1px 0 #e8cd8c; }
-  .tr-tor::after { content: ''; position: absolute; inset: 0; width: var(--pelne, 0%); background: #f7c531; transition: width .25s; }
-  .tr-ludzik { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; color: #c9a25a; opacity: .5;
-    transition: opacity .2s, color .2s, transform .25s; transform-origin: 50% 100%; }
-  .tr-ludzik svg { width: 100%; max-width: 50px; aspect-ratio: 1; display: block; }
-  .tr-ludzik span { font: 700 11px/1.1 'Alegreya Sans', sans-serif; white-space: nowrap; margin-top: 1px; }
-  .tr-ludzik.tr-za { opacity: .8; }
-  .tr-ludzik.tr-wybrany { opacity: 1; color: #ffd75e; transform: scale(1.18); filter: drop-shadow(0 0 6px rgba(255,200,80,.6)); }
-  .tr-ludzik:hover { opacity: .85; }
-  .tr-znacznik { position: absolute; bottom: 5px; width: 14px; height: 14px; margin-left: -7px; background: #ffd75e; transform: rotate(45deg);
-    box-shadow: -2px 0 0 #1e1a24, 2px 0 0 #1e1a24, 0 -2px 0 #1e1a24, 0 2px 0 #1e1a24; transition: left .25s cubic-bezier(.3,1.4,.6,1); }
+  .tr-os { position: relative; margin: 6px 0 2px; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer;
+    background: #0f0c08; border: 2px solid #b8893c; border-radius: 6px;
+    box-shadow: 0 0 0 2px #1e1a24, inset 0 0 0 1px #5a3b14; }
+  .tr-os:focus-visible { outline: 2px solid #f7c531; outline-offset: 3px; }
+  .tr-scena { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; height: 0; padding-bottom: 27%;
+    background: radial-gradient(ellipse at 50% 100%, #46230c, #2a1408 70%); border-radius: 4px 4px 0 0; border-bottom: 2px solid #d9a441; }
+  .tr-ludzik { position: absolute; bottom: 0; height: 82%; aspect-ratio: var(--ar); transform: translateX(-50%); transform-origin: 50% 100%;
+    background: #a8803f; -webkit-mask: var(--m) no-repeat bottom / contain; mask: var(--m) no-repeat bottom / contain;
+    transition: background-color .2s, filter .2s, transform .25s; }
+  .tr-ludzik.tr-za { background: #b88d45; }
+  .tr-ludzik.tr-wybrany { background: #ffcf4a; filter: drop-shadow(0 0 7px rgba(255, 196, 60, .85)); transform: translateX(-50%) scale(1.06); }
+  .tr-blask { position: absolute; bottom: 0; width: 22%; height: 100%; transform: translateX(-50%); pointer-events: none;
+    background: radial-gradient(ellipse at 50% 60%, rgba(255, 170, 40, .28), transparent 65%); transition: left .25s; }
+  .tr-dol { position: relative; height: 34px; }
+  .tr-tor { position: absolute; left: 8%; right: 8%; top: 15px; height: 3px; background: #6b4a1c; border-radius: 2px; }
+  .tr-tor::before, .tr-tor::after { content: ''; position: absolute; top: -3px; width: 7px; height: 7px; background: #c9953e; transform: rotate(45deg); }
+  .tr-tor::before { left: -9px; } .tr-tor::after { right: -9px; }
+  .tr-pelne { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#ffe08a, #d9a030); border-radius: 2px;
+    box-shadow: 0 0 6px rgba(255, 190, 60, .6); transition: width .25s; }
+  .tr-znacznik { position: absolute; top: 7px; width: 16px; height: 16px; margin-left: -8px; transform: rotate(45deg);
+    background: linear-gradient(135deg, #fff1b8, #f2b632 55%, #b77a17); border: 1px solid #6b4a12;
+    box-shadow: 0 0 10px 2px rgba(255, 200, 70, .7); transition: left .25s cubic-bezier(.3, 1.4, .6, 1); }
   .tr-opis { display: block; min-height: 2.4em; margin-top: 8px; }
-  .tr-okno .tr-os { margin: 14px 4px 4px; }
-  .tr-okno .m-box { max-width: 460px; }
-  @media (prefers-reduced-motion: reduce) { .tr-ludzik, .tr-znacznik, .tr-tor::after { transition: none; } }
+  .tr-okno .tr-os { margin: 14px 0 4px; }
+  .tr-okno .m-box { max-width: 480px; }
+  @media (prefers-reduced-motion: reduce) { .tr-ludzik, .tr-znacznik, .tr-pelne, .tr-blask { transition: none; } }
+  ${[0, 1, 2, 3, 4].map((i) => `.tr-ludzik.tr-p${i} { --m: ${url(i)}; --ar: ${PROPORCJE[i]}; }`).join('\n  ')}
   `;
   document.head.appendChild(s);
 }
@@ -77,19 +89,30 @@ export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, o
   box.setAttribute('aria-valuemin', '0');
   box.setAttribute('aria-valuemax', String(n - 1));
   if (opisId) box.setAttribute('aria-describedby', opisId);
-  const tor = document.createElement('div');
-  tor.className = 'tr-tor';
-  const znacznik = document.createElement('div');
-  znacznik.className = 'tr-znacznik';
+  const scena = document.createElement('div');
+  scena.className = 'tr-scena';
+  const blask = document.createElement('div');
+  blask.className = 'tr-blask';
+  scena.appendChild(blask);
   const ludziki = TRUDNOSCI.map((t, i) => {
     const d = document.createElement('div');
-    d.className = 'tr-ludzik';
-    d.innerHTML = `${pozaSvg(i)}<span></span>`;
-    d.querySelector('span')!.textContent = tx(t.nazwa, t.en);
-    box.appendChild(d);
+    d.className = `tr-ludzik tr-p${i}`;
+    d.style.left = `${((i + 0.5) / n) * 100}%`;
+    d.title = tx(t.nazwa, t.en);
+    scena.appendChild(d);
     return d;
   });
-  box.append(tor, znacznik);
+  const dol = document.createElement('div');
+  dol.className = 'tr-dol';
+  const tor = document.createElement('div');
+  tor.className = 'tr-tor';
+  const pelne = document.createElement('div');
+  pelne.className = 'tr-pelne';
+  tor.appendChild(pelne);
+  const znacznik = document.createElement('div');
+  znacznik.className = 'tr-znacznik';
+  dol.append(tor, znacznik);
+  box.append(scena, dol);
   let wybrany = -1;
   const srodek = (i: number) => ((i + 0.5) / n) * 100;
   const ustaw = (i: number) => {
@@ -100,8 +123,10 @@ export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, o
       d.classList.toggle('tr-wybrany', k === i);
       d.classList.toggle('tr-za', k < i);
     });
+    // the rail spans 8 %…92 % of the width; the marker sits under the figure
     znacznik.style.left = `${srodek(i)}%`;
-    box.style.setProperty('--pelne', `${((srodek(i) - 4) / 92) * 100}%`);
+    blask.style.left = `${srodek(i)}%`;
+    pelne.style.width = `${Math.max(0, ((srodek(i) - 8) / 84) * 100)}%`;
     box.setAttribute('aria-valuenow', String(i));
     box.setAttribute('aria-valuetext', tx(TRUDNOSCI[i].nazwa, TRUDNOSCI[i].en));
     onChange(i);
