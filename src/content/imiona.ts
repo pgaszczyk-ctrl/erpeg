@@ -21,9 +21,14 @@ export const IMIONA_FANTASY = [
 ];
 export const IMIONA = [...IMIONA_POLSKIE, ...IMIONA_ANGIELSKIE, ...IMIONA_FANTASY];
 
-/** Default name in the player's language (report #24: a Polish player got „Ivy”): Polish + fantasy for Polish, English + fantasy otherwise. */
-export function losoweImie(): string {
+/** Default name in the player's language (report #24: a Polish player got „Ivy”): Polish + fantasy for Polish, English + fantasy otherwise.
+ * With a gender: only the Polish/English lists, which alternate man, woman, man… (the fantasy ones are mixed). */
+export function losoweImie(plec?: 'k' | 'm'): string {
   const pl = lang === 'pl';
+  if (plec) {
+    const lista = (pl ? IMIONA_POLSKIE : IMIONA_ANGIELSKIE).filter((_, i) => (i % 2 === 1) === (plec === 'k'));
+    return lista[Math.floor(Math.random() * lista.length)];
+  }
   const lista = pl ? [...IMIONA_POLSKIE, ...IMIONA_POLSKIE, ...IMIONA_FANTASY] : [...IMIONA_ANGIELSKIE, ...IMIONA_FANTASY];
   return lista[Math.floor(Math.random() * lista.length)];
 }

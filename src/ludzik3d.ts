@@ -307,7 +307,7 @@ export class Ludzik3D {
     const g=this.g;
     // Every character gets the bow / wand poses (they used to come only with the recruit prologue's weapons).
     if(!g || this.changing || this.disposed)return;
-    const female=session.look.guard3d==='k';
+    const female=plec3d()==='k';
     const kind=item(gear.equip.bron)?.rodzaj ?? 'miecz';
     const hat=gear.equip.helm==='kapelusz_szkolny';
     const key=`${kind}:${hat}`;
@@ -357,7 +357,7 @@ export class Ludzik3D {
     try {
       const three = await import('three');
       const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-      const file=session.look.guard3d==='k' ? 'modele/postacie3d/01.glb' : LUDZIK_3D.plik;
+      const file=plec3d()==='k' ? 'modele/postacie3d/01.glb' : LUDZIK_3D.plik;
       const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL || '/'}${file}`);
       if(this.disposed)return;
       const n = LUDZIK_3D.ramka * LUDZIK_3D.gestosc;
@@ -759,4 +759,10 @@ export class Ludzik3D {
     this.laduje = false;
     if (this.scene.textures.exists(this.klucz)) this.scene.textures.remove(this.klucz);
   }
+}
+
+/** The hero's gender for the 3D model: the saved guard3d, else the modular look's gender (QR-demo characters made
+ * before 22 Nov 2026 had no guard3d and showed the man's model even as women). */
+function plec3d(): 'k' | 'm' {
+  return session.look.guard3d ?? session.look.modul?.p ?? 'm';
 }

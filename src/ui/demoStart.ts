@@ -10,7 +10,8 @@ import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
 import { sciezkaGry } from '../sciezka';
-import { randomModul, type ModulLook } from './modulPostac';
+import { randomModul } from './modulPostac';
+import { wyborPlci, BRAK_PLCI } from './wyborPlci';
 
 // The QR demo's own start screen (owner, 18 Oct 2026: many visitors from the flyers, nobody made a character):
 // only the name, and below it – optional – an account (e-mail or Google). The character is made at once
@@ -53,12 +54,13 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       location.href = `${location.origin}${sciezkaGry()}#wczytaj`;
     };
     const logo = logoImage(110, 'm-demo-logo');
-    // No look to pick: every hero starts as a young guard (owner, 27 Oct 2026).
-    const modul: ModulLook = randomModul(Math.random() < 0.5 ? 'k' : 'm');
+    // Every hero starts as a young guard; only the gender is picked (owner, 22 Nov 2026).
+    const plec = wyborPlci(name);
     box.append(
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),
       el('label', { className: 'm-field' }, [el('span', {}, ['Imię']), name, el('small', {}, ['Imienia nie można później zmienić.'])]),
+      plec.el,
       err, go, liniaRegulaminu(), konto, mam,
     );
     if (!document.getElementById('demo-start-css')) {
@@ -83,11 +85,13 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       err.textContent = '';
       const imie = name.value.trim();
       if (imie.length < 2) { err.textContent = 'Imię musi mieć co najmniej 2 znaki.'; return; }
+      const p0 = plec.plec();
+      if (!p0) { err.textContent = BRAK_PLCI(); return; }
       go.disabled = true;
       const label = go.textContent;
       go.textContent = 'Chwileczkę…';
       try {
-        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), ...(modul ? { modul } : {}) };
+        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0 };
         const p = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
         const r = await api.createCharacter(imie, PO_DEMO_START.nazwa, p.x, p.y, PX_PER_M, TRUDNOSCI[DOMYSLNA_TRUDNOSC].wiek, look);
         rememberTestLook(look, r.player.name);

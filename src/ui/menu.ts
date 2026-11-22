@@ -20,6 +20,7 @@ import { showLoginMap, beginMapIntro } from './loadingMap';
 import { przedWejsciem, anulujWejscie } from './poziomo';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
+import { wyborPlci, BRAK_PLCI } from './wyborPlci';
 import { losoweImie } from '../content/imiona';
 import { przygotujMiasta, znajdzMiejsceStartu, type MiejsceStartu } from '../miastaStartu';
 import { getMap, nameWorldMap } from '../travel';
@@ -163,6 +164,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       // A ready name (owner, 8 Nov 2026): the player may keep it or type their own.
       name.value = losoweImie();
       name.addEventListener('focus', () => name.select(), { once: true });
+      const plec = wyborPlci(name);
       const start = input({ placeholder: tx('np. Zamkowa 9, Lublin albo Paryż', 'e.g. Zamkowa 9, Lublin or Paris') });
       przygotujMiasta();
       // "📍": the phone's location as the start, if the game has a map of it.
@@ -242,6 +244,10 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       const go: HTMLButtonElement = button('Stwórz postać', () =>
         busy(go, err, async () => {
           if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
+          const p0 = plec.plec();
+          if (!p0) throw new Error(BRAK_PLCI());
+          // Every hero starts as a young guard; the gender is the player's (owner, 22 Nov 2026), the rest is drawn.
+          const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0 };
           const place = poDemo ? PO_DEMO_START.nazwa : start.value.trim() || DEFAULT_START;
           let p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? (geoSwiat ? null : city.findAnyStart(place, DEFAULT_START));
           let gdzie: MiejsceStartu | null = poDemo ? null : geoSwiat;
@@ -267,13 +273,10 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           // the HUD portrait reminds about it, the device remembers the character).
           await play(r, gdzie);
         }), 'm-primary');
-      // Every hero starts as a young guard (owner, 27 Oct 2026: „usuń wybór ludzików, obecnie jest tylko strażnik”;
-      // the story of the hero's growth comes later): the look is drawn at random, nothing to choose here.
-      const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(Math.random() < 0.5 ? 'k' : 'm') };
-      look.guard3d = look.modul!.p;
       screen(
         el('h2', {}, ['Nowa postać']),
         field('Imię', name, '⚠ Imienia nie można później zmienić.'),
+        plec.el,
         // After the demo the adventure starts in front of Targi Lublin: no address to choose (owner 7.10.2026).
         poDemo
           ? el('div', { className: 'm-field' }, [el('span', {}, ['Start przygody']), el('small', {}, [`🏛 ${PO_DEMO_START.nazwa}`])])
