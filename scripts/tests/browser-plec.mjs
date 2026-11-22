@@ -41,6 +41,7 @@ try {
     await box.getByRole('radio', { name: /Kobieta/ }).click();
     assert(KOBIETY.includes(await imie.inputValue()), `name ${await imie.inputValue()}`);
     assert.equal(await box.getByRole('radio', { name: /Kobieta/ }).getAttribute('aria-checked'), 'true');
+    assert.equal(await page.getByText('Wybierz płeć postaci.').count(), 0, 'message left after choosing');
     await page.screenshot({ path: `work/plec/${nazwa}-${telefon ? 'telefon' : 'komputer'}.png` });
     await wyslij.click();
     await page.getByText('test: bez tworzenia').waitFor();

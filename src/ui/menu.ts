@@ -231,6 +231,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       };
       showLevel();
       const err = error();
+      plec.el.addEventListener('click', () => { if (err.textContent === BRAK_PLCI()) err.textContent = ''; });
       // Optionally assigned to the player's account (then loaded from a list, no code needed).
       const linkBox = el('div', { className: 'm-field' });
       const linkCheck = el('input', { type: 'checkbox', checked: true });

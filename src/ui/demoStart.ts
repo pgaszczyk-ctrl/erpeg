@@ -56,6 +56,7 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
     const logo = logoImage(110, 'm-demo-logo');
     // Every hero starts as a young guard; only the gender is picked (owner, 22 Nov 2026).
     const plec = wyborPlci(name);
+    plec.el.addEventListener('click', () => { if (err.textContent === BRAK_PLCI()) err.textContent = ''; });
     box.append(
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),
