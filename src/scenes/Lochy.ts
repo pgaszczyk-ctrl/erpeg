@@ -495,6 +495,7 @@ export class LochWnetrze {
   private ciemno!: Phaser.GameObjects.Rectangle;
   private plomienie: { glow: Phaser.GameObjects.Image; fire: Phaser.GameObjects.Image; f: number }[] = [];
   private skrzyniaImg!: Phaser.GameObjects.Image;
+  private skrzyniaPuls!: Phaser.GameObjects.Image;
   private lokatorzy: Lokator[] = [];
   private zywi = new Map<unknown, number>();
   private stan: { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean };
@@ -724,6 +725,8 @@ export class LochWnetrze {
     // Skrzynia.
     const sk = this.skrzynia;
     this.skrzyniaImg = s.add.image(sk.x, sk.y + T * 0.4, 'loch-skrzynia', this.stan.skrzynia ? 'o' : 'z').setOrigin(0.5, 1).setScale(1 / D).setDepth(sk.y);
+    // A warm pulse round the chest while it can be opened (guardian beaten, not opened yet).
+    this.skrzyniaPuls = s.add.image(sk.x, sk.y + T * 0.1, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffc65a).setDisplaySize(T * 4.5, T * 3.4).setDepth(sk.y - 0.5).setVisible(false);
     // Pochodnie na licach ścian.
     for (const q of p.pochodnie) {
       const at = this.px(q.x, q.y);
@@ -831,10 +834,25 @@ export class LochWnetrze {
     return null;
   }
 
-  otworzSkrzynie() {
+  otworzSkrzynie(anim = false) {
     this.stan.skrzynia = true;
     if (this.h.progress) this.h.progress.chest = true;
-    this.skrzyniaImg.setFrame('o');
+    const img = this.skrzyniaImg, s = img.scene, sc = 1 / D;
+    if (!anim) { img.setFrame('o'); this.skrzyniaPuls.setVisible(false); return; }
+    // Shakes, squashes and bursts open with a flash (owner, 22 Nov 2026: „z animacją, dźwiękiem, pulsowaniem”).
+    const x0 = img.x;
+    s.tweens.add({ targets: img, x: { from: x0 - 0.8, to: x0 + 0.8 }, duration: 45, yoyo: true, repeat: 4, onComplete: () => {
+      img.setX(x0);
+      s.tweens.add({ targets: img, scaleY: sc * 0.82, scaleX: sc * 1.12, duration: 90, yoyo: true, onYoyo: () => img.setFrame('o'), onComplete: () => img.setScale(sc) });
+      const ring = s.add.image(img.x, img.y - this.plan.T * 0.5, 'lup-pierscien').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffd27a).setDepth(img.depth + 1).setScale(0.2);
+      s.tweens.add({ targets: ring, scale: 1.1, alpha: 0, duration: 520, ease: 'Cubic.Out', onComplete: () => ring.destroy() });
+      s.tweens.add({ targets: this.skrzyniaPuls, alpha: { from: 1, to: 0 }, duration: 900, onComplete: () => this.skrzyniaPuls.setVisible(false) });
+    } });
+  }
+
+  /** Where the chest's things come out from (its open lid). */
+  get wylotSkrzyni() {
+    return { x: this.skrzyniaImg.x, y: this.skrzyniaImg.y - this.plan.T * 0.6 };
   }
 
   /** `znane`: the fog of war knows this spot (an unexplored room's torch doesn't shine through the dark). */
@@ -849,6 +867,19 @@ export class LochWnetrze {
       const m = 0.5 * Math.sin(t * 7.1 + q.f) + 0.3 * Math.sin(t * 13.3 + q.f * 2) + (Math.random() - 0.5) * 0.3;
       q.glow.setAlpha(0.42 + m * 0.1);
       q.fire.setScale((1 / D) * (1 + m * 0.04), (1 / D) * (1 + m * 0.08));
+    }
+    {
+      const czeka = !this.stan.skrzynia && !this.skrzyniaPilnowana() && !this.skrzyniaPuls.scene.tweens.isTweening(this.skrzyniaPuls);
+      if (czeka) {
+        const k = this.skrzynia;
+        const widac = k.x > v.x - 40 && k.x < v.right + 40 && k.y > v.y - 40 && k.y < v.bottom + 40 && znane(k.x, k.y);
+        this.skrzyniaPuls.setVisible(widac);
+        if (widac) {
+          const p = 0.5 + 0.5 * Math.sin(t * 4.2);
+          this.skrzyniaPuls.setAlpha(0.35 + 0.45 * p);
+          this.skrzyniaImg.setScale((1 / D) * (1 + 0.04 * p));
+        }
+      } else if (!this.stan.skrzynia) this.skrzyniaPuls.setVisible(false);
     }
     if (!this.ostrzegl && this.skrzyniaPilnowana()) {
       const k = this.skrzynia;

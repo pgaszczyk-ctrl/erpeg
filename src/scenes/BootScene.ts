@@ -60,6 +60,8 @@ export class BootScene extends Phaser.Scene {
     this.load.image('szlam-szczegolowy', 'proby31/szlam_wodny.png');
     // Item pictures (16×16 pixel art) for shop dialogs.
     for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, bootImageUrl(phaserItemUrl(id)));
+    // A potion lying on the ground (loot pops out instead of going straight to the purse).
+    this.load.image('item-mikstura', bootImageUrl(phaserItemUrl('mikstura')));
     // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
     this.load.spritesheet('szklo-peka', bootImageUrl('items/szklany_miecz_peka.png'), { frameWidth: 64, frameHeight: 64 });
     loadHdSprites(this);
