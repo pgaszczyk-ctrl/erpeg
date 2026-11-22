@@ -22,9 +22,9 @@ for(const [id,expected] of [['skorzana_zbroja',[5,6,7,8,10]],['skorzany_helm',[2
  assert.deepEqual(pancerze().filter(p=>p.baza===id).map(p=>p.moc),expected);
  assert(lupOpcje().some(o=>o.id===`los_${id}`&&o.grupa==='Pancerze — losowa jakość'));
  for(let q=0;q<5;q++){
-  ustawStwory({wilk:{lup:[{co:`los_${id}`,ile:1,szansa:100}]}});
+  ustawStwory({bandyta:{lup:[{co:`los_${id}`,ile:1,szansa:100}]}});
   const roll=[0,[.1,.3,.5,.8,.99][q]];
-  const out=losujLup('wilk',()=>roll.shift());
+  const out=losujLup('bandyta',()=>roll.shift());
   assert.equal(inv.item(out[0].co).moc,expected[q]);
  }
 }

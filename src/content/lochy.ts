@@ -133,6 +133,12 @@ export const PUKANIE = {
   otwartaM: 6,
 };
 
+/**
+ * Skrzynia skarbu (właściciel, 22.11.2026: „z niej też musi wyskakiwać coś z animacją, a nie w dialogu”): poza złotem,
+ * EXP-em i miksturą czasem przedmiot z jakością lepszą niż z potworów (procenty: kiepski … mistrzowski).
+ */
+export const SKRZYNIA_LUP = { przedmiot: 0.75, drugi: 0.2, jakosci: [4, 16, 36, 30, 14] as const };
+
 export const LOCH_TEKSTY = {
   get schodze() { return tx('🕯 Schodzę', '🕯 Go down'); },
   get nieTeraz() { return tx('Nie teraz', 'Not now'); },
