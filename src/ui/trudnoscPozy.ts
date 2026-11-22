@@ -1,37 +1,14 @@
 /**
- * Difficulty as poses (owner, 22 Nov 2026: „raczkujący, idący, bieg, paker”): five code-drawn pictogram silhouettes
+ * Difficulty as poses (owner, 22 Nov 2026: „raczkujący, idący, bieg, paker”): five silhouettes
  * on one axis, used instead of the slider in the new-character form and in the in-game difficulty window.
- * Placeholders like road-sign pictograms until the artist draws them.
+ * The silhouettes are cut from the owner's mock-up by scripts/trudnosc-pozy.py; colour comes from CSS masks.
  */
 import { TRUDNOSCI, WYBOR_TRUDNOSCI } from '../content/trudnosc';
 import { tx } from '../i18n';
-
-const S = (d: string, w = 5) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
-const G = (x: number, y: number, r: number) => `<circle cx="${x}" cy="${y}" r="${r}" fill="currentColor"/>`;
+import { naEkranie } from '../obrot';
 
 /** Width/height of the cut masks public/ui/trudnosc/poza_<n>.png (scripts/trudnosc-pozy.py). */
 const PROPORCJE = [99 / 160, 104 / 160, 121 / 160, 138 / 160, 117 / 160];
-
-/** 48×48 pictograms (older code drawing, kept for pozaSvg), ground at y 44, facing right. */
-const POZY: string[] = [
-  // Raczkujący maluch: big head, on hands and knees.
-  G(35, 23, 5.5) + S('M13 29 L28 28', 8) + S('M27 30 L29 43', 4.5) + S('M14 30 L15 42 L6 42', 5),
-  // Pierwsze kroki: chubby toddler, arms up for balance, legs wide.
-  G(24, 12, 5.5) + S('M24 19 L24 30', 8) + S('M23 22 L16 15 M25 22 L32 15', 4.5) + S('M23 30 L18 43 M25 30 L30 43', 5),
-  // Idzie spokojnie.
-  G(24, 8, 4.5) + S('M24 14 L23 28', 6) + S('M24 17 L29 22 L31 27 M24 17 L19 23 L18 28', 3.5) + S('M23 28 L27 35 L30 43 M23 28 L20 36 L17 43', 5),
-  // Biegnie: leaning forward, long stride.
-  G(30, 8, 4.5) + S('M28 14 L21 26', 6) + S('M27 17 L33 22 L37 17 M27 17 L20 20 L16 25', 4) + S('M21 26 L30 30 L31 39 M21 26 L15 34 L6 34', 5),
-  // Paker: wide shoulders, double biceps.
-  G(24, 8, 4.5) +
-    '<path d="M13 15 L35 15 L29 31 L19 31 Z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
-    S('M14 16 L7 17 L8 7 M34 16 L41 17 L40 7', 5) + G(10, 13, 3.6) + G(38, 13, 3.6) +
-    S('M21 31 L17 43 M27 31 L31 43', 6),
-];
-
-export function pozaSvg(i: number) {
-  return `<svg viewBox="0 0 48 48" aria-hidden="true">${POZY[i] ?? ''}</svg>`;
-}
 
 let styl = false;
 function dodajStyl() {
@@ -63,8 +40,15 @@ function dodajStyl() {
     background: linear-gradient(135deg, #fff1b8, #f2b632 55%, #b77a17); border: 1px solid #6b4a12;
     box-shadow: 0 0 10px 2px rgba(255, 200, 70, .7); transition: left .25s cubic-bezier(.3, 1.4, .6, 1); }
   .tr-opis { display: block; min-height: 2.4em; margin-top: 8px; }
-  .tr-okno .tr-os { margin: 14px 0 4px; }
+  .tr-okno .tr-os { margin: 14px 0 4px; width: 100%; box-sizing: border-box; }
   .tr-okno .m-box { max-width: 480px; }
+  .tr-okno.tr-niskie .m-box { max-width: 560px; padding-top: 10px; padding-bottom: 10px; overflow-y: auto; }
+  .tr-okno.tr-niskie h2 { margin: 0 0 2px; font-size: 18px; }
+  .tr-okno.tr-niskie p { margin: 0; font-size: 13px; }
+  .tr-okno.tr-niskie .tr-os { margin: 8px auto 2px; width: 100%; max-width: 360px; align-self: center; }
+  .tr-okno.tr-niskie .tr-opis { min-height: 0; margin-top: 4px; }
+  .tr-okno.tr-niskie .tr-przyciski { display: flex; gap: 8px; margin-top: 6px; }
+  .tr-okno.tr-niskie .tr-przyciski .m-btn { flex: 1; margin: 0; padding-top: 8px; padding-bottom: 8px; }
   @media (prefers-reduced-motion: reduce) { .tr-ludzik, .tr-znacznik, .tr-pelne, .tr-blask { transition: none; } }
   ${[0, 1, 2, 3, 4].map((i) => `.tr-ludzik.tr-p${i} { --m: ${url(i)}; --ar: ${PROPORCJE[i]}; }`).join('\n  ')}
   `;
@@ -131,18 +115,20 @@ export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, o
     box.setAttribute('aria-valuetext', tx(TRUDNOSCI[i].nazwa, TRUDNOSCI[i].en));
     onChange(i);
   };
-  const zPunktu = (x: number) => {
+  // On an upright phone in live mode the whole page is turned (obrot.ts): map the touch and the box's corners back.
+  const zPunktu = (cx: number, cy: number) => {
     const r = box.getBoundingClientRect();
-    return Math.floor(((x - r.left) / r.width) * n);
+    const p = naEkranie(cx, cy), a = naEkranie(r.left, r.top), b = naEkranie(r.right, r.bottom);
+    const lewo = Math.min(a.x, b.x), szer = Math.abs(b.x - a.x) || 1;
+    return Math.floor(((p.x - lewo) / szer) * n);
   };
   let ciagnie = false;
   box.onpointerdown = (e) => {
     ciagnie = true;
     box.setPointerCapture?.(e.pointerId);
-    ustaw(zPunktu(e.clientX));
-    box.focus();
+    ustaw(zPunktu(e.clientX, e.clientY));
   };
-  box.onpointermove = (e) => { if (ciagnie) ustaw(zPunktu(e.clientX)); };
+  box.onpointermove = (e) => { if (ciagnie) ustaw(zPunktu(e.clientX, e.clientY)); };
   box.onpointerup = box.onpointercancel = () => { ciagnie = false; };
   box.onkeydown = (e) => {
     const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0;
@@ -190,6 +176,7 @@ export function oknoTrudnosci(o: { tekst: string; teraz: number; pierwszy: boole
       ok.textContent = i === o.teraz ? (o.pierwszy ? `Zostaję przy: ${TRUDNOSCI[i].nazwa}` : 'Bez zmian') : `Wybieram: ${TRUDNOSCI[i].nazwa}`;
     }, opis.id);
     const koniec = (i: number) => {
+      window.removeEventListener('resize', dopasuj);
       overlay.remove();
       done(i);
     };
@@ -208,7 +195,17 @@ export function oknoTrudnosci(o: { tekst: string; teraz: number; pierwszy: boole
       if (e.key === 'Escape') { e.preventDefault(); koniec(o.pierwszy ? o.teraz : -1); }
       if (e.key === 'Enter' && document.activeElement?.classList.contains('tr-os')) { e.preventDefault(); ok.click(); }
     };
-    panel.append(h, p, kafle.el, opis, ...przyciski);
+    const rzad = document.createElement('div');
+    rzad.className = 'tr-przyciski';
+    rzad.append(...przyciski);
+    panel.append(h, p, kafle.el, opis, rzad);
+    // Low screens (a phone sideways, also the turned page – CSS media queries see the upright screen): compact.
+    const dopasuj = () => {
+      overlay.classList.toggle('tr-niskie', window.innerHeight < 560);
+      panel.style.maxHeight = `${window.innerHeight - 12}px`;
+    };
+    dopasuj();
+    window.addEventListener('resize', dopasuj);
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
     kafle.el.focus();
