@@ -179,23 +179,34 @@ try {
   await page.waitForTimeout(1200);
   await page.screenshot({ path: `work/lochy-${tag}-skrzynia.png` });
   await page.keyboard.press('KeyE');
-  await page.waitForFunction(() => window.__dialogi.some((d) => /Skrzynia/.test(d.title)), null, { timeout: 10000 }).catch(async () => {
+  // No dialog any more: the chest bursts open and its treasure pops out onto the floor (owner, 22 Nov 2026).
+  await page.waitForFunction(() => window.__session.stats.lochy === 1, null, { timeout: 10000 }).catch(async () => {
     console.log('diagnoza', JSON.stringify(await g(() => { const s = window.__game.scene.getScene('game'); const h = s.player.hitPoint(); return { toasty: window.__toasty, przy: s.loch.przy(h.x, h.y), hp: [h.x, h.y], gracz: [s.player.x, s.player.y], sk: s.loch.skrzynia, pow: s.loch.skrzyniaPowod(), aktywna: window.__game.scene.isActive('game'), ui: window.__game.scene.getScene('ui').hasDialog }; })));
     throw new Error('skrzynia się nie otworzyła');
   });
-  const nagroda = await g(() => window.__dialogi.at(-1).text);
-  console.log('skrzynia', JSON.stringify(nagroda));
-  await wybierz(0);
+  assert(!(await g(() => window.__dialogi.some((d) => /Skrzynia|Chest/.test(d.title)))), 'the chest opens without a dialog');
+  await page.waitForTimeout(700);
+  await page.screenshot({ path: `work/lochy-${tag}-skrzynia-wybuch.png` });
+  await page.waitForTimeout(1300);
+  const lup = await g(() => window.__game.scene.getScene('game').pickups.filter((i) => i.getData('lup')).map((i) => i.getData('kind')));
+  console.log('ze skrzyni', JSON.stringify(lup));
+  assert(lup.some((k) => k === 'coin'), 'gold nuggets lie in front of the chest');
+  // Walk over every piece (the magnet pulls the near ones by itself).
+  for (let i = 0; i < 12; i++) {
+    const left = await g(() => { const s = window.__game.scene.getScene('game'); const p = s.pickups.find((i) => i.getData('lup') && !i.getData('warned')); if (p) s.player.setPosition(p.x, p.y - 4); return !!p; });
+    if (!left) break;
+    await page.waitForTimeout(250);
+  }
   const coins1 = await g(() => window.__session.coins);
+  console.log('złoto', coins0, '→', coins1);
   assert(coins1 > coins0, 'gold from the chest');
-  assert.equal(await g(() => window.__session.stats.lochy), 1);
+  await page.waitForTimeout(1800); // the quiet save after the last piece
   await page.waitForTimeout(800);
   const tu = saves.at(-1)?.p_save?.tu ?? null;
   console.log('zapis w lochu → tu', JSON.stringify(tu));
   if (tu) assert(!String(tu.m).startsWith('loch:'), 'a save in a dungeon keeps the entrance on the surface');
 
   // 5. Cleared floor: return from the treasure room without walking to the stairs.
-  // The chest's dialog pauses the game for a moment after it closes; the button acts only in a running game.
   await page.waitForFunction(() => window.__game.scene.isActive('game'), null, { timeout: 10000 });
   await page.waitForTimeout(1000); // the button fades in
   await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).click();

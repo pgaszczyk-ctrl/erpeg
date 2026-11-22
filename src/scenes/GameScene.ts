@@ -1,7 +1,10 @@
+import { oknoTrudnosci } from '../ui/trudnoscPozy';
 import { PROFESJE, PROFESJA, profesja, type ProfesjaId } from '../content/profesje';
 import { czytelnaNazwa } from '../transliteracja';
 import { stanGry } from '../stanGry';
-import { pipe } from '../sfx';
+import { pipe, brzdek, upadekLupu, fanfaraLupu, skrzyniaOtwiera } from '../sfx';
+import { przygotujTekstury as przygotujLup, grudkaKlucz, podzielZloto, wyrzuc, miejsceObok, animujLup, pokazFx, dodajBlysk, dodajPoswiate, LUP_FX } from '../lup/lupFx';
+import { RZADKOSCI, rzadkoscPrzedmiotu } from '../content/rzadkosc';
 import { Zloza, type Zloze } from './Zloza';
 import { GORNICTWO } from '../content/sklepy';
 import { landingPanorama } from '../artillery/panorama';
@@ -122,12 +125,12 @@ import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
 import { idLochu, nazwyLochow, czytajIdLochu } from '../loch/mapa';
-import { LOCH, LOCHY, LOCH_TEKSTY } from '../content/lochy';
+import { LOCH, LOCHY, LOCH_TEKSTY, SKRZYNIA_LUP } from '../content/lochy';
 import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
 import { StworAI, type StworHost } from '../objects/StworAI';
 import { poPancerzu, losujPancerz } from '../content/pancerz';
 import { defense } from '../inventory';
-import { stwory, losujLup, losujJakosc } from '../content/stwory';
+import { stwory, losujLup, losujJakosc, ZWIERZETA } from '../content/stwory';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -1601,7 +1604,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.updatePosts(now);
     this.zabytki.update(this.player.x, this.player.y);
+    // Loot slides to the hero from a few metres (a light magnet), but only once it has landed.
+    animujLup(this.pickups, { x: this.player.x, y: this.player.y + 4 }, this.time.now, Math.min(0.05, delta / 1000), (i) => !i.getData('warned') && !this.player.isDead);
     for (const item of [...this.pickups]) {
+      if (this.time.now < ((item.getData('gotowyAt') as number | undefined) ?? 0)) continue;
       if (Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y + 4) < 10) this.collect(item);
     }
 
@@ -1735,6 +1741,7 @@ export class GameScene extends Phaser.Scene {
       const onScreen = i.x > v.x - 20 && i.x < v.right + 20 && i.y > v.y - 20 && i.y < v.bottom + 30;
       i.setVisible(onScreen && pointInPolygon(this.vision, i.x, i.y));
       (i.getData('glow') as Phaser.GameObjects.Image | undefined)?.setVisible(i.visible);
+      pokazFx(i, i.visible);
     }
   }
 
@@ -1935,7 +1942,7 @@ export class GameScene extends Phaser.Scene {
     if(this.loch) {
       const l=this.loch;
       add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
-      if(!out.some(t=>t.id==='prolog:chest'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
+      if(!out.some(t=>t.id==='prolog:chest')&&(this.city.loch?.tutorial||l.skrzyniaPowod()!=='pusta'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
     }
     for(const p of this.city.places) if(Math.abs(p.door.x-this.player.x)<74&&Math.abs(p.door.y-this.player.y)<74) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
     for(const r of this.missions) if(!r.m.postac&&missionAvailable(r.m))add(`mission:${r.m.id}`,r.door,'use',r.m.tytul,()=>this.openMissionDialog(r));
@@ -2543,8 +2550,16 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: 180, onComplete: () => g.destroy() });
   }
 
-  private dropFruit(x: number, y: number, fruit: Owoc) {
+  private dropFruit(x: number, y: number, fruit: Owoc, od?: { x: number; y: number }, opozn = 0) {
     const tex = GOODS_TEX[fruit];
+    if (od) {
+      // Loot from a creature: pops out of the body like gold.
+      przygotujLup(this);
+      const item = this.add.image(x, y, tex).setScale(artScale(tex)).setDepth(y);
+      item.setData('kind', `fruit:${fruit}`);
+      this.wyrzucLup(item, od, opozn, false);
+      return;
+    }
     const tx = x + (Math.random() - 0.5) * 16;
     const ty = y + 4 + Math.random() * 8;
     const item = this.add.image(x, y - 10, tex).setScale(artScale(tex)).setDepth(ty);
@@ -2589,14 +2604,10 @@ export class GameScene extends Phaser.Scene {
     if (wlozone) this.toast(`🐉 Łuska smocza ×${wlozone}${wlozone < n ? ' (plecak pełny)' : ''}`, 2500);
     const zloto = roll(L.zloto);
     if (zloto && x !== undefined && y !== undefined) {
-      const kupki = Math.min(5, zloto);
-      let left = zloto;
-      for (let i = 0; i < kupki; i++) {
-        const k = i === kupki - 1 ? left : Math.max(1, Math.round(left / (kupki - i)));
-        left -= k;
-        const a = (i / kupki) * Math.PI * 2;
-        this.dropPickup(x + Math.cos(a) * 10, y! + Math.sin(a) * 7, false, k);
-      }
+      podzielZloto(zloto).forEach((k, i) => {
+        const at = miejsceObok(x, y!, (px, py) => this.freeFeet(px, py), undefined, [8, 20]);
+        this.dropPickup(at.x, at.y, false, k, { x, y: y! - 6 }, 120 + i * 80);
+      });
     }
     if (L.exp) session.exp += L.exp;
     this.gearChanged();
@@ -2774,7 +2785,7 @@ export class GameScene extends Phaser.Scene {
     if (zPanelu) this.lupZPanelu(s.x, s.y, zPanelu);
     else {
       this.dropLoot(s.x, s.y, s.kindId);
-      if (live()) {
+      if (live() && !ZWIERZETA.has(s.kindId)) {
         const id = losujPancerz(Math.random, losujJakosc);
         if (id) this.lupZPanelu(s.x, s.y, [{ co: id, ile: 1 }]);
       }
@@ -3183,37 +3194,28 @@ export class GameScene extends Phaser.Scene {
   /** Loot rolled from the admin panel's table (each row on its own): gold and goods fall on the ground, the rest goes to the bag. */
   private lupZPanelu(x: number, y: number, lup: { co: string; ile: number }[]) {
     const notki: string[] = [];
-    let rzut = 0;
-    const obok = () => {
-      const a = (rzut++ * 2.4) % (Math.PI * 2);
-      return { x: x + Math.cos(a) * (6 + rzut * 2), y: y + Math.sin(a) * (4 + rzut) };
-    };
+    const od = { x, y: y - 4 };
+    // Everything pops out of the body one after another (owner, 22 Nov 2026: „animacja wyskakiwania po uderzeniu”).
+    let kolej = 0;
+    const opozn = () => 90 + (kolej++) * 70;
+    const obok = () => miejsceObok(x, y, (px, py) => this.freeFeet(px, py));
     for (const { co, ile } of lup) {
       if (co === 'zloto') {
-        const n = luckyCoins(ile);
-        const kupki = Math.min(5, n);
-        let left = n;
-        for (let i = 0; i < kupki; i++) {
-          const k = i === kupki - 1 ? left : Math.max(1, Math.round(left / (kupki - i)));
-          left -= k;
+        for (const k of podzielZloto(luckyCoins(ile))) {
           const at = obok();
-          this.dropPickup(at.x, at.y, false, k);
+          this.dropPickup(at.x, at.y, false, k, od, opozn());
         }
-      } else if (co === 'diament') {
-        session.diamenty += ile;
-        notki.push(`💎 ${ile}`);
-      } else if (co === 'mikstura') {
-        session.mikstury += ile;
-        notki.push(`🧪 ${ile}`);
+      } else if (co === 'diament' || co === 'mikstura') {
+        for (let i = 0; i < Math.min(ile, 5); i++) { const at = obok(); this.upuscRzecz(at.x, at.y, co, od, opozn()); }
       } else if (co === 'serce') {
         for (let i = 0; i < Math.min(ile, 6); i++) {
           const at = obok();
-          this.dropPickup(at.x, at.y, true);
+          this.dropPickup(at.x, at.y, true, 1, od, opozn());
         }
       } else if (co in OWOCE) {
         const f = co as Owoc;
         for (let i = 0; i < ile; i++) {
-          if (i < 8) this.dropFruit(x, y, f);
+          if (i < 8) { const at = obok(); this.dropFruit(at.x, at.y, f, od, opozn()); }
           else if (!addFruit(f)) break;
         }
       } else if (co in AMUNICJA) {
@@ -3222,18 +3224,8 @@ export class GameScene extends Phaser.Scene {
       } else {
         const it = PRZEDMIOTY.find((p) => p.id === co);
         if (!it) continue;
-        for (let i = 0; i < ile; i++) {
-          if (!addItem(co)) {
-            notki.push(`${it.nazwa} (plecak pełny!)`);
-            break;
-          }
-          if (i === 0) {
-            notki.push(`✨ ${it.nazwa}${ile > 1 ? ` ×${ile}` : ''}`);
-            // A rare find is seen and heard (report: the helmet dropped silently).
-            this.floatText(x, y - 18, `✨ ${it.nazwa.split(' — ')[0]}`, it.jakosc && it.jakosc >= 3 ? '#ffb347' : '#ffd76a', 2400);
-            pipe(880, 160); setTimeout(() => pipe(1320, 220), 120);
-          }
-        }
+        // Gear lies on the ground in its rarity's glow until the hero walks over it (it used to jump into the bag).
+        for (let i = 0; i < Math.min(ile, 4); i++) { const at = obok(); this.upuscPrzedmiot(at.x, at.y, co, od, opozn()); }
       }
     }
     if (notki.length) this.toast(`Łup: ${notki.join(', ')}`, 2800);
@@ -3927,28 +3919,93 @@ export class GameScene extends Phaser.Scene {
   private dropBossLoot(x: number, y: number) {
     const L = LUP_HERSZTA;
     const roll = ([a, b]: [number, number]) => a + Math.floor(Math.random() * (b - a + 1));
-    let coins = roll(L.monety);
-    const piles = Math.min(6, coins);
-    for (let i = 0; i < piles; i++) {
-      const n = i === piles - 1 ? coins : Math.max(1, Math.round(coins / (piles - i)));
-      coins -= n;
-      const a = (i / piles) * Math.PI * 2;
-      this.dropPickup(x + Math.cos(a) * 9, y + Math.sin(a) * 6, false, n);
-    }
+    const od = { x, y: y - 4 };
+    podzielZloto(roll(L.monety), 6).forEach((n, i) => {
+      const at = miejsceObok(x, y, (px, py) => this.freeFeet(px, py));
+      this.dropPickup(at.x, at.y, false, n, od, 90 + i * 70);
+    });
     const fruit = roll(L.owoce);
-    for (let i = 0; i < fruit; i++) this.dropFruit(x + (Math.random() - 0.5) * 24, y + (Math.random() - 0.5) * 12, Math.random() < 0.6 ? 'jablko' : 'sliwka');
+    for (let i = 0; i < fruit; i++) {
+      const at = miejsceObok(x, y, (px, py) => this.freeFeet(px, py), undefined, [6, 22]);
+      this.dropFruit(at.x, at.y, Math.random() < 0.6 ? 'jablko' : 'sliwka', i < 10 ? od : undefined, 200 + i * 40);
+    }
   }
 
-  private dropPickup(x: number, y: number, heart: boolean, coins = 1) {
-    const item = this.add.image(x, y, heart ? TEX.pickupHeart : TEX.coin).setDepth(y - 8);
+  /**
+   * Gold (a nugget, bigger for more coins – owner, 22 Nov 2026: „złoto na grudki, mniejsze większe”) or a heart.
+   * It pops out of `od` (the body, a chest) on an arc; without `od` it just hops where it lies.
+   */
+  private dropPickup(x: number, y: number, heart: boolean, coins = 1, od?: { x: number; y: number }, opozn = 0) {
+    przygotujLup(this);
+    const item = heart ? this.add.image(x, y, TEX.pickupHeart) : this.add.image(x, y, grudkaKlucz(coins)).setScale(0.5);
+    item.setDepth(y);
     item.setData('kind', heart ? 'heart' : 'coin');
     item.setData('n', coins);
-    if (coins > 1) item.setScale(1.3);
-    this.pickups.push(item);
-    this.tweens.add({ targets: item, y: y - 3, duration: 400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    this.time.delayedCall(15000, () => {
+    if (heart) item.setData('bob', true);
+    else dodajBlysk(this, item);
+    this.wyrzucLup(item, od ?? { x, y }, opozn, !heart);
+    this.time.delayedCall(LUP_FX.zlotoZnikaMs + opozn, () => {
       if (!item.active) return;
       this.tweens.add({ targets: item, alpha: 0, duration: 300, onComplete: () => this.removePickup(item) });
+    });
+  }
+
+  /** Extra ms before thrown loot can be picked (set while a chest spills its treasure). */
+  private lupZwloka = 0;
+  /** Puts a piece of loot in the list, hidden until the hero sees it, and throws it out on its arc. */
+  private wyrzucLup(item: Phaser.GameObjects.Image, od: { x: number; y: number }, opozn: number, zloto: boolean) {
+    this.pickups.push(item);
+    const blisko = Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y) < 260;
+    wyrzuc(this, item, od, opozn, () => { if (blisko && item.visible) upadekLupu(zloto); });
+    // From a chest the treasure lies a moment before the magnet takes it, so the player sees what came out.
+    if (this.lupZwloka) item.setData('gotowyAt', (item.getData('gotowyAt') as number) + this.lupZwloka);
+    const seen = !!this.vision && pointInPolygon(this.vision, item.x, item.y);
+    item.setVisible(seen);
+    pokazFx(item, seen);
+  }
+
+  /** A potion or a diamond on the ground (they used to land straight in the purse). */
+  private upuscRzecz(x: number, y: number, co: 'diament' | 'mikstura', od?: { x: number; y: number }, opozn = 0) {
+    przygotujLup(this);
+    const key = this.textures.exists(`item-${co}`) ? `item-${co}` : TEX.questItem;
+    const item = this.add.image(x, y, key).setDepth(y);
+    item.setDisplaySize(co === 'diament' ? 7 : 8, co === 'diament' ? 7 : 8).setOrigin(0.5, 0.8);
+    item.setData('kind', co).setData('bob', true);
+    if (co === 'diament') { dodajPoswiate(this, item, { kolor: 0x8ff3ff, poziom: 3, slup: true }); dodajBlysk(this, item); }
+    this.wyrzucLup(item, od ?? { x, y }, opozn, false);
+    if (co === 'diament') this.time.delayedCall(opozn + 450, () => { if (item.active) fanfaraLupu(3); });
+  }
+
+  private lupNapisy: number[] = [];
+  /** A piece of gear on the ground, glowing in its rarity's colour (uncommon green … unique orange). */
+  private upuscPrzedmiot(x: number, y: number, id: string, od?: { x: number; y: number }, opozn = 0) {
+    przygotujLup(this);
+    const it = PRZEDMIOTY.find((p) => p.id === id);
+    if (!it) return;
+    const key = itemTexture(id) ?? TEX.questItem;
+    const item = this.add.image(x, y, key).setDepth(y).setOrigin(0.5, 0.75);
+    item.setDisplaySize(10, 10);
+    const rz = RZADKOSCI[rzadkoscPrzedmiotu(id)];
+    item.setData('kind', `item:${id}`).setData('rz', rz.poziom);
+    dodajPoswiate(this, item, rz);
+    if (rz.poziom >= 2) dodajBlysk(this, item);
+    this.wyrzucLup(item, od ?? { x, y }, opozn, false);
+    this.time.delayedCall(opozn + 520, () => {
+      if (!item.active) return;
+      const nazwa = it.nazwa.split(' — ')[0];
+      // Several finds at once: names stack upwards instead of covering each other.
+      const teraz = this.time.now;
+      this.lupNapisy = this.lupNapisy.filter((t) => teraz - t < 1500);
+      const wyzej = this.lupNapisy.length * 7;
+      this.lupNapisy.push(teraz);
+      if (rz.poziom > 0) {
+        // A find better than common is seen and heard (report: the helmet dropped silently).
+        this.floatText(item.x, item.y - 12 - wyzej, `✨ ${nazwa}`, rz.css, 2600);
+        fanfaraLupu(rz.poziom);
+      } else {
+        this.floatText(item.x, item.y - 10 - wyzej, nazwa, '#f2ead8', 1600);
+        pipe(660, 120);
+      }
     });
   }
 
@@ -4049,7 +4106,27 @@ export class GameScene extends Phaser.Scene {
       this.emitHud();
       return;
     }
-    if (kind === 'heart') this.player.heal(2);
+    if (kind.startsWith('item:')) {
+      const id = kind.slice(5);
+      const gdzie = addItem(id);
+      if (!gdzie) {
+        if (!item.getData('warned')) this.toast(tx('Plecak pełny! Zrób miejsce, a przedmiot poczeka.', 'Backpack full! Make room – the item will wait.'), 1800);
+        item.setData('warned', true);
+        return;
+      }
+      const it = PRZEDMIOTY.find((p) => p.id === id);
+      const rz = RZADKOSCI[rzadkoscPrzedmiotu(id)];
+      this.toast(`${rz.poziom > 0 ? '✨ ' : ''}${it?.nazwa ?? id}${rz.poziom > 0 ? ` (${rz.nazwa})` : ''}${gdzie === 'equipped' ? tx(' – założone', ' – equipped') : ''}`, 2200);
+      pipe(988, 90); setTimeout(() => pipe(1319, 140), 70);
+      this.removePickup(item);
+      this.gearChanged();
+      this.emitHud();
+      if (this.loch) this.zapiszLupWkrotce();
+      return;
+    }
+    if (kind === 'diament') { session.diamenty += 1; this.toast('💎 +1', 1200); brzdek(20); }
+    else if (kind === 'mikstura') { session.mikstury += 1; this.toast(tx('🧪 +1 mikstura', '🧪 +1 potion'), 1200); pipe(740, 110); }
+    else if (kind === 'heart') this.player.heal(2);
     else if (kind.startsWith('fruit:')) {
       const f = kind.slice(6) as Owoc;
       if (!addFruit(f)) {
@@ -4065,10 +4142,18 @@ export class GameScene extends Phaser.Scene {
     } else {
       const n = luckyCoins((item.getData('n') as number | undefined) ?? 1);
       earn(n);
-      if (n > 1) this.toast(`+${n} monet`, 900);
+      brzdek(n);
     }
     this.removePickup(item);
     this.emitHud();
+    if (this.loch) this.zapiszLupWkrotce();
+  }
+
+  /** Underground nothing saves quietly: what was picked from a chest is saved a moment after the last piece. */
+  private lupZapis?: Phaser.Time.TimerEvent;
+  private zapiszLupWkrotce() {
+    this.lupZapis?.remove();
+    this.lupZapis = this.time.delayedCall(1500, () => { if (!this.player.isDead) this.save(true); });
   }
 
   private onPlayerDeath() {
@@ -4376,26 +4461,54 @@ export class GameScene extends Phaser.Scene {
     const pow = loch.skrzyniaPowod();
     if (pow === 'pusta') return this.toast(misja ? tx('Skrzynia jest pusta – to, po co przyszedłeś, już masz.', 'The chest is empty – you already have what you came for.') : LOCH_TEKSTY.skrzyniaPusta, 2200);
     if (pow === 'pilnowana') return this.toast(LOCH_TEKSTY.skrzyniaZamknieta, 2600);
+    // No dialog any more (owner, 22 Nov 2026): the chest shakes, bursts open with a sound and its treasure pops out
+    // onto the floor in front of it; the hero walks over it (the magnet helps).
+    przygotujLup(this);
     const N = loch.opis.nagroda;
     const monety = luckyCoins(N.monety[0] + Math.floor(Math.random() * (N.monety[1] - N.monety[0] + 1)));
-    earn(monety);
     session.exp += N.exp;
-    session.mikstury += N.mikstura;
-    const diament = Math.random() < N.diament;
-    if (diament) session.diamenty += 1;
     session.stats.lochy = (session.stats.lochy ?? 0) + 1;
-    loch.otworzSkrzynie();
+    loch.otworzSkrzynie(true);
+    skrzyniaOtwiera();
+    this.cameras.main.shake(160, 0.002);
+    const od = loch.wylotSkrzyni, k = loch.skrzynia;
+    const wolne = (px: number, py: number) => this.freeFeet(px, py) && !this.city.isBlocked(px, py);
+    // In front of the chest (south), in a fan.
+    const obok = () => miejsceObok(k.x, k.y + 4, wolne, [Math.PI * 0.12, Math.PI * 0.88], [8, 26]);
+    let kolej = 0;
+    const opozn = () => 520 + (kolej++) * 85;
+    this.lupZwloka = 900;
+    for (const n of podzielZloto(monety, 7)) { const at = obok(); this.dropPickup(at.x, at.y, false, n, od, opozn()); }
+    for (let i = 0; i < N.mikstura; i++) { const at = obok(); this.upuscRzecz(at.x, at.y, 'mikstura', od, opozn()); }
+    if (Math.random() < N.diament) { const at = obok(); this.upuscRzecz(at.x, at.y, 'diament', od, opozn()); }
+    const rodziny = PRZEDMIOTY.filter((p) => p.baza === p.id && ['bron', 'zbroja', 'helm', 'buty'].includes(p.miejsce));
+    const jakosc = () => {
+      const tab = SKRZYNIA_LUP.jakosci, n = Math.random() * tab.reduce((a, b) => a + b, 0);
+      let sum = 0;
+      for (let q = 0; q < tab.length; q++) { sum += tab[q]; if (n < sum) return q; }
+      return 4;
+    };
+    const przedmiot = () => {
+      const r = rodziny[Math.floor(Math.random() * rodziny.length)];
+      if (!r) return;
+      const q = jakosc();
+      const id = PRZEDMIOTY.find((p) => p.baza === r.id && p.jakosc === q)?.id ?? r.id;
+      const at = obok();
+      this.upuscPrzedmiot(at.x, at.y, id, od, opozn() + 150);
+    };
+    if (Math.random() < SKRZYNIA_LUP.przedmiot) przedmiot();
+    if (Math.random() < SKRZYNIA_LUP.drugi) przedmiot();
+    this.lupZwloka = 0;
+    this.time.delayedCall(700, () => this.floatText(od.x, od.y - 6, `+${N.exp} EXP`, '#ffe08a', 1800));
     this.emitHud();
-    const co = [`💰 ${monety} ${LOCH_TEKSTY.zloto}`, `✨ ${N.exp} EXP`, N.mikstura ? `🧪 ${LOCH_TEKSTY.mikstura}${N.mikstura > 1 ? ` ×${N.mikstura}` : ''}` : '', diament ? LOCH_TEKSTY.diament : ''].filter(Boolean).join('\n');
     // A mission stage's dungeon: what the stage gives lies in the chest; the stage itself is done back on the surface.
-    let fabula = '';
     if (misja) {
       const m = this.misjaLochu(misja.id);
       const z = m?.etapy?.[misja.etap];
       (session.questResults[misja.id] ??= { originMap: 'lublin', routeM: 0, choices: {} }).choices[lochKlucz(misja.etap)] = '1';
-      if (z?.daje?.length) fabula = `\n\n${LOCH_TEKSTY.misyjna}\n📜 ${z.daje.join(', ')}`;
+      if (z?.daje?.length) this.time.delayedCall(1200, () => this.toast(`${LOCH_TEKSTY.misyjna} 📜 ${z.daje!.join(', ')}`, 3600));
     }
-    this.dialog({ title: LOCH_TEKSTY.skrzynia, text: LOCH_TEKSTY.skrzyniaOtwarta(co) + fabula, buttons: [LOCH_TEKSTY.zabrane], onChoose: () => this.save() });
+    this.time.delayedCall(2500, () => this.save(true));
   }
 
   /** Down in a mission stage's dungeon (its entrance's mission/stage), or null. */
@@ -4583,16 +4696,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const teraz = Math.max(0, TRUDNOSCI.indexOf(session.level));
-    this.dialog({
-      title: W.tytul,
-      text: `${pierwszy ? W.poDemo : W.wMenu}\n\n${TRUDNOSCI.map((t, i) => `• ${t.nazwa} – ${W.krotko[i]}`).join('\n')}`,
-      buttons: [...TRUDNOSCI.map((t, i) => (i === teraz ? `${t.nazwa} ✓` : t.nazwa)), pierwszy ? `Zostaję przy: ${TRUDNOSCI[teraz].nazwa}` : 'Anuluj'],
-      odpowiedzi: pierwszy,
-      onChoose: (k) => {
-        const i = k < TRUDNOSCI.length ? k : pierwszy ? teraz : -1;
-        if (i < 0 || (i === teraz && !pierwszy)) return dalej();
-        void this.ustawTrudnosc(TRUDNOSCI[i].wiek, !session.trudnoscWybrana).then(dalej);
-      },
+    // Pose plates in an HTML window (owner, 22 Nov 2026); the world is paused under it.
+    const pauza = this.scene.isActive();
+    if (pauza) this.scene.pause();
+    void oknoTrudnosci({ tekst: pierwszy ? W.poDemo : W.wMenu, teraz, pierwszy }).then((i) => {
+      if (pauza) this.scene.resume();
+      this.noHurtUntil = this.time.now + 1500;
+      if (i < 0 || (i === teraz && !pierwszy)) return dalej();
+      void this.ustawTrudnosc(TRUDNOSCI[i].wiek, !session.trudnoscWybrana).then(dalej);
     });
   }
 

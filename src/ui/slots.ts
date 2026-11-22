@@ -5,6 +5,7 @@ import { item, goodsN, goodsLabel, imbueOf, type Slot, type Place } from '../inv
 import { JAKOSCI_BRONI, JAKOSCI_PANCERZA, MIEJSCA, type Miejsce } from '../content/przedmioty';
 import { GRUPY } from '../content/sklepy';
 import { esencja } from '../content/esencje';
+import { rzadkoscPrzedmiotu, RZADKOSCI } from '../content/rzadkosc';
 
 // Item grids shared by the character sheet (equipment + backpack) and the
 // chest (chest + backpack): one look for a slot, and dragging things between
@@ -90,6 +91,9 @@ export function slotCell(s: Slot | null, place: Place, extra = '') {
     if ('esencja' in s && !rzeczUrl(`esencja_${s.esencja}`)) c.append(el('span', 'sl-flask', '🧪'));
     if ('item' in s) {
       const dots = qualityDots(s.item); if (dots) c.append(dots);
+      // Better than common glows in its rarity's colour (uncommon green, rare blue, epic purple, unique orange).
+      const rz = rzadkoscPrzedmiotu(s.item);
+      if (RZADKOSCI[rz].poziom > 0) { c.classList.add('rz', `rz-${rz}`); c.style.setProperty('--rz', RZADKOSCI[rz].css); }
       const imb = imbueOf(s.item);
       if (imb) {
         const b = el('span', 'sl-imb', `${imb.e.ikona}${imb.minutes}′`);

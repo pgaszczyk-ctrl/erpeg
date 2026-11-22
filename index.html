@@ -599,6 +599,11 @@
         #character .k-wrap .c-card-body .c-stat { font-size: 13px; padding: 3px 0; }
         #character .k-wrap .c-card-body .c-stat:first-child { font-size: 17px; }
       }
+      /* Rarity glow of items (owner, 22 Nov 2026): uncommon green, rare blue, epic purple, unique orange. */
+      html body .sl-cell.rz { border-color: var(--rz) !important; box-shadow: inset 0 0 0 1px var(--rz), inset 0 0 12px color-mix(in srgb, var(--rz) 55%, transparent), 0 0 7px color-mix(in srgb, var(--rz) 60%, transparent) !important; }
+      html body .sl-cell.rz-epicki, html body .sl-cell.rz-unikat { animation: rz-puls 1.8s ease-in-out infinite; }
+      @keyframes rz-puls { 50% { box-shadow: inset 0 0 0 1px var(--rz), inset 0 0 16px color-mix(in srgb, var(--rz) 75%, transparent), 0 0 12px var(--rz); } }
+      @media (prefers-reduced-motion: reduce) { html body .sl-cell.rz { animation: none !important; } }
     </style>
   </head>
   <body>
