@@ -69,6 +69,12 @@ try{
  assert.equal(originAttempts,2,'retry repeats the unconfirmed origin save');
  assert.equal(await evalGame(()=>window.__game.scene.getScene('game').prolog.state.originMapId),failedOrigin);
  await choose(0);
+ // No window opens by itself (owner, 22 Nov 2026): the guard calls out and the player walks up to talk.
+ await waitStage('intro');
+ await page.waitForTimeout(1500);
+ assert(!(await evalGame(()=>window.__dialogi.some(d=>/Starszy strażnik|Senior guard/.test(d.title)))),'intro must not open by itself');
+ await page.screenshot({path:`work/prolog/${tag}-wolanie.png`});
+ await at('mentor');await interact();
  await page.waitForFunction(()=>window.__dialogi.some(d=>/Starszy strażnik|Senior guard/.test(d.title)),null,{timeout:30000});
  const anchors=await evalGame(()=>window.__game.scene.getScene('game').prolog.state.anchors);
  await page.screenshot({path:`work/prolog/${tag}-intro.png`});
