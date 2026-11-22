@@ -15,6 +15,7 @@ import { session } from './quests';
 import { gear, item } from './inventory';
 import { testVehicle, hasTestVehicle } from './testTransport';
 import { wyrazistyMaterial } from './wyrazistosc3d';
+import { wzmocnij, stawyModelu, staw, biodra as biodraModelu, obroc as obrocCzesci, receWBiegu as receModelu, poprawSylwetke, podniesGlowe, type Stawy } from './ludzik3dPoza';
 
 export const LUDZIK_3D = {
   plik: 'modele/straznik.glb',
@@ -107,6 +108,8 @@ type Gotowy = {
   miecz?: THREE.Object3D;
   /** Canvas px per model unit. */
   jednostkaPx: number;
+  /** Shoulders, elbows, hips, knees in each part's own frame (src/ludzik3dPoza.ts): the procedural turns go about them. */
+  stawy: Stawy;
   /** The rigid parts' rest pose (every frame starts from it, so the procedural turns never pile up). */
   reszta: { o: THREE.Object3D; p: THREE.Vector3; q: THREE.Quaternion }[];
   /** The weapon's grip and blade tip (its own space), for the blade trail. */
@@ -136,44 +139,6 @@ function czasKlipu(c: Cios): number {
   if (p < 0.22) return 0.7 - (0.7 - 0.36) * gladko(0, 0.22, p);
   if (p < 0.46) return 0.36 - (0.36 - 0.15) * gladko(0.22, 0.46, p);
   return 0.15 * (1 - gladko(0.46, 1, p));
-}
-
-/**
- * Makes a clip's moves k times bigger: every key of a part is a rigid move (turn q + shift t) from the rest pose;
- * it is replaced by the same screw motion taken k times (k × the angle about the same axis through the same point,
- * k × the slide along it), so hip/knee pivots stay where they are and joined parts stay joined.
- */
-function wzmocnij(three: typeof THREE, clip: THREE.AnimationClip, k: number) {
-  const pos = new Map<string, THREE.KeyframeTrack>();
-  const rot = new Map<string, THREE.KeyframeTrack>();
-  for (const t of clip.tracks) {
-    const [node, prop] = t.name.split('.');
-    if (prop === 'position') pos.set(node, t);
-    if (prop === 'quaternion') rot.set(node, t);
-  }
-  const q = new three.Quaternion(), a = new three.Vector3(), tv = new three.Vector3(), c = new three.Vector3();
-  const tp = new three.Vector3(), cr = new three.Vector3(), rc = new three.Vector3();
-  for (const [node, rt] of rot) {
-    const pt = pos.get(node);
-    if (!pt || pt.times.length !== rt.times.length) continue;
-    for (let i = 0; i < rt.times.length; i++) {
-      q.fromArray(rt.values, i * 4).normalize();
-      if (q.w < 0) q.set(-q.x, -q.y, -q.z, -q.w);
-      tv.fromArray(pt.values, i * 3);
-      const th = 2 * Math.acos(Math.min(1, q.w));
-      if (th < 1e-5) { tv.multiplyScalar(k).toArray(pt.values, i * 3); continue; }
-      a.set(q.x, q.y, q.z).divideScalar(Math.sin(th / 2));
-      const d = tv.dot(a);
-      tp.copy(tv).addScaledVector(a, -d);
-      // A point on the screw axis: c = ½ (t⊥ + cot(θ/2) · a × t⊥).
-      c.copy(tp).add(cr.crossVectors(a, tp).multiplyScalar(1 / Math.tan(th / 2))).multiplyScalar(0.5);
-      q.setFromAxisAngle(a, th * k);
-      rc.copy(c).applyQuaternion(q);
-      tv.copy(c).sub(rc).addScaledVector(a, d * k);
-      q.toArray(rt.values, i * 4);
-      tv.toArray(pt.values, i * 3);
-    }
-  }
 }
 
 export class Ludzik3D {
@@ -380,6 +345,8 @@ export class Ludzik3D {
       // Own colours of this character (uniform, trousers, hair, skin) – everyone used to look the same.
       this.kolory = koloryZWygladu(session.look.modul, session.name);
       przebarwModel(model, this.kolory);
+      poprawSylwetke(three, model);
+      const stawy = stawyModelu(three, model);
       scene.add(model);
       const amb = new three.AmbientLight(0xffffff, LUDZIK_3D.otoczenie);
       scene.add(amb);
@@ -416,7 +383,7 @@ export class Ludzik3D {
       renderer.autoClear = false;
       const reszta: Gotowy['reszta'] = [];
       model.traverse((o) => { if (o !== model && o.parent !== model) reszta.push({ o, p: o.position.clone(), q: o.quaternion.clone() }); });
-      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k, reszta,
+      this.g = { three, renderer, scene, camera, model, mixer, chodNogi, chodGora, atak, atakGora, miecz, jednostkaPx: k, reszta, stawy,
         ostrze: miecz ? this.ostrzeZ(three, miecz) : undefined };
       this.swiatla = { amb, sun };
       this.podpis = '';
@@ -478,49 +445,19 @@ export class Ludzik3D {
 
   /** Turns rigid parts about a point (model space): the parts stay joined. */
   private obroc(g: Gotowy, nazwy: string[], os: THREE.Vector3, kat: number, srodek: THREE.Vector3) {
-    if (Math.abs(kat) < 1e-4) return;
-    const q = new g.three.Quaternion().setFromAxisAngle(os, kat);
-    for (const n of nazwy) {
-      const o = g.model.getObjectByName(n);
-      if (!o) continue;
-      o.position.sub(srodek).applyQuaternion(q).add(srodek);
-      o.quaternion.premultiply(q);
-    }
+    obrocCzesci(g.three, g.model, nazwy, os, kat, srodek);
   }
 
-  /** Running arms: each arm swings opposite to its own leg (read from the walk clip's live pose, so it always keeps the
-   * legs' rhythm), elbows bent, and the chest twists with the step. Held weapons follow the hand they're nearest. */
-  private receWBiegu(g: Gotowy, sila: number, biodra: THREE.Vector3, gora: string[]) {
-    const three = g.three;
-    const pos = (n: string) => g.model.getObjectByName(n)?.position.clone();
-    const X = new three.Vector3(1, 0, 0), Y = new three.Vector3(0, 1, 0);
-    const bron = ['WeaponMesh', 'BowStringTop', 'BowStringBottom'].filter((n) => g.model.getObjectByName(n));
-    const hL = pos('handL'), hR = pos('handR'), w = pos('WeaponMesh');
-    const bronL = !!(w && hL && hR && w.distanceTo(hL) < w.distanceTo(hR));
-    let skret = 0;
-    for (const strona of ['L', 'R'] as const) {
-      const udo = pos('thigh' + strona), kolano = pos('shin' + strona), bark = pos('upper' + strona), lokiec = pos('fore' + strona);
-      if (!udo || !kolano || !bark) continue;
-      // The leg's swing: how far the knee is ahead of the hip (+Z = forward), as a share of the thigh's length.
-      const noga = Math.max(-1, Math.min(1, (kolano.z - udo.z) / Math.max(1e-3, udo.distanceTo(kolano)) * 1.6));
-      const reka = ['upper' + strona, 'fore' + strona, 'hand' + strona, ...((strona === 'L') === bronL ? bron : [])];
-      // Positive turn about +X sends the hand back: arm back while its leg is forward.
-      this.obroc(g, reka, X, LUDZIK_3D.biegRece * sila * noga, bark);
-      if (lokiec) {
-        const l = g.model.getObjectByName('fore' + strona)!.position.clone();
-        this.obroc(g, reka.slice(1), X, -LUDZIK_3D.biegLokiec * sila, l);
-      }
-      skret += (strona === 'L' ? 1 : -1) * noga;
-    }
-    this.obroc(g, gora, Y, LUDZIK_3D.biegSkret * sila * skret * 0.5, biodra);
+  /** Running arms about the real shoulders/elbows (src/ludzik3dPoza.ts receWBiegu). */
+  private receWBiegu(g: Gotowy, sila: number, gora: string[]) {
+    receModelu(g.three, g.model, g.stawy, sila, { rece: LUDZIK_3D.biegRece, lokiec: LUDZIK_3D.biegLokiec, skret: LUDZIK_3D.biegSkret }, gora);
   }
 
   /** The procedural part of a blow, on top of the clip's pose: chest turned with the cut, the arm over the head (C),
    * a small lean for the bow's recoil and the mage's push, and the visual step forward. */
   private ruchCiosu(g: Gotowy, c: Cios) {
     const three = g.three, p = c.p;
-    const pos = (n: string) => g.model.getObjectByName(n)?.position.clone() ?? new three.Vector3();
-    const biodra = pos('thighL').add(pos('thighR')).multiplyScalar(0.5);
+    const biodra = biodraModelu(three, g.model, g.stawy);
     const gora = ['core', 'head', 'upperL', 'foreL', 'handL', 'upperR', 'foreR', 'handR', 'WeaponMesh', 'BowStringTop', 'BowStringBottom'];
     const ramie = ['upperR', 'foreR', 'handR', 'WeaponMesh'];
     const Y = new three.Vector3(0, 1, 0), X = new three.Vector3(1, 0, 0);
@@ -528,7 +465,7 @@ export class Ludzik3D {
     if (c.rodzaj === 'miecz') {
       if (c.wariant === 2) {
         // Over the head: the arm goes up and back, then comes down hard; the chest leans into it.
-        const bark = pos('upperR');
+        const bark = staw(three, g.model, g.stawy, 'barkR');
         this.obroc(g, ramie, X, -1.15 * dzwon(0, 0.24, 0.4, p) + 0.55 * dzwon(0.3, 0.44, 0.8, p), bark);
         sklon = -0.14 * dzwon(0, 0.24, 0.38, p) + 0.3 * dzwon(0.3, 0.44, 0.85, p);
         skret = 0.2 * dzwon(0, 0.22, 0.4, p) - 0.25 * dzwon(0.3, 0.45, 0.85, p);
@@ -640,6 +577,7 @@ export class Ludzik3D {
     // Every frame starts from the rest pose: the clips set what they animate, the blow's turns go on top.
     for (const r of g.reszta) { r.o.position.copy(r.p); r.o.quaternion.copy(r.q); }
     g.mixer.update(s);
+    podniesGlowe(g.model);
     this.emitAttackSound();
     // A small bob per step (two per walking cycle), in sheet pixels.
     const faza = g.chodNogi.isRunning() ? g.chodNogi.time / g.chodNogi.getClip().duration : 0;
@@ -660,11 +598,10 @@ export class Ludzik3D {
     let oddechKrok = -1;
     if (this.cios) this.ruchCiosu(g, this.cios);
     else {
-      const pos = (n: string) => g.model.getObjectByName(n)?.position.clone() ?? new g.three.Vector3();
-      const biodra = pos('thighL').add(pos('thighR')).multiplyScalar(0.5);
+      const biodra = biodraModelu(g.three, g.model, g.stawy);
       const gora = ['core', 'head', 'upperL', 'foreL', 'handL', 'upperR', 'foreR', 'handR', 'WeaponMesh', 'BowStringTop', 'BowStringBottom'];
       let pochyl = LUDZIK_3D.biegPochylenie * Math.min(1, szyb) + LUDZIK_3D.rozpedPochylenie * this.rozped;
-      if (idzie) this.receWBiegu(g, Math.min(1, szyb), biodra, gora);
+      if (idzie) this.receWBiegu(g, Math.min(1, szyb), gora);
       if (!idzie) {
         // Breathing in a few steps (each step is a new picture; a smooth breath would redraw all the time).
         const n = LUDZIK_3D.oddechKrokow;
