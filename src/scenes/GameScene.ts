@@ -1,3 +1,4 @@
+import { oknoTrudnosci } from '../ui/trudnoscPozy';
 import { PROFESJE, PROFESJA, profesja, type ProfesjaId } from '../content/profesje';
 import { czytelnaNazwa } from '../transliteracja';
 import { stanGry } from '../stanGry';
@@ -4583,16 +4584,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const teraz = Math.max(0, TRUDNOSCI.indexOf(session.level));
-    this.dialog({
-      title: W.tytul,
-      text: `${pierwszy ? W.poDemo : W.wMenu}\n\n${TRUDNOSCI.map((t, i) => `• ${t.nazwa} – ${W.krotko[i]}`).join('\n')}`,
-      buttons: [...TRUDNOSCI.map((t, i) => (i === teraz ? `${t.nazwa} ✓` : t.nazwa)), pierwszy ? `Zostaję przy: ${TRUDNOSCI[teraz].nazwa}` : 'Anuluj'],
-      odpowiedzi: pierwszy,
-      onChoose: (k) => {
-        const i = k < TRUDNOSCI.length ? k : pierwszy ? teraz : -1;
-        if (i < 0 || (i === teraz && !pierwszy)) return dalej();
-        void this.ustawTrudnosc(TRUDNOSCI[i].wiek, !session.trudnoscWybrana).then(dalej);
-      },
+    // Pose plates in an HTML window (owner, 22 Nov 2026); the world is paused under it.
+    const pauza = this.scene.isActive();
+    if (pauza) this.scene.pause();
+    void oknoTrudnosci({ tekst: pierwszy ? W.poDemo : W.wMenu, teraz, pierwszy }).then((i) => {
+      if (pauza) this.scene.resume();
+      this.noHurtUntil = this.time.now + 1500;
+      if (i < 0 || (i === teraz && !pierwszy)) return dalej();
+      void this.ustawTrudnosc(TRUDNOSCI[i].wiek, !session.trudnoscWybrana).then(dalej);
     });
   }
 

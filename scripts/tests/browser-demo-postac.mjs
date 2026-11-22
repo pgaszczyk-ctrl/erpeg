@@ -286,9 +286,12 @@ try {
   assert(new URL(awake.url).pathname === '/' && awake.url.includes('#postac=Zosia'), `After waking up the address loads the character: ${awake.url}`);
   await choose(0); // "Rozejrzę się"
   // The difficulty after waking up (owner, 19 Oct 2026): free first choice, Średni here.
-  await page.waitForFunction(() => /Poziom trudności/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 15000 });
+  // Pose plates (owner, 22 Nov 2026): tap a plate, then the confirm button.
+  await page.waitForSelector('.tr-okno .tr-kafel', { timeout: 15000 });
+  assert.equal(await page.locator('.tr-okno .tr-kafel').count(), 5);
+  await page.locator('.tr-okno .tr-kafel').nth(2).click();
   await page.screenshot({ path: `work/onb-${name}-5-trudnosc.png` });
-  await choose(2);
+  await page.locator('.tr-okno .m-primary').click();
   await page.waitForFunction(() => window.__session.level.nazwa === 'Średni', null, { timeout: 10000 });
   assert.deepEqual(zmiany.map((z) => [z.p_age, z.p_pierwszy]), [[12, true]], 'One free choice, as an age');
 
@@ -339,7 +342,10 @@ try {
   assert(Math.hypot(p1.x - p0.x, p1.y - p0.y) > 5, `The hero walks after waking up: ${JSON.stringify({ p0, p1 })}`);
   // Changing the difficulty from the game menu: once a day (the 2nd try says „jutro”), hearts follow (Hardkor: 2).
   await page.evaluate(() => window.__game.scene.getScene('game').wyborTrudnosci(false));
-  await choose(4);
+  await page.waitForSelector('.tr-okno .tr-kafel');
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__session.level.nazwa === 'Hardkor', null, { timeout: 10000 });
   assert.deepEqual(zmiany.map((z) => [z.p_age, z.p_pierwszy]).slice(1), [[19, false]]);
   const serca = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { hp: s.player.hp, max: window.__game.scene.getScene('game').player.maxHp ?? null }; });
