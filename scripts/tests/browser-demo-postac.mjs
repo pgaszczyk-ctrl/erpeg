@@ -286,10 +286,10 @@ try {
   assert(new URL(awake.url).pathname === '/' && awake.url.includes('#postac=Zosia'), `After waking up the address loads the character: ${awake.url}`);
   await choose(0); // "Rozejrzę się"
   // The difficulty after waking up (owner, 19 Oct 2026): free first choice, Średni here.
-  // Pose plates (owner, 22 Nov 2026): tap a plate, then the confirm button.
-  await page.waitForSelector('.tr-okno .tr-kafel', { timeout: 15000 });
-  assert.equal(await page.locator('.tr-okno .tr-kafel').count(), 5);
-  await page.locator('.tr-okno .tr-kafel').nth(2).click();
+  // Poses on one axis (owner, 22 Nov 2026): tap a figure, then the confirm button.
+  await page.waitForSelector('.tr-okno .tr-ludzik', { timeout: 15000 });
+  assert.equal(await page.locator('.tr-okno .tr-ludzik').count(), 5);
+  await page.locator('.tr-okno .tr-ludzik').nth(2).click();
   await page.screenshot({ path: `work/onb-${name}-5-trudnosc.png` });
   await page.locator('.tr-okno .m-primary').click();
   await page.waitForFunction(() => window.__session.level.nazwa === 'Średni', null, { timeout: 10000 });
@@ -342,7 +342,7 @@ try {
   assert(Math.hypot(p1.x - p0.x, p1.y - p0.y) > 5, `The hero walks after waking up: ${JSON.stringify({ p0, p1 })}`);
   // Changing the difficulty from the game menu: once a day (the 2nd try says „jutro”), hearts follow (Hardkor: 2).
   await page.evaluate(() => window.__game.scene.getScene('game').wyborTrudnosci(false));
-  await page.waitForSelector('.tr-okno .tr-kafel');
+  await page.waitForSelector('.tr-okno .tr-os');
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight'); await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Enter');

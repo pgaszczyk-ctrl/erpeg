@@ -1,6 +1,6 @@
 /**
  * Difficulty as poses (owner, 22 Nov 2026: „raczkujący, idący, bieg, paker”): five code-drawn pictogram silhouettes
- * on brass plates, used instead of the slider in the new-character form and in the in-game difficulty window.
+ * on one axis, used instead of the slider in the new-character form and in the in-game difficulty window.
  * Placeholders like road-sign pictograms until the artist draws them.
  */
 import { TRUDNOSCI, WYBOR_TRUDNOSCI } from '../content/trudnosc';
@@ -36,61 +36,96 @@ function dodajStyl() {
   styl = true;
   const s = document.createElement('style');
   s.textContent = `
-  .tr-kafle { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 4px 0 2px; }
-  .tr-kafel { all: unset; box-sizing: border-box; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 4px 2px 3px; color: #2a1d10; background: linear-gradient(#c9a25a, #a77f3c); opacity: .55;
-    box-shadow: -2px 0 0 #1e1a24, 2px 0 0 #1e1a24, 0 -2px 0 #1e1a24, 0 2px 0 #1e1a24, inset 2px 2px 0 #e8cd8c, inset -2px -2px 0 #6e4e22; }
-  .tr-kafel svg { width: 100%; max-width: 56px; aspect-ratio: 1; display: block; }
-  .tr-kafel span { font: 700 11px/1.1 'Alegreya Sans', sans-serif; text-align: center; white-space: nowrap; }
-  .tr-kafel:hover { opacity: .8; }
-  .tr-kafel:focus-visible { outline: 2px solid #f7c531; outline-offset: 3px; }
-  .tr-kafel[aria-checked="true"] { opacity: 1; color: #1e1a24; background: linear-gradient(#ffe08a, #e0ac3e);
-    box-shadow: -2px 0 0 #1e1a24, 2px 0 0 #1e1a24, 0 -2px 0 #1e1a24, 0 2px 0 #1e1a24, inset 2px 2px 0 #fff3c4, inset -2px -2px 0 #9a6b1c, 0 0 12px 2px rgba(255, 200, 80, .7); }
-  .tr-opis { display: block; min-height: 2.4em; margin-top: 4px; }
-  .tr-okno .tr-kafle { margin: 10px 0 4px; }
+  .tr-os { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); margin: 6px 4px 2px; padding: 10px 0 22px;
+    touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+  .tr-os:focus-visible { outline: 2px solid #f7c531; outline-offset: 1px; }
+  .tr-tor { position: absolute; left: 4%; right: 4%; bottom: 10px; height: 4px; background: #a77f3c;
+    box-shadow: 0 -2px 0 #1e1a24, 0 2px 0 #1e1a24, inset 0 1px 0 #e8cd8c; }
+  .tr-tor::after { content: ''; position: absolute; inset: 0; width: var(--pelne, 0%); background: #f7c531; transition: width .25s; }
+  .tr-ludzik { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; color: #c9a25a; opacity: .5;
+    transition: opacity .2s, color .2s, transform .25s; transform-origin: 50% 100%; }
+  .tr-ludzik svg { width: 100%; max-width: 50px; aspect-ratio: 1; display: block; }
+  .tr-ludzik span { font: 700 11px/1.1 'Alegreya Sans', sans-serif; white-space: nowrap; margin-top: 1px; }
+  .tr-ludzik.tr-za { opacity: .8; }
+  .tr-ludzik.tr-wybrany { opacity: 1; color: #ffd75e; transform: scale(1.18); filter: drop-shadow(0 0 6px rgba(255,200,80,.6)); }
+  .tr-ludzik:hover { opacity: .85; }
+  .tr-znacznik { position: absolute; bottom: 5px; width: 14px; height: 14px; margin-left: -7px; background: #ffd75e; transform: rotate(45deg);
+    box-shadow: -2px 0 0 #1e1a24, 2px 0 0 #1e1a24, 0 -2px 0 #1e1a24, 0 2px 0 #1e1a24; transition: left .25s cubic-bezier(.3,1.4,.6,1); }
+  .tr-opis { display: block; min-height: 2.4em; margin-top: 8px; }
+  .tr-okno .tr-os { margin: 14px 4px 4px; }
   .tr-okno .m-box { max-width: 460px; }
+  @media (prefers-reduced-motion: reduce) { .tr-ludzik, .tr-znacznik, .tr-tor::after { transition: none; } }
   `;
   document.head.appendChild(s);
 }
 
 const opisPoziomu = (i: number) => WYBOR_TRUDNOSCI.krotko[i] ?? '';
 
-/** Five plates as a radio group; `onChange` gets the index. Arrow keys move the choice. */
+/**
+ * One axis (owner, 22 Nov 2026: „zrób jedną oś i niech te ludziki idą”): the five figures march along one brass
+ * rail, crawling → muscleman; the chosen one is lit and bigger, a gold marker slides along the rail. Tap a figure,
+ * drag along the rail, or use the arrow keys (it is an ARIA slider).
+ */
 export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, opisId?: string) {
   dodajStyl();
+  const n = TRUDNOSCI.length;
   const box = document.createElement('div');
-  box.className = 'tr-kafle';
-  box.setAttribute('role', 'radiogroup');
+  box.className = 'tr-os';
+  box.tabIndex = 0;
+  box.setAttribute('role', 'slider');
   box.setAttribute('aria-label', tx('Poziom trudności', 'Difficulty'));
+  box.setAttribute('aria-valuemin', '0');
+  box.setAttribute('aria-valuemax', String(n - 1));
   if (opisId) box.setAttribute('aria-describedby', opisId);
-  let wybrany = start;
-  const kafle = TRUDNOSCI.map((t, i) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'tr-kafel';
-    b.setAttribute('role', 'radio');
-    b.innerHTML = `${pozaSvg(i)}<span></span>`;
-    b.querySelector('span')!.textContent = tx(t.nazwa, t.en);
-    b.title = `${tx(t.nazwa, t.en)} – ${opisPoziomu(i)}`;
-    b.onclick = () => ustaw(i, true);
-    box.appendChild(b);
-    return b;
+  const tor = document.createElement('div');
+  tor.className = 'tr-tor';
+  const znacznik = document.createElement('div');
+  znacznik.className = 'tr-znacznik';
+  const ludziki = TRUDNOSCI.map((t, i) => {
+    const d = document.createElement('div');
+    d.className = 'tr-ludzik';
+    d.innerHTML = `${pozaSvg(i)}<span></span>`;
+    d.querySelector('span')!.textContent = tx(t.nazwa, t.en);
+    box.appendChild(d);
+    return d;
   });
-  const ustaw = (i: number, fokus = false) => {
-    wybrany = Math.max(0, Math.min(TRUDNOSCI.length - 1, i));
-    kafle.forEach((b, k) => {
-      b.setAttribute('aria-checked', String(k === wybrany));
-      b.tabIndex = k === wybrany ? 0 : -1;
+  box.append(tor, znacznik);
+  let wybrany = -1;
+  const srodek = (i: number) => ((i + 0.5) / n) * 100;
+  const ustaw = (i: number) => {
+    i = Math.max(0, Math.min(n - 1, i));
+    if (i === wybrany) return;
+    wybrany = i;
+    ludziki.forEach((d, k) => {
+      d.classList.toggle('tr-wybrany', k === i);
+      d.classList.toggle('tr-za', k < i);
     });
-    if (fokus) kafle[wybrany].focus();
-    onChange(wybrany);
+    znacznik.style.left = `${srodek(i)}%`;
+    box.style.setProperty('--pelne', `${((srodek(i) - 4) / 92) * 100}%`);
+    box.setAttribute('aria-valuenow', String(i));
+    box.setAttribute('aria-valuetext', tx(TRUDNOSCI[i].nazwa, TRUDNOSCI[i].en));
+    onChange(i);
   };
+  const zPunktu = (x: number) => {
+    const r = box.getBoundingClientRect();
+    return Math.floor(((x - r.left) / r.width) * n);
+  };
+  let ciagnie = false;
+  box.onpointerdown = (e) => {
+    ciagnie = true;
+    box.setPointerCapture?.(e.pointerId);
+    ustaw(zPunktu(e.clientX));
+    box.focus();
+  };
+  box.onpointermove = (e) => { if (ciagnie) ustaw(zPunktu(e.clientX)); };
+  box.onpointerup = box.onpointercancel = () => { ciagnie = false; };
   box.onkeydown = (e) => {
-    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-    if (!d) return;
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -1 : 0;
+    const k = e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : null;
+    if (!d && k === null) return;
     e.preventDefault();
     e.stopPropagation();
-    ustaw(wybrany + d, true);
+    ustaw(k ?? wybrany + d);
   };
   ustaw(start);
   return { el: box, wybrany: () => wybrany };
@@ -146,11 +181,11 @@ export function oknoTrudnosci(o: { tekst: string; teraz: number; pierwszy: boole
     overlay.onkeydown = (e) => {
       e.stopPropagation();
       if (e.key === 'Escape') { e.preventDefault(); koniec(o.pierwszy ? o.teraz : -1); }
-      if (e.key === 'Enter' && document.activeElement?.classList.contains('tr-kafel')) { e.preventDefault(); ok.click(); }
+      if (e.key === 'Enter' && document.activeElement?.classList.contains('tr-os')) { e.preventDefault(); ok.click(); }
     };
     panel.append(h, p, kafle.el, opis, ...przyciski);
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
-    (panel.querySelector<HTMLElement>('.tr-kafel[aria-checked="true"]') ?? ok).focus();
+    kafle.el.focus();
   });
 }
