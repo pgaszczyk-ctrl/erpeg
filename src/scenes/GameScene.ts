@@ -1941,7 +1941,7 @@ export class GameScene extends Phaser.Scene {
     if(this.loch) {
       const l=this.loch;
       add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
-      if(!out.some(t=>t.id==='prolog:chest'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
+      if(!out.some(t=>t.id==='prolog:chest')&&(this.city.loch?.tutorial||l.skrzyniaPowod()!=='pusta'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
     }
     for(const p of this.city.places) if(Math.abs(p.door.x-this.player.x)<74&&Math.abs(p.door.y-this.player.y)<74) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
     for(const r of this.missions) if(!r.m.postac&&missionAvailable(r.m))add(`mission:${r.m.id}`,r.door,'use',r.m.tytul,()=>this.openMissionDialog(r));
@@ -3949,11 +3949,15 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /** Extra ms before thrown loot can be picked (set while a chest spills its treasure). */
+  private lupZwloka = 0;
   /** Puts a piece of loot in the list, hidden until the hero sees it, and throws it out on its arc. */
   private wyrzucLup(item: Phaser.GameObjects.Image, od: { x: number; y: number }, opozn: number, zloto: boolean) {
     this.pickups.push(item);
     const blisko = Phaser.Math.Distance.Between(item.x, item.y, this.player.x, this.player.y) < 260;
     wyrzuc(this, item, od, opozn, () => { if (blisko && item.visible) upadekLupu(zloto); });
+    // From a chest the treasure lies a moment before the magnet takes it, so the player sees what came out.
+    if (this.lupZwloka) item.setData('gotowyAt', (item.getData('gotowyAt') as number) + this.lupZwloka);
     const seen = !!this.vision && pointInPolygon(this.vision, item.x, item.y);
     item.setVisible(seen);
     pokazFx(item, seen);
@@ -3971,6 +3975,7 @@ export class GameScene extends Phaser.Scene {
     if (co === 'diament') this.time.delayedCall(opozn + 450, () => { if (item.active) fanfaraLupu(3); });
   }
 
+  private lupNapisy: number[] = [];
   /** A piece of gear on the ground, glowing in its rarity's colour (uncommon green … unique orange). */
   private upuscPrzedmiot(x: number, y: number, id: string, od?: { x: number; y: number }, opozn = 0) {
     przygotujLup(this);
@@ -3987,12 +3992,17 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(opozn + 520, () => {
       if (!item.active) return;
       const nazwa = it.nazwa.split(' — ')[0];
+      // Several finds at once: names stack upwards instead of covering each other.
+      const teraz = this.time.now;
+      this.lupNapisy = this.lupNapisy.filter((t) => teraz - t < 1500);
+      const wyzej = this.lupNapisy.length * 7;
+      this.lupNapisy.push(teraz);
       if (rz.poziom > 0) {
         // A find better than common is seen and heard (report: the helmet dropped silently).
-        this.floatText(item.x, item.y - 12, `✨ ${nazwa}`, rz.css, 2600);
+        this.floatText(item.x, item.y - 12 - wyzej, `✨ ${nazwa}`, rz.css, 2600);
         fanfaraLupu(rz.poziom);
       } else {
-        this.floatText(item.x, item.y - 10, nazwa, '#f2ead8', 1600);
+        this.floatText(item.x, item.y - 10 - wyzej, nazwa, '#f2ead8', 1600);
         pipe(660, 120);
       }
     });
@@ -4466,6 +4476,7 @@ export class GameScene extends Phaser.Scene {
     const obok = () => miejsceObok(k.x, k.y + 4, wolne, [Math.PI * 0.12, Math.PI * 0.88], [8, 26]);
     let kolej = 0;
     const opozn = () => 520 + (kolej++) * 85;
+    this.lupZwloka = 900;
     for (const n of podzielZloto(monety, 7)) { const at = obok(); this.dropPickup(at.x, at.y, false, n, od, opozn()); }
     for (let i = 0; i < N.mikstura; i++) { const at = obok(); this.upuscRzecz(at.x, at.y, 'mikstura', od, opozn()); }
     if (Math.random() < N.diament) { const at = obok(); this.upuscRzecz(at.x, at.y, 'diament', od, opozn()); }
@@ -4486,6 +4497,7 @@ export class GameScene extends Phaser.Scene {
     };
     if (Math.random() < SKRZYNIA_LUP.przedmiot) przedmiot();
     if (Math.random() < SKRZYNIA_LUP.drugi) przedmiot();
+    this.lupZwloka = 0;
     this.time.delayedCall(700, () => this.floatText(od.x, od.y - 6, `+${N.exp} EXP`, '#ffe08a', 1800));
     this.emitHud();
     // A mission stage's dungeon: what the stage gives lies in the chest; the stage itself is done back on the surface.

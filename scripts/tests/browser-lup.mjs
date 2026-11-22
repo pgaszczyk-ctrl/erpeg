@@ -26,6 +26,7 @@ try {
     if (path.endsWith('/save_game') || path.endsWith('/heartbeat')) body = true;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
   });
+  await context.addInitScript(() => { try { localStorage.setItem('exp-kod-pokazany:Jam', '1'); } catch {} });
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource|WebGL|GL_/.test(m.text()) && errors.push(m.text()));
@@ -60,11 +61,16 @@ try {
   let lup = [];
   for (let i = 0; i < 30 && !lup.some((l) => l.kind === 'coin'); i++) lup = await zabij('glut');
   assert(lup.some((l) => l.kind === 'coin'), 'imps carry gold');
-  await page.waitForTimeout(220);
-  const wLocie = await g(() => window.__game.scene.getScene('game').pickups.filter((i) => i.getData('kind') === 'coin').map((i) => ({ y: i.y, by: i.getData('by'), tex: i.texture.key })));
+  // Sample the flight a few times (headless frames are slow): some nugget must be seen above its landing spot.
+  let wLocie = [], wGorze = false;
+  for (let i = 0; i < 20 && !wGorze; i++) {
+    await page.waitForTimeout(60);
+    wLocie = await g(() => window.__game.scene.getScene('game').pickups.filter((i) => i.getData('kind') === 'coin').map((i) => ({ y: i.y, by: i.getData('by'), tex: i.texture.key })));
+    wGorze = wLocie.some((c) => c.y < c.by - 2);
+  }
   console.log('w locie', JSON.stringify(wLocie));
   assert(wLocie.every((c) => c.tex.startsWith('grudka-')), 'gold is drawn as nuggets');
-  assert(wLocie.some((c) => c.y < c.by - 2), 'a nugget is up in the air');
+  assert(wGorze, 'a nugget is up in the air');
   await page.screenshot({ path: `work/lup/${tag}-wylot.png` });
 
   // 3. Gear on the ground: one of each rarity, a diamond and a big gold nugget, then a screenshot of the glows.
@@ -72,6 +78,7 @@ try {
     const s = window.__game.scene.getScene('game');
     for (const p of [...s.pickups]) s.removePickup(p);
     s.lupZPanelu(x, y, [{ co: 'zelazny', ile: 1 }, { co: 'zelazny_jakosc2', ile: 1 }, { co: 'stalowy_jakosc3', ile: 1 }, { co: 'kolczuga_jakosc4', ile: 1 }, { co: 'swietlisty', ile: 1 }, { co: 'diament', ile: 1 }, { co: 'zloto', ile: 60 }]);
+    s.player.setPosition(x - 60, y);
   }, [spot.x + 30, spot.y]);
   await page.waitForTimeout(1600);
   const ziemia = await g(() => window.__game.scene.getScene('game').pickups.filter((i) => i.getData('lup')).map((i) => ({ kind: i.getData('kind'), tex: i.texture.key, fx: (i.getData('fx') ?? []).map((f) => f.rodzaj) })));
@@ -104,12 +111,13 @@ try {
     const s = window.__game.scene.getScene('game');
     s.upuscPrzedmiot(s.player.x + 16, s.player.y + 4, 'stalowy_jakosc3');
   });
-  await page.waitForTimeout(2200);
+  await page.waitForFunction(() => window.__gear.bag.some((b) => b.item === 'stalowy_jakosc3') || window.__gear.equip.bron === 'stalowy_jakosc3', null, { timeout: 15000 });
   const plecak1 = await g(() => window.__gear.bag.length + Object.values(window.__gear.equip).filter(Boolean).length);
   assert(plecak1 > plecak0 || (await g(() => window.__gear.bag.some((b) => b.item === 'stalowy_jakosc3') || window.__gear.equip.bron === 'stalowy_jakosc3')), 'gear picked up');
   // The trunk shows the rarity glow on the slot.
   await g(() => window.__game.scene.getScene('ui').openCharacter?.('eq'));
-  await page.waitForTimeout(800);
+  if (!(await page.locator('.sl-cell').count())) await page.locator('.k-tab', { hasText: 'Postać' }).first().click();
+  await page.waitForSelector('.sl-cell.rz-rzadki', { timeout: 8000 }).catch(() => {});
   const rzSloty = await page.locator('.sl-cell.rz-rzadki').count();
   console.log('sloty rzadkie', rzSloty);
   assert(rzSloty >= 1, 'a rare item glows blue in the trunk');

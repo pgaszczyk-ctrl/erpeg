@@ -174,7 +174,7 @@ export function dodajPoswiate(scene: Phaser.Scene, img: Phaser.GameObjects.Image
   fxOf(img).push({ obj: glow, rodzaj: 'glow' });
   if (r.slup) {
     const slup = scene.add.image(img.x, img.y, 'lup-slup').setOrigin(0.5, 1).setTint(r.kolor).setBlendMode(Phaser.BlendModes.ADD)
-      .setScale(0.9, r.poziom >= 4 ? 0.85 : 0.6).setAlpha(0.65).setDepth(img.depth + 0.3);
+      .setScale(1.1, r.poziom >= 4 ? 1.2 : 0.9).setAlpha(0.8).setDepth(img.depth + 0.3);
     fxOf(img).push({ obj: slup, rodzaj: 'slup' });
   }
   img.setData('pulsKolor', r.poziom);
@@ -269,7 +269,7 @@ export function animujLup(items: Phaser.GameObjects.Image[], cel: { x: number; y
       switch (f.rodzaj) {
         case 'cien': f.obj.setPosition(bx, by + 1).setAlpha(1); break;
         case 'glow': f.obj.setPosition(bx, by - 1).setAlpha(0.55 + 0.3 * Math.sin((now + faza) / 230)); break;
-        case 'slup': f.obj.setPosition(bx, by).setAlpha(0.4 + 0.25 * Math.sin((now + faza) / 380)); break;
+        case 'slup': f.obj.setPosition(bx, by).setAlpha(0.6 + 0.3 * Math.sin((now + faza) / 380)); break;
         case 'blysk': {
           const on = img.visible && pf < 280;
           f.obj.setVisible(on);
