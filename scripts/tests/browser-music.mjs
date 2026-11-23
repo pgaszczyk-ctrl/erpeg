@@ -47,10 +47,12 @@ try {for(const phone of [false,true]) {
  const go=()=>page.goto('http://127.0.0.1:4184/test/?lang=pl&pogoda=czysto&ostrosc=1&live=1&ludzik3d=0&stwory3d=0&mieszkancy3d=0#postac=Jam&kod=ANGELIKA');
  await go();
  await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
- assert(await page.evaluate(()=>window.__music.every(m=>m.__gain.gain.value===0||document.getElementById('loading-map')?.hidden!==false)),'sound only after map reveal');
+ assert(await page.evaluate(()=>window.__music.slice(0,4).every(m=>m.__gain.gain.value===0||document.getElementById('loading-map')?.hidden!==false)),'game music only after map reveal');
+ assert(await page.evaluate(()=>window.__music[4]?.src.endsWith('brassbound-horizons.mp3')),'intro track exists');
  await page.locator('canvas').first().dispatchEvent('pointerdown'); // a synthetic event does not unlock autoplay
  if(phone)await page.locator('.hs-atak').tap();else await page.keyboard.press('Space');
  await page.waitForFunction(()=>window.__music.some(m=>m.src.endsWith('caravan-trails-1.mp3')&&!m.paused&&m.__gain.gain.value>.9),null,{timeout:30000});
+ await page.waitForFunction(()=>window.__music[4].paused&&window.__music[4].__gain.gain.value<.05,null,{timeout:15000}); // intro faded out in the game
  const stream=await page.evaluate(()=>window.__music.map(m=>({url:m.src,duration:m.duration,error:m.error?.code})));
  assert(stream.every(m=>m.url.includes('/test/audio/')),'base URL supports TEST subpath');
  const start=await page.evaluate(()=>window.__music[0].currentTime);
@@ -135,10 +137,11 @@ try {for(const phone of [false,true]) {
  await hide();await page.waitForTimeout(3600);await show();
  await page.locator('#powrot [data-a="wyjdz"]').click();
  await page.locator('#menu').waitFor({timeout:15000});
- await page.waitForFunction(()=>window.__music.every(m=>m.paused));
- // Logout / leaving the active map stops immediately, also from a settings dialog.
+ await page.waitForFunction(()=>window.__music.slice(0,4).every(m=>m.paused));
+ // Back in the start menu the intro plays again („od otwarcia linka do załadowania mapy”).
+ await page.waitForFunction(()=>!window.__music[4].paused&&window.__music[4].__gain.gain.value>.9,null,{timeout:15000});
  await page.evaluate(()=>{window.__session.token=null;});
- await page.waitForFunction(()=>window.__music.every(m=>m.paused));
+ await page.waitForFunction(()=>window.__music.slice(0,4).every(m=>m.paused));
  assert.deepEqual(failed,[]);assert.deepEqual(errors,[]);
  results.push({phone,streams:stream,fadeTailMs:fadeTail,wiring,errors,failed});
  await context.close();

@@ -141,5 +141,6 @@ game.events.on('step', () => {
   const ready = running && scene?.player && session.token && !loadingMapVisible() && !document.getElementById('menu');
   const state = ready ? scene.musicState() : null;
   if (state && game.scene.isActive('arena')) state.combat = true;
-  updateMusic(state);
+  // Before the map is shown (start menu, loading cover) the intro „Brassbound Horizons” plays.
+  updateMusic(state, performance.now(), !state && (loadingMapVisible() || !!document.getElementById('menu')));
 });
