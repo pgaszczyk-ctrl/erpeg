@@ -29,7 +29,7 @@ function losujMiejsce(t: Track) {
   try { t.media.currentTime = Math.random() * d * LOSOWY_START_DO; } catch { /* seeking is optional */ }
 }
 let context: AudioContext | undefined, master: GainNode | undefined;
-let tracks: Track[] = [], state: MusicState = null;
+let tracks: Track[] = [];
 let surface = 0, desired = -1, previous = 0, lastCombat = -Infinity;
 let stopped = true;
 /** Held while the game waits for „Gram dalej” after the tab came back (powrot.ts): nothing plays. */
@@ -114,7 +114,6 @@ function unlock(gesture = false) {
 }
 /** Called from the global game step, also while dialogs pause GameScene. `intro` = menu/loading cover is up. */
 export function updateMusic(next: MusicState, now = performance.now(), intro = false) {
-  state = next;
   const dt = previous ? Math.min(.1, Math.max(0, (now - previous) / 1000)) : 0;
   previous = now;
   if (!next) lastCombat = -Infinity;
@@ -152,4 +151,4 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) pauzaWTle = setTimeout(() => { if (document.hidden) pause(); }, KROTKIE_WYJSCIE_MS);
   else if (desired >= 0) unlock();
 });
-window.addEventListener('pagehide', () => { state = null; desired = -1; stopped = true; pause(); });
+window.addEventListener('pagehide', () => { desired = -1; stopped = true; pause(); });
