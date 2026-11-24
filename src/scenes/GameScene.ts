@@ -57,7 +57,7 @@ import { LUP_HERSZTA, BERSERKER } from '../content/gangi';
 import { MISJE, WROGOWIE, ZADAN_NARAZ, KOLOR_GLOWNEGO, KOLORY_ZADAN, jakDaleko, type RodzajWroga, type Misja } from '../content/fabula';
 import { isCharacterOpen, type QuestLine } from '../ui/character';
 import { ESENCJE, type Esencja } from '../content/esencje';
-import { WALKA, zasiegDystansu } from '../content/walka';
+import { WALKA, WALKA_SPECJALNE, zasiegDystansu } from '../content/walka';
 import { askText } from '../ui/prompt';
 import { showChest } from '../ui/chest';
 import { Npcs, riddleFor, requestFor, dayNumber, today, type Npc } from './Npcs';
@@ -185,7 +185,7 @@ import { DynamikaRuchu } from '../ruch';
 const DZWIEK_KROKU = { asfalt: 'krok-twardy', sciezka: 'krok-miekki', trawa: 'krok-miekki', las: 'krok-miekki', piasek: 'krok-piasek', bloto: 'krok-bloto', brod: 'krok-bloto' } as const;
 const KOLOR_KURZU = { asfalt: 0xb9b2a4, sciezka: 0xc8b49a, trawa: 0xa9b184, las: 0x9c8a66, piasek: 0xe0cc98, bloto: 0x6e5a3c, brod: 0x8fa8b0 } as const;
 import type { CombatSound } from '../audio/combatCatalog';
-import { UMIEJETNOSCI as SPECJALNE, domyslnaUmiejetnosc, type Umiej } from '../content/umiejetnosci';
+import { specjalnyZEkwipunku, umiejetnoscOId, type Umiej } from '../content/umiejetnosci';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -385,6 +385,8 @@ interface Shot {
   missed: Set<Enemy>;
   /** New controls test: a tired archer aims worse (hit-chance points off). */
   celnoscMinus?: number;
+  /** Strzał przebijający: how many more enemies it may fly through after a hit. */
+  przebija?: number;
 }
 
 type Challenge =
@@ -475,6 +477,8 @@ export class GameScene extends Phaser.Scene {
   private shots: Shot[] = [];
   private noManaToast = 0;
   private bezKosztuStrzalu = false;
+  /** The next shot flies through this many enemies (Strzał przebijający). */
+  private przebicieStrzalu = 0;
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
@@ -2057,17 +2061,9 @@ export class GameScene extends Phaser.Scene {
       s: zasoby.s, sMax: maxStaminy(lvl), m: zasoby.m, mMax: maxMany(lvl),
       magia: this.handSkill() === 'magia', wyczerpany: wyczerpany(lvl), bezpiecznie: this.bezpiecznie,
       umiej: u, aktywna: u.id,
-      wybor: comicHud ? SPECJALNE.filter(v => v.bron === u.bron && skillLevel(v.bron) >= v.poziom) : undefined,
-      wybierz: comicHud ? (id) => {
-        const next = SPECJALNE.find(v => v.id === id && v.bron === this.handSkill() && skillLevel(v.bron) >= v.poziom);
-        const hidden = document.querySelector('#hud-ster.off, #hud-ster.dim');
-        if (!next || this.player.isDead || this.witam || hidden || !this.scene.isActive()) return;
-        if (this.umiejetnosc().id === next.id) return;
-        session.umiej[next.bron] = next.id;
-        this.emitZasoby();
-        // Keep combat switching free of save-point side effects and success toasts.
-        if (!this.inCombat()) this.save(true);
-      } : undefined,
+      // No choice any more: the special comes from the equipment (owner, 24 Nov 2026).
+      wybor: undefined,
+      wybierz: undefined,
       cooldown: 1 - (zasoby.czas - zasoby.mocnyAt) / ZASOBY.mocnyCooldownS,
       cooldownLeft: Math.max(0, Math.ceil(ZASOBY.mocnyCooldownS - (zasoby.czas - zasoby.mocnyAt))),
       cost: u.bron === 'magia' ? ZASOBY.koszt.mocnyCzar : ZASOBY.koszt.mocny,
@@ -6578,11 +6574,9 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
-  /** The chosen weapon skill: training places, plus the TEST comic HUD selector (level-gated). */
+  /** The special attack: weapon in hand + second hand (content/umiejetnosci.ts specjalnyZEkwipunku). */
   umiejetnosc(): Umiej {
-    const b = this.handSkill();
-    const id = session.umiej[b];
-    return SPECJALNE.find((u) => u.id === id && u.bron === b) ?? domyslnaUmiejetnosc(b);
+    return umiejetnoscOId(specjalnyZEkwipunku(this.handSkill(), gear.equip.dystans));
   }
 
   /** The special button / Q (new controls): the weapon's chosen skill, paid in stamina or mana. */
@@ -6594,46 +6588,46 @@ export class GameScene extends Phaser.Scene {
     const weapon = rangedWeapon();
     if (u.id === 'mocny') return this.mocnyLuk(now);
     if (u.id === 'zamach') return this.zamach(now);
+    if (u.id === 'tarcza') return this.uderzenieTarcza(now);
+    if (u.id === 'krag') return this.kragMocy(now);
     if (!weapon) return;
     const foe = this.nearestFoe(this.shotRange(u.bron === 'magia' ? 'magia' : 'luk', u.id !== 'salwa' && u.id !== 'wachlarz'));
     const base = foe ? { x: foe.x - this.player.x, y: foe.y - this.player.y } : { x: this.player.facing.x, y: this.player.facing.y };
     const a0 = Math.atan2(base.y, base.x);
     const katy = u.id === 'salwa' ? [-0.2, 0, 0.2] : u.id === 'wachlarz' ? [-0.5, -0.25, 0, 0.25, 0.5] : [0];
     this.bezKosztuStrzalu = true; // the skill was paid as a whole above
+    this.przebicieStrzalu = u.id === 'przebicie' ? WALKA_SPECJALNE.przebicie : 0;
     for (const [i, k] of katy.entries()) {
       // A volley's side arrows fly where they are aimed (no aim help that would bring them all onto one target).
       this.fireShot(weapon, { x: Math.cos(a0 + k), y: Math.sin(a0 + k) }, katy.length === 1, now, i === 0, katy.length === 1);
       this.lastShot = now;
     }
     this.bezKosztuStrzalu = false;
+    this.przebicieStrzalu = 0;
   }
 
   /**
-   * Choosing the skill of the special button (new controls test). Only at a training place (owner, 26 Oct 2026):
-   * the stadium judge and training stations for sword/bow, a library for magic. A skill needs its weapon level.
+   * Training places (stadium judge, training stations, a library) used to let the player pick the special attack.
+   * Now it comes from the equipment (owner, 24 Nov 2026), so they explain what the hero has and what changes it.
    */
   private wyborUmiejetnosci(bronie: Umiejetnosc[], title: string) {
-    const lista = SPECJALNE.filter((u) => bronie.includes(u.bron));
-    const nazwyBroni: Record<Umiejetnosc, string> = { miecz: UMIEJETNOSCI.miecz.nazwa, luk: UMIEJETNOSCI.luk.nazwa, magia: UMIEJETNOSCI.magia.nazwa };
-    const aktywna = (u: Umiej) => (session.umiej[u.bron] ?? domyslnaUmiejetnosc(u.bron).id) === u.id;
-    const buttons = lista.map((u) => {
-      const lvl = skillLevel(u.bron);
-      if (lvl < u.poziom) return `🔒 ${u.nazwa} (${nazwyBroni[u.bron]} – poziom ${u.poziom}, masz ${lvl})`;
-      return `${aktywna(u) ? '✅' : u.ikona} ${u.nazwa} (${nazwyBroni[u.bron]})`;
-    });
+    const u = this.umiejetnosc();
+    const linie = bronie.includes('magia')
+      ? [
+          `🔮 ${umiejetnoscOId('krag').nazwa}: różdżka bez niczego w drugiej ręce.`,
+          `🔥 ${umiejetnoscOId('wachlarz').nazwa}: różdżka + szklana kula.`,
+          `✨ ${umiejetnoscOId('mocny_czar').nazwa}: różdżka + księga zaklęć.`,
+        ]
+      : [
+          `🌀 ${umiejetnoscOId('zamach').nazwa}: miecz bez niczego w drugiej ręce.`,
+          `🛡 ${umiejetnoscOId('tarcza').nazwa}: miecz + tarcza.`,
+          `🎯 ${umiejetnoscOId('przebicie').nazwa}: łuk.`,
+        ];
     this.dialog({
       title,
-      text: `Tu ćwiczysz umiejętność, którą masz pod złotym przyciskiem (Q). Kosztuje siły (miecz, łuk) albo manę (magia).\n\n${lista.map((u) => `${u.ikona} ${u.nazwa}: ${u.opis}`).join('\n')}`,
-      buttons: [...buttons, 'Wyjdź'],
-      onChoose: (i) => {
-        const u = lista[i];
-        if (!u) return;
-        if (skillLevel(u.bron) < u.poziom) return this.toast(`🔒 ${u.nazwa}: potrzebny poziom ${u.poziom} (${nazwyBroni[u.bron]}).`, 2200);
-        session.umiej[u.bron] = u.id;
-        this.toast(`🎯 ${u.nazwa} – gotowa pod złotym przyciskiem.`, 2200);
-        this.emitZasoby();
-        this.save();
-      },
+      text: `Atak pod złotym przyciskiem (Q) zależy od tego, co trzymasz w rękach. Zmień broń albo to, co masz w drugiej ręce, a zmieni się też atak.\n\n${linie.join('\n')}\n\nTeraz masz: ${u.ikona} ${u.nazwa}.`,
+      buttons: ['Rozumiem'],
+      onChoose: () => {},
     });
   }
 
@@ -6664,6 +6658,46 @@ export class GameScene extends Phaser.Scene {
       this.wearWeapon(gear.equip.bron);
       this.practiced('miecz');
     }
+  }
+
+  /** Uderzenie tarczą (sword + shield): a short shove ahead – everyone in the arc is knocked back and stunned. */
+  private uderzenieTarcza(now: number) {
+    const T = WALKA_SPECJALNE.tarcza;
+    this.faceFoe(T.zasieg);
+    const aim = Math.atan2(this.player.facing.y, this.player.facing.x);
+    const reach = this.swingReach(T.zasieg);
+    const arc = (T.katStopnie * Math.PI) / 180;
+    this.drawSweep(aim, arc, reach);
+    this.animateMelee(aim, true);
+    let landed = false;
+    for (const e of [...this.enemies]) {
+      if (e.isDead || e.inAir || e.peaceful) continue;
+      const dx = e.x - this.player.x, dy = e.y - (this.player.y + 2);
+      if (Math.hypot(dx, dy) > reach + e.size) continue;
+      if (Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aim)) > arc / 2 && Math.hypot(dx, dy) > e.size + 4) continue;
+      landed = true;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * T.mnoznik, { rodzaj: 'tepe', mocny: true, bohater: true })) this.onEnemyKilled(e);
+      else if (!e.heavy) e.daze(now, T.ogluszenieMs);
+    }
+    if (landed) this.practiced('miecz');
+  }
+
+  /** Krąg mocy (a wand without a book or orb): a wave of magic all round the hero. */
+  private kragMocy(now: number) {
+    const weapon = rangedWeapon();
+    if (!weapon) return;
+    const K = WALKA_SPECJALNE.krag;
+    const reach = this.swingReach(K.zasieg);
+    this.drawSweep(0, Math.PI * 2, reach);
+    this.animateMelee(Math.atan2(this.player.facing.y, this.player.facing.x), true, true);
+    let landed = false;
+    for (const e of [...this.enemies]) {
+      if (e.isDead || e.inAir || e.peaceful) continue;
+      if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
+      landed = true;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, shotDamage(weapon, Math.random) * K.mnoznik, { rodzaj: 'magia', mocny: true, bohater: true })) this.onEnemyKilled(e);
+    }
+    if (landed) this.practiced('magia');
   }
 
   /** Zamach (sword skill): a full turn with the weapon, every enemy around takes a blow (×0.8). */
@@ -6769,7 +6803,7 @@ export class GameScene extends Phaser.Scene {
     this.oprawa?.sledz(sprite, skill === 'magia', strong);
     this.shots.push({ sprite, x: this.player.x, y: this.player.y, originX: this.player.x, originY: this.player.y, range,
       arc: live() && !strong && skillLevel(skill) <= 3 ? WALKA.dystans.lukLotuPx : 0,
-      vx: dir.x * speed, vy: dir.y * speed, left: range, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus });
+      vx: dir.x * speed, vy: dir.y * speed, left: range, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus, przebija: this.przebicieStrzalu });
   }
 
   private updateShots(dt: number) {
@@ -6797,7 +6831,8 @@ export class GameScene extends Phaser.Scene {
           this.practiced(shot.skill);
           this.missText(foe.x, foe.y - 4 * foe.kind.scale);
         } else if (foe) {
-          done = true;
+          // A piercing shot flies on through the next enemies (each hit only once).
+          if (shot.przebija) { shot.przebija--; shot.missed.add(foe); } else done = true;
           this.practiced(shot.skill);
           const imb = imbueOf(shot.weapon)?.e;
           const instant = shot.skill === 'luk' && !WALKA.bezNatychmiast.includes(foe.kindId) && !foe.duel && Math.random() < instaKillChance();

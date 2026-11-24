@@ -50,6 +50,12 @@ export interface Przedmiot {
    * 'obrona' = talizman liczony do obrony jak zbroja (jego `moc`, Filtr aetherowy).
    */
   efekt?: 'swiatlo' | 'pioruny' | 'szczescie' | 'szybkosc' | 'zycie' | 'celnosc' | 'obrona';
+  /**
+   * The item's own power (`efekt`) works only from this level of its weapon skill (owner, 24 Nov 2026: an unskilled
+   * hero swings a legendary sword like an ordinary one; from skill N the lightning starts). The item itself can be
+   * worn from skill 1.
+   */
+  mocWymaga?: number;
   /** Przedmiot fabularny (np. pączek dla herszta): nic nie daje, służy do misji. */
   fabularny?: boolean;
   /** Prepared food: heals this many hearts, after potions and edible harvests. */
@@ -121,10 +127,10 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 4400 },
   // Mityczne: nie ma ich w sklepach, dostaje się je za tajne hasło (np. z ulotki
   // w prawdziwym miejscu). Hasła i nagrody ustawia się w panelu admina.
-  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 9, cena: 0, efekt: 'swiatlo', opis: 'Świeci – widzisz o połowę dalej.' },
+  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 9, cena: 0, efekt: 'swiatlo', mocWymaga: 5, opis: 'Świeci – widzisz o połowę dalej.' },
   // Talizmany (miejsce na szyi): tylko w nagrodę za misje.
   { id: 'podkowa_szczescia', nazwa: 'Podkowa Szczęścia', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szczescie', opis: 'Dopóki ją nosisz, każdy potwór i każda rozbita banda dają 10% więcej monet.' },
-  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 7, cena: 0, efekt: 'pioruny', opis: 'Sam razi piorunami wrogów w pobliżu.' },
+  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 7, cena: 0, efekt: 'pioruny', mocWymaga: 5, opis: 'Sam razi piorunami wrogów w pobliżu.' },
   // „Serce Zębatka” (owner's quest chain, 6 Oct 2026): rewards of its missions, made in the admin panel.
   { id: 'gwizdek_maszynisty', nazwa: 'Gwizdek Maszynisty', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Mosiężny gwizdek z parowozu. Noszony jako talizman: chodzisz o 4% szybciej.' },
   { id: 'kluczyk_nakrecacz', nazwa: 'Kluczyk Nakręcacz', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Kluczyk do nakręcania mechanizmów. Noszony jako talizman: chodzisz o 4% szybciej.' },
@@ -157,7 +163,7 @@ const WYMAGANIA_BRONI: Record<string, number> = {
   zelazny: 3, miecz_mosiezny: 4, stalowy: 5, szabla_hartowana: 8, rycerski: 10,
   karabela_damascenska: 12, szklany_miecz: 10, siekiera: 1,
   luk: 1, luk_refleksyjny: 5, dlugi_luk: 7, kusza: 10, pistolet_parowy: 12,
-  rozdzka: 1, swietlisty: 8, gromowladny: 8, karabin_trybunal: 12,
+  rozdzka: 1, swietlisty: 1, gromowladny: 1, karabin_trybunal: 12,
 };
 for (const p of PRZEDMIOTY) if (p.miejsce === 'bron') p.wymaganySkill = WYMAGANIA_BRONI[p.id] ?? 1;
 

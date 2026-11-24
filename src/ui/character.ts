@@ -1,5 +1,5 @@
 import { PROFESJE, PROFESJA, profesja } from '../content/profesje';
-import { UMIEJETNOSCI as ATAKI, domyslnaUmiejetnosc } from '../content/umiejetnosci';
+import { specjalnyZEkwipunku, umiejetnoscOId } from '../content/umiejetnosci';
 import { przewijanieDotykiem } from './przewijanie';
 import { naEkranie } from '../obrot';
 import { collectStoryItems } from '../prolog/rewards';
@@ -13,7 +13,7 @@ import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
 import { itemLargeUrl, rzeczUrl, itemAssetUrl } from './itemIcon';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, weaponRequirement, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
+  gear, item, weaponRequirement, powerRequirement, powerSkill, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
 import { session, stanOsiagniec, saveNow, poczatekSesji } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
@@ -782,9 +782,20 @@ function itemCard(id: string) {
     // Unmet requirement = the row itself in red (owner, 3 Nov 2026: no "za niski poziom" sentence).
     list.push([`Wymaga ${UMIEJETNOSCI[k].dopelniacz}:`, String(it.wymaganySkill ?? 1), ...(weaponRequirement(id) ? ['brak'] : [])] as [string, string] | [string, string, string]);
   }
-  if (it?.miejsce === 'bron' && k && gear.equip.bron === id && !weaponRequirement(id)) {
-    const special = ATAKI.find(u => u.id === session.umiej[k] && u.bron === k && u.poziom <= skillLevel(k)) ?? domyslnaUmiejetnosc(k);
-    list.push(['Aktywny atak specjalny', special.nazwa]);
+  // The special attack comes from the equipment (owner, 24 Nov 2026): what this item gives, or – for the weapon in
+  // hand – what the hand + second hand give together right now.
+  if (it?.miejsce === 'bron' && k) {
+    const druga = gear.equip.bron === id ? gear.equip.dystans : null;
+    list.push(['Atak specjalny', umiejetnoscOId(specjalnyZEkwipunku(k, druga)).nazwa]);
+  } else if (it?.miejsce === 'dystans') {
+    const reka = gear.equip.bron ? skillOfItem(gear.equip.bron) : null;
+    const z = it.rodzaj === 'magia' ? 'magia' : 'miecz';
+    if (z === 'miecz' || !reka || reka === z) list.push(['Atak specjalny', umiejetnoscOId(specjalnyZEkwipunku(z, id)).nazwa]);
+  }
+  // The item's own power: from skill N (red until then).
+  if (it?.efekt && it.mocWymaga) {
+    const ps = powerSkill(id);
+    list.push([`Moc: ${MOCE[it.efekt] ?? it.efekt}`, `od ${UMIEJETNOSCI[ps].dopelniacz} ${it.mocWymaga}`, ...(powerRequirement(id) ? ['brak'] : [])] as [string, string, string] | [string, string]);
   }
   const w = wearRow(id);
   if (w) list.push(w);
@@ -795,6 +806,9 @@ function itemCard(id: string) {
   if (it?.leczenie) card.append(el('div', 'c-card-desc', `Leczy: +${it.leczenie} ${it.leczenie === 1 ? 'serce' : it.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.`));
   return card;
 }
+
+/** Names of item powers on the item card. */
+const MOCE: Record<string, string> = { swiatlo: 'światło', pioruny: 'pioruny', szczescie: 'szczęście', szybkosc: 'szybkość', zycie: 'życie', celnosc: 'celność', obrona: 'obrona' };
 
 /**
  * A brass slider along the trunk's right edge (owner, 6 Oct 2026: on a phone, swiping the trunk

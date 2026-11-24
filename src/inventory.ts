@@ -237,7 +237,22 @@ export function gearLifeBonus() {
 
 /** Special power of the weapon in hand (mythic items). */
 export function weaponEffect() {
-  return weaponRequirement(gear.equip.bron) ? undefined : item(gear.equip.bron)?.efekt;
+  if (weaponRequirement(gear.equip.bron) || powerRequirement(gear.equip.bron)) return undefined;
+  return item(gear.equip.bron)?.efekt;
+}
+
+/** The skill an item's power depends on: its weapon kind; shields and other second-hand gear follow the melee skill. */
+export function powerSkill(id: string | null | undefined): Umiejetnosc {
+  const p = item(id);
+  return p?.rodzaj === 'magia' ? 'magia' : p?.rodzaj === 'luk' ? 'luk' : 'miecz';
+}
+
+/** Why an item's own power (efekt) is still asleep: its skill below `mocWymaga`. Null = it works. */
+export function powerRequirement(id: string | null | undefined): string | null {
+  const p = item(id);
+  if (!p?.efekt || !p.mocWymaga) return null;
+  const skill = powerSkill(id);
+  return skillLevel(skill) < p.mocWymaga ? `Moc przedmiotu – wymaga ${UMIEJETNOSCI[skill].dopelniacz}: ${p.mocWymaga}` : null;
 }
 
 /** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */

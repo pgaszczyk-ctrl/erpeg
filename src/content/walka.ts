@@ -90,3 +90,16 @@ export function zTabeli(t: Tabela, poziom: number) {
   }
   return t[t.length - 1][1];
 }
+
+/**
+ * Special attacks that come from the equipment (owner, 24 Nov 2026; content/umiejetnosci.ts specjalnyZEkwipunku).
+ * Numbers are a first try, to be balanced later.
+ */
+export const WALKA_SPECJALNE = {
+  /** Strzał przebijający: flies through this many more enemies after the first hit. */
+  przebicie: 2,
+  /** Uderzenie tarczą: reach (× the sword's), arc, damage share, stun. */
+  tarcza: { zasieg: 1.2, katStopnie: 100, mnoznik: 0.6, ogluszenieMs: 1200 },
+  /** Krąg mocy: reach (× the sword's) all round, damage share of a spell. */
+  krag: { zasieg: 1.8, mnoznik: 0.9 },
+};
