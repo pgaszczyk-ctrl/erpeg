@@ -13,7 +13,7 @@ import {
 } from '../controls';
 import { hdOn, useHdHero, fitHd, ensureHd } from '../sprites';
 import { PLAYER_TEX } from '../art';
-import { Ludzik3D, ludzik3d } from '../ludzik3d';
+import { nowyBohater, type Bohater } from '../chibi/bohater';
 import { GAZETA } from '../content/gazeta';
 import { ustawInterakcjeHud } from '../ui/hudLive';
 import { nazwaIMozaika } from '../artillery/kulociag';
@@ -117,8 +117,8 @@ export class HalaScene extends Phaser.Scene {
     this.player.setDepth(ey);
     cam.startFollow(this.player, true);
     // The same 3D model as on the street and in dungeons (its own texture: the street's hero still exists).
-    if (ludzik3d()) {
-      const l = new Ludzik3D(this, { klucz: 'ludzik3d-hala', skala: H.hallNaMape });
+    const l = nowyBohater(this, { klucz: 'ludzik3d-hala', skala: H.hallNaMape });
+    if (l) {
       this.ludzik = l;
       l.ukryjNaStart(this.player);
       const krok = (_t: number, d: number) => l.update(this.player, Math.min(0.05, d / 1000));
@@ -275,7 +275,7 @@ export class HalaScene extends Phaser.Scene {
   }
 
   /** The hero as the 3D model (src/ludzik3d.ts); none = his drawn sheet. */
-  ludzik?: Ludzik3D;
+  ludzik?: Bohater;
 
   update(now: number, delta: number) {
     if (this.wyszedl) return;
