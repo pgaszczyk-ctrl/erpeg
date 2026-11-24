@@ -622,20 +622,14 @@
       try { navigator.getBattery && navigator.getBattery().then(function (b) { window.__naBaterii = !b.charging; }); } catch (e) {}
     </script>
     <script>
-      // QR demo (?d=…): show the logo right away, together with the map wallpaper.
-      // The code goes to window.__demoKod (src/demo.ts reads it) and the address bar shows only …/demo
-      // (owner, 19 Oct 2026); a reload of …/demo goes through public/demo/ back into the demo.
+      // The QR demo is retired (owner, 24 Nov 2026: „demo olewamy”): printed codes (?d=…) open the ordinary
+      // game at the new-character form instead.
       (function () { try {
-        var q = new URLSearchParams(location.search), kod = q.get('d');
-        if (!kod) return;
-        window.__demoKod = kod;
+        var q = new URLSearchParams(location.search);
+        if (!q.get('d')) return;
         q.delete('d');
         var rest = q.toString(), base = location.pathname.replace(/[^/]*$/, '');
-        history.replaceState(null, '', base + 'demo' + (rest ? '?' + rest : '') + location.hash);
-        var r = document.getElementById('loading-map'), l = new Image();
-        r.setAttribute('data-demo', '1');
-        l.className = 'lm-logo'; l.alt = 'Exp-lore'; l.src = './logo/odznaka.webp';
-        r.appendChild(l);
+        history.replaceState(null, '', base + (rest ? '?' + rest : '') + (location.hash || '#nowa'));
       } catch (e) {} })();
     </script>
     <script type="module" src="/src/main.ts"></script>
