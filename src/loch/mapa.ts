@@ -4,9 +4,9 @@
 //   loch:<rodzaj>:<seed>:<lat>:<lon>
 import { CityMap, PX_PER_M } from '../map/CityMap';
 import type { RodzajLochu } from '../content/lochy';
-import { planLochu, type PlanLochu } from './plan';
+import { planLochu, poziomyLochu, type PlanLochu } from './plan';
 
-export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean; /** A mission stage's dungeon (Etap typ 'loch'). */ misja?: boolean }
+export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean; /** A mission stage's dungeon (Etap typ 'loch'). */ misja?: boolean; /** Level below the surface (1 = first, default). */ poziom?: number }
 
 export const jestLochem = (id: string) => id.startsWith('loch:');
 
@@ -14,20 +14,33 @@ export const jestLochem = (id: string) => id.startsWith('loch:');
 export const nazwyLochow = new Map<string, string>();
 
 export function idLochu(l: IdLochu) {
-  return `loch:${l.tutorial ? 'prolog:' : l.misja ? 'misja:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}`;
+  const p = l.poziom && l.poziom > 1 ? `:p${l.poziom}` : '';
+  return `loch:${l.tutorial ? 'prolog:' : l.misja ? 'misja:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}${p}`;
+}
+
+/** The same dungeon, another level. */
+export function idPoziomu(id: string, poziom: number) {
+  const l = czytajIdLochu(id);
+  return l ? idLochu({ ...l, poziom }) : id;
+}
+
+/** How many levels the dungeon has (missions and the prologue: one). */
+export function poziomyId(l: IdLochu) {
+  return l.tutorial || l.misja ? { normalne: 1, ukryty: false } : poziomyLochu(l.rodzaj, l.seed);
 }
 
 export function czytajIdLochu(id: string): IdLochu | null {
-  const m = /^loch:(prolog:|misja:)?(krypta|podziemia|jaskinia):(\d+):(-?[\d.]+):(-?[\d.]+)$/.exec(id);
+  const m = /^loch:(prolog:|misja:)?(krypta|podziemia|jaskinia):(\d+):(-?[\d.]+):(-?[\d.]+)(?::p(\d+))?$/.exec(id);
   if (!m) return null;
-  return { tutorial: m[1] === 'prolog:', misja: m[1] === 'misja:', rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]) };
+  return { tutorial: m[1] === 'prolog:', misja: m[1] === 'misja:', rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]), poziom: m[6] ? Number(m[6]) : 1 };
 }
 
 /** Mapa lochu z jej planem (`city.loch`). */
 export function mapaLochu(id: string): CityMap {
   const l = czytajIdLochu(id);
   if (!l) throw new Error('Nieznany loch');
-  const plan = planLochu(l.rodzaj, l.seed, l.tutorial);
+  const lv = poziomyId(l);
+  const plan = planLochu(l.rodzaj, l.seed, l.tutorial, { poziom: Math.min(l.poziom ?? 1, lv.normalne + (lv.ukryty ? 1 : 0)), ...lv });
   const T = plan.T;
   const W = plan.w * T, H = plan.h * T;
   // Jednostki mapy = px (unitsPerM = PX_PER_M → k = 1); pierścienie zapisane różnicowo jak w plikach map.

@@ -4,10 +4,11 @@
 import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { LOCH, LOCHY, LOCH_TEKSTY, PUKANIE, type RodzajLochu } from '../content/lochy';
+import { DEKOR_LOCHU, LOCH, LOCHY, LOCH_TEKSTY, POZIOMY_LOCHU, PUKANIE, UKRYTY_POZIOM, type RodzajLochu } from '../content/lochy';
+import { BERSERKER } from '../content/gangi';
 import { KLATEK_ZEJSCIA, obrazZejscia, plotnoKurzu, plotnoPoswiaty, type ObrazZejscia } from '../loch/zejscieObraz';
 import { KATY_PIKSELOWE } from '../gen/budynki';
-import { pukanie } from '../sfx';
+import { kapniecie, pukanie } from '../sfx';
 import { hashLochu, podloga, type PlanLochu } from '../loch/plan';
 import type { RodzajWroga } from '../content/fabula';
 import { pasekWyjsciaZLochu } from '../ui/lochWyjscie';
@@ -133,6 +134,19 @@ function tekstury(scene: Phaser.Scene) {
     }
     c.fillStyle = '#e8dcbc'; c.fillRect(2, 2, 44, 2);
   });
+  // Schody w dół: stopnie ciemniejące w głąb (czarna czeluść u góry).
+  plotno('loch-w-dol', 48, 40, (c) => {
+    c.fillStyle = ink; c.fillRect(0, 0, 48, 40);
+    for (let i = 0; i < 5; i++) {
+      const v = 18 + i * 17;
+      c.fillStyle = `rgb(${v},${v - 3},${v - 8})`;
+      c.fillRect(3, 3 + i * 7, 42, 6);
+      c.fillStyle = ink; c.fillRect(3, 9 + i * 7, 42, 1);
+    }
+    c.fillStyle = '#050407'; c.fillRect(3, 3, 42, 5);
+    c.fillStyle = '#8d877a'; c.fillRect(0, 0, 3, 40); c.fillRect(45, 0, 3, 40);
+    c.fillStyle = '#5d584f'; c.fillRect(2, 0, 1, 40); c.fillRect(45, 0, 1, 40);
+  });
   // Skrzynia: zamknięta / otwarta.
   plotno('loch-skrzynia', 48, 24, (c) => {
     for (const [ox, otw] of [[0, false], [24, true]] as [number, boolean][]) {
@@ -166,6 +180,32 @@ function tekstury(scene: Phaser.Scene) {
     c.fillStyle = '#ffd36a'; c.fillRect(4, 3, 2, 4);
     c.fillStyle = '#fff2c0'; c.fillRect(4, 5, 2, 2);
   });
+  // Kinkiet z marmurowej sali (poziom ukryty): mosiężna tarcza i dwie świece (płomień osobno, migocze jak pochodnia).
+  plotno('loch-kandelabr', 14, 18, (c) => {
+    c.fillStyle = ink; c.fillRect(5, 9, 4, 9); c.fillRect(1, 9, 12, 3);
+    c.fillStyle = '#d4af37'; c.fillRect(6, 10, 2, 7); c.fillRect(2, 10, 10, 1);
+    c.fillStyle = '#8a6a1e'; c.fillRect(2, 11, 10, 1);
+    c.fillStyle = '#f3ecd8'; c.fillRect(2, 5, 2, 5); c.fillRect(10, 5, 2, 5);
+    c.fillStyle = '#ff9a2e'; c.fillRect(2, 2, 2, 3); c.fillRect(10, 2, 2, 3);
+    c.fillStyle = '#fff2c0'; c.fillRect(2, 3, 1, 1); c.fillRect(10, 3, 1, 1);
+  });
+  // Kropla wody i plusk (3 klatki rozchodzącego się kółka).
+  plotno('loch-kropla', 2, 4, (c) => {
+    c.fillStyle = '#9fd0f0'; c.fillRect(0, 1, 2, 3);
+    c.fillStyle = '#e6f6ff'; c.fillRect(0, 0, 1, 2);
+  });
+  plotno('loch-plusk', 42, 8, (c) => {
+    for (let k = 0; k < 3; k++) {
+      const o = k * 14, rx = 2 + k * 2, ry = 1 + k, a = [0.9, 0.6, 0.3][k];
+      c.fillStyle = `rgba(190,225,245,${a})`;
+      for (let i = 0; i < 24; i++) {
+        const u = (i / 24) * Math.PI * 2;
+        c.fillRect(Math.round(o + 7 + Math.cos(u) * rx), Math.round(4 + Math.sin(u) * ry), 1, 1);
+      }
+      if (k === 0) { c.fillRect(o + 6, 0, 1, 2); c.fillRect(o + 8, 1, 1, 1); }
+    }
+  });
+  if (tex.exists('loch-plusk') && !tex.get('loch-plusk').has('p0')) for (let k = 0; k < 3; k++) tex.get('loch-plusk').add(`p${k}`, 0, k * 14, 0, 14, 8);
   // Miękkie światło (ADD).
   if (!tex.exists('loch-swiatlo')) {
     const S = 128, c = document.createElement('canvas');
@@ -179,6 +219,47 @@ function tekstury(scene: Phaser.Scene) {
     x.fillRect(0, 0, S, S);
     tex.addCanvas('loch-swiatlo', c);
   }
+}
+
+/** Luźna ściana (ukryte zejście): kawał lica w kolorach lochu, 3 klatki – cała, popękana, ledwo się trzyma. */
+function teksturaGruzu(scene: Phaser.Scene, rodzaj: RodzajLochu) {
+  const key = `loch-gruz-${rodzaj}`;
+  if (scene.textures.exists(key)) return key;
+  const K = LOCHY[rodzaj].kolory, ink = '#1e1a24', W = 48, H = 44;
+  const c = document.createElement('canvas');
+  c.width = W * 3;
+  c.height = H;
+  const x = c.getContext('2d')!;
+  const r = rng(hashLochu(key));
+  for (let k = 0; k < 3; k++) {
+    const o = k * W;
+    x.fillStyle = ink; x.fillRect(o, 0, W, H);
+    x.fillStyle = K.wierzch; x.fillRect(o + 1, 0, W - 2, 12);
+    x.fillStyle = 'rgba(255,255,255,0.10)'; x.fillRect(o + 1, 11, W - 2, 1);
+    x.fillStyle = ink; x.fillRect(o, 12, W, 1);
+    x.fillStyle = K.lico; x.fillRect(o + 1, 13, W - 2, H - 14);
+    x.fillStyle = K.licoCien; x.fillRect(o + 1, H - 3, W - 2, 2);
+    // Kamienie w rzędach (jak lico ściany), trochę krzywo – luźno ułożone.
+    for (let rz = 0; rz < 4; rz++) {
+      const yy = 13 + rz * 7;
+      x.fillStyle = K.licoCien; x.fillRect(o + 1, yy + 6, W - 2, 1);
+      for (let xx = (rz % 2) * 6 + 2; xx < W - 2; xx += 11 + Math.floor(r() * 3)) x.fillRect(o + xx, yy, 1, 7);
+      if (r() < 0.8) { x.fillStyle = 'rgba(255,255,255,0.08)'; x.fillRect(o + 4 + Math.floor(r() * 30), yy + 1, 6, 1); }
+    }
+    // Ledwo widoczna rysa (podpowiedź dla uważnych), potem coraz więcej pęknięć i ubytków.
+    const rysa = (n: number) => {
+      x.fillStyle = 'rgba(8,8,12,0.75)';
+      let cx = o + 14 + Math.floor(r() * 20), cy = 14;
+      for (let i = 0; i < n; i++) { x.fillRect(cx, cy, 1, 2); cx += Math.round(r() * 2 - 1); cy += 2; if (cy > H - 4) break; }
+    };
+    rysa(5);
+    if (k >= 1) { rysa(12); rysa(9); x.fillStyle = '#0b0a0d'; x.fillRect(o + 18, 27, 6, 4); }
+    if (k >= 2) { rysa(14); rysa(14); x.fillStyle = '#060508'; x.fillRect(o + 8, 20, 7, 5); x.fillRect(o + 28, 33, 9, 5); x.fillRect(o + 22, 16, 5, 3); }
+  }
+  const t = scene.textures.addCanvas(key, c);
+  t?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+  for (let k = 0; k < 3; k++) t?.add(k, 0, k * W, 0, W, H);
+  return key;
 }
 
 /**
@@ -472,12 +553,15 @@ export const lochSesja = {
 interface Lokator { kind: RodzajWroga; x: number; y: number; komnata: number; straznik: boolean }
 
 /** Co zostało pokonane w lochu w tej sesji logowania (id lochu → numery potworów, skrzynia). */
-const stany = new Map<string, { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean }>();
+interface StanLochu { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean; /** Ciosy w luźną ścianę i czy już runęła. */ sciana: number; odkryte: boolean }
+const stany = new Map<string, StanLochu>();
 
 export interface LochHost {
   scene: Phaser.Scene;
   /** Use the existing surface transition, keeping the character and entrance position. */
   wyjdz: () => void;
+  /** The escape button (shown PRZYCISK s after arriving): asks, then runs up to the surface. */
+  uciekaj: () => void;
   spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean; hp: number; power?: number };
   toast: (t: string, ms?: number) => void;
   /** Numer logowania – stan lochu (pokonani, skrzynia) trwa tylko do następnego. */
@@ -498,22 +582,30 @@ export class LochWnetrze {
   private skrzyniaPuls!: Phaser.GameObjects.Image;
   private lokatorzy: Lokator[] = [];
   private zywi = new Map<unknown, number>();
-  private stan: { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean };
+  private stan: StanLochu;
+  private gruz?: Phaser.GameObjects.Image;
+  /** Kapiąca woda: miejsca (px mapy: x, góra zacieku, podłoga), rytm i sprite'y kropli/plusku. */
+  private krople: { x: number; y0: number; y1: number; okres: number; faza: number; kropla: Phaser.GameObjects.Image; plusk: Phaser.GameObjects.Image; dzwiek: number }[] = [];
   private key: string;
   private wyjscie: ReturnType<typeof pasekWyjsciaZLochu>;
 
   constructor(private h: LochHost, city: CityMap) {
     this.plan = city.loch!;
     this.key = `${h.nonce}|${city.id}`;
-    this.stan = h.progress ? { zabici: new Set(h.progress.killed), skrzynia: h.progress.chest, ogloszony: false } : stany.get(this.key) ?? { zabici: new Set(), skrzynia: false, ogloszony: false };
+    this.stan = h.progress ? { zabici: new Set(h.progress.killed), skrzynia: h.progress.chest, ogloszony: false, sciana: 0, odkryte: false } : stany.get(this.key) ?? { zabici: new Set(), skrzynia: false, ogloszony: false, sciana: 0, odkryte: false };
     stany.set(this.key, this.stan);
     tekstury(h.scene);
     this.maluj();
     this.planujPotwory();
+    // Prologue: the old shortcut once the floor is clear. Every other dungeon: an escape button POZIOMY_LOCHU.przyciskPoS
+    // seconds after arriving (owner, 24 Nov 2026), asking first and running up with a short animation.
     this.wyjscie = pasekWyjsciaZLochu(() => {
-      if (this.zostalo === 0) this.h.wyjdz();
+      if (this.plan.tutorial) { if (this.zostalo === 0) this.h.wyjdz(); }
+      else this.h.uciekaj();
     });
-    this.wyjscie.ustawOczyszczony(this.zostalo === 0);
+    if (this.plan.tutorial) this.wyjscie.ustawOczyszczony(this.zostalo === 0);
+    else h.scene.time.delayedCall(POZIOMY_LOCHU.przyciskPoS * 1000, () => this.wyjscie.ustawOczyszczony(true));
+    if (this.plan.ukrytyPoziom) h.scene.time.delayedCall(1800, () => h.toast(LOCH_TEKSTY.marmur, 3600));
     h.scene.events.once('shutdown', () => this.destroy());
   }
 
@@ -522,6 +614,67 @@ export class LochWnetrze {
     if (!this.h.nazwa && !this.h.straznik) return o;
     // Getters (nazwa/wejscie in the player's language) don't survive a spread, so the base is read field by field.
     return { nazwa: this.h.nazwa ?? o.nazwa, wejscie: o.wejscie, wezly: o.wezly, potwory: o.potwory, straznik: this.h.straznik ?? o.straznik, obstawa: o.obstawa, kolory: o.kolory, nagroda: o.nagroda };
+  }
+
+  /** Name with the level („Krypta pod cmentarzem · poziom -2”). */
+  get nazwaPoziomu() {
+    return this.plan.poziom > 1 ? `${this.opis.nazwa} · ${LOCH_TEKSTY.poziom(this.plan.poziom)}` : this.opis.nazwa;
+  }
+
+  /** Stairs down: the ordinary ones, or the hidden ones once their loose wall is down (null otherwise). */
+  get zejscie() {
+    const p = this.plan;
+    if (p.zejscie) { const q = this.px(p.zejscie.x, p.zejscie.y); return { x: q.x, y: q.y + p.T * 0.5 }; }
+    if (p.ukryte && this.stan.odkryte) { const q = this.px(p.ukryte.x, p.ukryte.y); return { x: q.x, y: q.y + p.T * 0.4 }; }
+    return null;
+  }
+
+  /** The loose wall's middle while it still stands. */
+  private get srodekGruzu() {
+    const u = this.plan.ukryte;
+    if (!u || this.stan.odkryte) return null;
+    return { x: (u.x + 0.5) * this.plan.T, y: u.y * this.plan.T + this.plan.T * 0.3 };
+  }
+
+  /**
+   * A blow (melee point, or the hero standing next to it) or a shot at the loose wall: it takes POZIOMY_LOCHU.ciosowSciany
+   * hits whatever the damage – no name, no life bar, it never strikes back. true = the wall was hit.
+   */
+  uderzSciane(x: number, y: number, hx?: number, hy?: number): boolean {
+    const c = this.srodekGruzu, img = this.gruz;
+    if (!c || !img) return false;
+    const T = this.plan.T;
+    const d = Math.min(Math.hypot(x - c.x, y - c.y), hx === undefined ? Infinity : Math.hypot(hx - c.x, hy! - c.y - T * 0.6));
+    if (d > T * 2.6) return false;
+    const s = img.scene;
+    this.stan.sciana++;
+    pukanie(0.9);
+    const x0 = img.x;
+    s.tweens.killTweensOf(img);
+    img.setX(x0);
+    s.tweens.add({ targets: img, x: { from: x0 - 1, to: x0 + 1 }, duration: 40, yoyo: true, repeat: 2, onComplete: () => img.setX(x0) });
+    this.kurz(c.x, c.y + T * 0.8, 3);
+    if (this.stan.sciana < POZIOMY_LOCHU.ciosowSciany) {
+      img.setFrame(Math.min(2, this.stan.sciana));
+      this.h.toast(LOCH_TEKSTY.scianaPeka, 1400);
+      return true;
+    }
+    this.stan.odkryte = true;
+    s.cameras.main.shake(220, 0.004);
+    this.kurz(c.x, c.y + T * 0.6, 8);
+    s.tweens.add({ targets: img, scaleY: 0, alpha: 0, y: img.y + 2, duration: 420, ease: 'Quad.In', onComplete: () => img.destroy() });
+    this.gruz = undefined;
+    this.h.toast(LOCH_TEKSTY.scianaOdkryta, 3200);
+    return true;
+  }
+
+  /** Little dust puffs (the entrances' dust texture). */
+  private kurz(x: number, y: number, n: number) {
+    const s = this.h.scene;
+    for (let i = 0; i < n; i++) {
+      const p = s.add.image(x + (Math.random() - 0.5) * 16, y + (Math.random() - 0.5) * 4, 'loch-kurz', i % 2).setScale(0.5).setDepth(y + 2).setAlpha(0.9);
+      s.tweens.add({ targets: p, x: p.x + (Math.random() - 0.5) * 14, y: p.y - 4 - Math.random() * 8, alpha: 0, scale: 0.9, duration: 500 + Math.random() * 400, onComplete: () => p.destroy() });
+    }
   }
 
   /** Środek kratki w px mapy. */
@@ -555,6 +708,11 @@ export class LochWnetrze {
     x.fillStyle = '#07070a';
     x.fillRect(0, 0, W, H);
     const pod = (tx: number, ty: number) => podloga(p, tx, ty);
+    const UK = UKRYTY_POZIOM.kolory, DK = DEKOR_LOCHU;
+    /** Poziom za ukrytą ścianą: marmurowa sala zamiast zmurszałego kamienia. */
+    const marmur = p.ukrytyPoziom;
+    const zmurszaly = !marmur && p.rodzaj !== 'jaskinia';
+    const MECH = '#56703f';
     const scianaKratka = new Set<number>();
     for (const [a, b, cc, d] of p.sciany) for (let ty = b; ty < d; ty++) for (let tx = a; tx < cc; tx++) scianaKratka.add(ty * p.w + tx);
     // 1) Podłoga: płyty (po 2×2 kratki z przesunięciem co drugi rząd), spoiny, pęknięcia, mech/cegła.
@@ -562,6 +720,32 @@ export class LochWnetrze {
       if (!pod(tx, ty)) continue;
       const X = tx * t, Y = ty * t;
       const blok = ((Math.floor((tx + (Math.floor(ty / 2) % 2)) / 2) * 73856093) ^ (Math.floor(ty / 2) * 19349663)) >>> 0;
+      if (marmur) {
+        // Marmur: szachownica płyt 2×2 kratki, jasne i ciemne, z żyłkami (ciągłymi w całej płycie), złote spoiny, połysk.
+        const sx = Math.floor(tx / 2), sy = Math.floor(ty / 2), ciemna = (sx + sy) % 2 === 1;
+        const hs = ((sx * 73856093) ^ (sy * 19349663)) >>> 0;
+        const pal = ciemna ? UK.ciemny : UK.jasny;
+        x.fillStyle = pal[hs % pal.length];
+        x.fillRect(X, Y, t, t);
+        const rv = rng(hs ^ 0x9e3779b9);
+        x.fillStyle = ciemna ? UK.zylkaCiemna : UK.zylka;
+        for (let v = 0; v < 2; v++) {
+          let vx = sx * 2 * t + rv() * 2 * t;
+          const dx = (rv() - 0.5) * 1.6;
+          for (let i = 0; i < 2 * t; i++) {
+            const qx = Math.round(vx), qy = sy * 2 * t + i;
+            if (qx >= X && qx < X + t && qy >= Y && qy < Y + t) x.fillRect(qx, qy, 1, 1);
+            vx += dx + (rv() - 0.5) * 1.2;
+          }
+        }
+        if (!ciemna && r() < 0.35) { x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(X + Math.floor(r() * (t - 3)), Y + Math.floor(r() * (t - 1)), 3, 1); }
+        x.fillStyle = UK.zlotoCien;
+        if (ty % 2 === 0) x.fillRect(X, Y, t, 1);
+        if (tx % 2 === 0) x.fillRect(X, Y, 1, t);
+        if (!pod(tx, ty - 1)) { x.fillStyle = 'rgba(0,0,0,0.30)'; x.fillRect(X, Y, t, 4); x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(X, Y + 4, t, 4); }
+        if (!pod(tx - 1, ty)) { x.fillStyle = 'rgba(0,0,0,0.20)'; x.fillRect(X, Y, 3, t); }
+        continue;
+      }
       if (p.rodzaj === 'jaskinia') {
         // Skała: plamy po 3×3 kratki bez spoin, drobne kamyki, gdzieniegdzie mokry połysk.
         const pl = ((Math.floor(tx / 3) * 73856093) ^ (Math.floor(ty / 3) * 19349663)) >>> 0;
@@ -586,10 +770,16 @@ export class LochWnetrze {
       x.fillStyle = K.spoina;
       if (ty % 2 === 0) x.fillRect(X, Y, t, 1);
       if ((tx + (Math.floor(ty / 2) % 2)) % 2 === 0) x.fillRect(X, Y, 1, t);
-      if (r() < 0.05) {
+      if (r() < 0.05 + DK.rysa * 0.3) {
         x.fillStyle = 'rgba(10,10,14,0.55)';
         let cx = X + 3 + Math.floor(r() * (t - 6)), cy = Y + 3;
         for (let i = 0; i < 6; i++) { x.fillRect(cx, cy, 1, 2); cx += Math.round(r() * 2 - 1); cy += 2; }
+      }
+      // Wyszczerbiona płyta: odprysk przy rogu (ciemny dołek z jaśniejszym dolnym brzegiem).
+      if (r() < 0.06) {
+        const ox = X + (r() < 0.5 ? 1 : t - 5), oy = Y + (r() < 0.5 ? 1 : t - 4);
+        x.fillStyle = 'rgba(8,8,10,0.6)'; x.fillRect(ox, oy, 4, 3);
+        x.fillStyle = 'rgba(255,255,255,0.10)'; x.fillRect(ox, oy + 3, 4, 1);
       }
       if (p.rodzaj === 'krypta' && r() < 0.06) {
         x.fillStyle = K.akcent;
@@ -599,27 +789,58 @@ export class LochWnetrze {
       if (!pod(tx, ty - 1)) { x.fillStyle = 'rgba(0,0,0,0.38)'; x.fillRect(X, Y, t, 5); x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(X, Y + 5, t, 4); }
       if (!pod(tx - 1, ty)) { x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(X, Y, 4, t); }
     }
+    const kapiace: { x: number; y0: number; y1: number; okres: number; faza: number }[] = [];
     // 2) Ściany: ciemny wierzch; tam, gdzie pod spodem podłoga – lico z kamieni/cegieł.
     for (let ty = 0; ty < p.h; ty++) for (let tx = 0; tx < p.w; tx++) {
       if (pod(tx, ty) || !scianaKratka.has(ty * p.w + tx)) continue;
       const X = tx * t, Y = ty * t;
-      x.fillStyle = K.wierzch;
+      x.fillStyle = marmur ? UK.wierzch : K.wierzch;
       x.fillRect(X, Y, t, t);
       if (r() < 0.3) { x.fillStyle = 'rgba(255,255,255,0.04)'; x.fillRect(X + Math.floor(r() * t), Y + Math.floor(r() * t), 3, 2); }
-      // Krawędź wierzchu przy podłodze (z każdej strony) – cienka jaśniejsza linia.
-      x.fillStyle = 'rgba(255,255,255,0.10)';
+      // Krawędź wierzchu przy podłodze (z każdej strony) – cienka jaśniejsza linia (w marmurowej sali złota).
+      x.fillStyle = marmur ? UK.zlotoCien : 'rgba(255,255,255,0.10)';
       if (pod(tx, ty - 1)) x.fillRect(X, Y, t, 1);
       if (pod(tx - 1, ty)) x.fillRect(X, Y, 1, t);
       if (pod(tx + 1, ty)) x.fillRect(X + t - 1, Y, 1, t);
       if (pod(tx, ty + 1)) {
-        // Lico: dolne ~2/3 kratki.
-        const hL = Math.round(t * 0.62), yL = Y + t - hL;
+        // Lico: wyższe (półtorej kratki), gdy nad nim jest jeszcze ściana – mur ma wtedy wysokość jak w budynkach.
+        const wyzszy = !pod(tx, ty - 1) && scianaKratka.has((ty - 1) * p.w + tx);
+        const hL = wyzszy ? Math.round(t * 1.5) : Math.round(t * 0.62), yL = Y + t - hL;
         x.fillStyle = '#1e1a24';
         x.fillRect(X, yL - 1, t, 1);
+        if (marmur) {
+          // Lico z jasnego marmuru: złoty fryz u góry, ciemny cokół, pilastry co 4 kratki, żyłki.
+          x.fillStyle = UK.lico; x.fillRect(X, yL, t, hL);
+          x.fillStyle = UK.zylka;
+          let vx = X + r() * t;
+          for (let i = 2; i < hL - 3; i++) { x.fillRect(Math.round(vx), yL + i, 1, 1); vx += (r() - 0.5) * 1.4; if (vx < X || vx >= X + t) break; }
+          x.fillStyle = UK.zloto; x.fillRect(X, yL, t, 2);
+          x.fillStyle = UK.zlotoCien; x.fillRect(X, yL + 2, t, 1);
+          x.fillStyle = UK.ciemny[0]; x.fillRect(X, Y + t - 3, t, 3);
+          x.fillStyle = UK.zloto; x.fillRect(X, Y + t - 4, t, 1);
+          if (tx % 4 === 0) {
+            const px0 = X + Math.floor(t / 2) - 3;
+            x.fillStyle = '#f5f0e6'; x.fillRect(px0, yL + 3, 6, hL - 7);
+            x.fillStyle = UK.licoCien; x.fillRect(px0 + 5, yL + 3, 1, hL - 7); x.fillRect(px0 + 2, yL + 4, 1, hL - 9);
+            x.fillStyle = UK.zloto; x.fillRect(px0 - 1, yL + 3, 8, 2); x.fillRect(px0 - 1, Y + t - 5, 8, 1);
+          }
+          continue;
+        }
         x.fillStyle = K.lico;
         x.fillRect(X, yL, t, hL);
         x.fillStyle = K.licoCien;
         x.fillRect(X, Y + t - 2, t, 2);
+        // Ściekająca woda: mokry zaciek po licu i kałuża pod spodem; krople spadają (sprite'y w update).
+        if (r() < DK.kapanie && pod(tx, ty + 1) && pod(tx, ty + 2)) {
+          const sx = X + 3 + Math.floor(r() * (t - 6)), py = Y + t + 6;
+          x.fillStyle = 'rgba(15,25,40,0.5)'; x.fillRect(sx - 2, yL + 2, 4, hL - 2);
+          x.fillStyle = 'rgba(160,210,240,0.45)'; x.fillRect(sx, yL + 3, 1, hL - 4);
+          x.fillStyle = 'rgba(25,45,70,0.6)'; x.beginPath(); x.ellipse(sx + 0.5, py, 7, 3, 0, 0, Math.PI * 2); x.fill();
+          x.strokeStyle = 'rgba(170,215,240,0.45)'; x.lineWidth = 1; x.beginPath(); x.ellipse(sx + 0.5, py, 6, 2.5, 0, 0, Math.PI * 2); x.stroke();
+          x.fillStyle = 'rgba(220,240,255,0.55)'; x.fillRect(sx - 3, py - 1, 3, 1);
+          const [a, b] = DK.kroplaCoS;
+          kapiace.push({ x: (sx + 0.5) / D, y0: (yL + 2) / D, y1: py / D, okres: a + (b - a) * r(), faza: r() });
+        }
         if (p.rodzaj === 'jaskinia') {
           // Lico skały: nieregularne bryły zamiast cegieł.
           for (let i = 0; i < 5; i++) {
@@ -630,7 +851,7 @@ export class LochWnetrze {
           continue;
         }
         // Kamienie / cegły.
-        const rz = p.rodzaj === 'podziemia' ? 3 : 2;
+        const rz = Math.max(2, Math.round(hL / (p.rodzaj === 'podziemia' ? 4 : 6)));
         const hR = Math.floor(hL / rz);
         for (let i = 0; i < rz; i++) {
           const yy = yL + i * hR;
@@ -639,8 +860,40 @@ export class LochWnetrze {
           const off = (i + tx) % 2 ? Math.floor(t / 2) : 0;
           x.fillRect(X + off, yy, 1, hR);
           if (r() < 0.5) { x.fillStyle = 'rgba(255,255,255,0.08)'; x.fillRect(X + off + 2, yy + 1, Math.floor(t / 3), 1); }
+          // Zmurszały mur: wykruszony kawałek kamienia – ciemny ubytek, oświetlony dolny brzeg, okruch niżej.
+          if (zmurszaly && r() < DK.ubytek) {
+            const bw = 3 + Math.floor(r() * 4), bh = Math.max(2, hR - 2 - Math.floor(r() * 2));
+            const bx = X + Math.floor(r() * (t - bw)), by = yy + Math.floor(r() * Math.max(1, hR - bh));
+            x.fillStyle = '#0f0d13'; x.fillRect(bx, by, bw, bh);
+            x.fillStyle = K.licoCien; x.fillRect(bx, by, bw, 1);
+            x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(bx, by + bh, bw, 1);
+          }
         }
         if (p.rodzaj === 'krypta' && r() < 0.12) { x.fillStyle = K.akcent; x.fillRect(X + Math.floor(r() * (t - 4)), yL + 1, 4, 2); }
+        if (zmurszaly) {
+          // Wyszczerbiona krawędź u góry lica.
+          if (r() < 0.35) { x.fillStyle = K.wierzch; x.fillRect(X + Math.floor(r() * (t - 4)), yL, 2 + Math.floor(r() * 3), 1 + Math.floor(r() * 2)); }
+          // Rysa biegnąca w dół.
+          if (r() < DK.rysa) {
+            x.fillStyle = 'rgba(8,8,12,0.7)';
+            let cx = X + 2 + Math.floor(r() * (t - 4)), cy = yL + 1;
+            while (cy < Y + t - 2) { x.fillRect(cx, cy, 1, 2); cx += Math.round(r() * 2 - 1); cy += 2; }
+          }
+          // Zaciek mchu spływający z góry.
+          if (r() < DK.mech) {
+            const mx = X + Math.floor(r() * (t - 3)), dl = 3 + Math.floor(r() * (hL - 4));
+            x.fillStyle = MECH; x.fillRect(mx, yL, 3, 2); x.fillRect(mx + 1, yL + 2, 1, dl);
+            x.fillStyle = 'rgba(140,180,90,0.5)'; x.fillRect(mx, yL, 1, 1);
+          }
+          // Gruz u stóp ściany (na podłodze pod licem).
+          if (r() < DK.gruz && pod(tx, ty + 1)) {
+            for (let i = 0; i < 4; i++) {
+              const gx = X + Math.floor(r() * (t - 3)), gy = Y + t + Math.floor(r() * 4);
+              x.fillStyle = '#1e1a24'; x.fillRect(gx, gy, 3, 2);
+              x.fillStyle = r() < 0.5 ? K.lico : K.licoCien; x.fillRect(gx, gy, 2, 1);
+            }
+          }
+        }
       }
     }
     // 3) Ozdoby.
@@ -705,6 +958,52 @@ export class LochWnetrze {
             x.fillStyle = 'rgba(160,255,110,0.25)'; x.fillRect(X + dx - 2, Y + dy - 2, 7, 6);
           }
           break;
+        case 'gruz':
+          // Kupka gruzu: większe i mniejsze kamienie z cieniem.
+          for (const [dx, dy, w, h] of [[2, 9, 6, 4], [7, 8, 5, 5], [11, 11, 3, 3], [4, 6, 3, 3], [1, 13, 3, 2], [12, 7, 2, 2]]) {
+            x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(X + dx + 1, Y + dy + 1, w, h);
+            x.fillStyle = ink; x.fillRect(X + dx, Y + dy, w, h);
+            x.fillStyle = K.lico; x.fillRect(X + dx, Y + dy, w - 1, h - 1);
+            x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(X + dx, Y + dy, w - 1, 1);
+          }
+          break;
+        case 'swiece':
+          // Ogarki świec w kałuży wosku (płomyki są małe – ciepła plamka światła na podłodze).
+          x.fillStyle = 'rgba(255,190,110,0.16)'; x.beginPath(); x.ellipse(X + 8, Y + 10, 9, 5, 0, 0, Math.PI * 2); x.fill();
+          x.fillStyle = '#e8dfc6'; x.fillRect(X + 3, Y + 11, 10, 3);
+          for (const [dx, h] of [[4, 6], [8, 4], [11, 7]]) {
+            x.fillStyle = ink; x.fillRect(X + dx - 1, Y + 13 - h, 3, h + 1);
+            x.fillStyle = '#f2ead4'; x.fillRect(X + dx, Y + 13 - h, 1, h);
+            x.fillStyle = '#ff9a2e'; x.fillRect(X + dx, Y + 10 - h, 1, 2);
+            x.fillStyle = '#fff2c0'; x.fillRect(X + dx, Y + 11 - h, 1, 1);
+          }
+          break;
+        case 'lancuch':
+          // Zardzewiałe kajdany z łańcuchem.
+          x.fillStyle = ink; x.fillRect(X + 2, Y + 4, 5, 5); x.fillRect(X + 10, Y + 9, 5, 5);
+          x.fillStyle = '#7a6a5a'; x.fillRect(X + 3, Y + 5, 3, 3); x.fillRect(X + 11, Y + 10, 3, 3);
+          x.fillStyle = ink; x.fillRect(X + 4, Y + 6, 1, 1); x.fillRect(X + 12, Y + 11, 1, 1);
+          for (let i = 0; i < 4; i++) { x.fillStyle = i % 2 ? '#8a5a3a' : '#6e6258'; x.fillRect(X + 6 + i, Y + 8 + i, 2, 1); }
+          break;
+        case 'urna': {
+          // Urna na cokole: ciemny marmur ze złotymi obręczami.
+          x.fillStyle = 'rgba(0,0,0,0.3)'; x.fillRect(X + 4, Y + 14, 10, 2);
+          x.fillStyle = ink; x.fillRect(X + 3, Y + 11, 10, 4); x.fillRect(X + 4, Y + 1, 8, 11); x.fillRect(X + 6, Y - 1, 4, 3);
+          x.fillStyle = UK.jasny[0]; x.fillRect(X + 4, Y + 12, 8, 2);
+          x.fillStyle = UK.ciemny[2]; x.fillRect(X + 5, Y + 2, 6, 9); x.fillRect(X + 7, Y, 2, 2);
+          x.fillStyle = UK.zloto; x.fillRect(X + 5, Y + 3, 6, 1); x.fillRect(X + 5, Y + 9, 6, 1);
+          x.fillStyle = 'rgba(255,255,255,0.3)'; x.fillRect(X + 6, Y + 4, 1, 4);
+          break;
+        }
+        case 'posag':
+          // Posąg na cokole (biały marmur), sięga kratkę wyżej.
+          x.fillStyle = 'rgba(0,0,0,0.3)'; x.fillRect(X + 3, Y + 14, 13, 3);
+          x.fillStyle = ink; x.fillRect(X + 2, Y + 9, 12, 6); x.fillRect(X + 5, Y - 9, 6, 19); x.fillRect(X + 6, Y - 13, 4, 5);
+          x.fillStyle = UK.ciemny[0]; x.fillRect(X + 3, Y + 10, 10, 4);
+          x.fillStyle = UK.zloto; x.fillRect(X + 3, Y + 10, 10, 1);
+          x.fillStyle = UK.jasny[2]; x.fillRect(X + 6, Y - 8, 4, 17); x.fillRect(X + 7, Y - 12, 2, 4); x.fillRect(X + 4, Y - 6, 2, 6); x.fillRect(X + 10, Y - 7, 2, 5);
+          x.fillStyle = UK.licoCien; x.fillRect(X + 9, Y - 8, 1, 17); x.fillRect(X + 8, Y - 12, 1, 4);
+          break;
         case 'kaluza':
           x.fillStyle = 'rgba(40,60,80,0.55)';
           x.fillRect(X + 2, Y + 6, 12, 5); x.fillRect(X + 4, Y + 4, 8, 9);
@@ -712,7 +1011,32 @@ export class LochWnetrze {
           break;
       }
     }
-    const key = `loch-${p.rodzaj}-${p.seed}`;
+    if (marmur) {
+      // Inkrustacja w środku komnat: romb z ciemnego marmuru w złotej obwódce; w skarbcu czerwony chodnik do skrzyni.
+      for (const k of p.komnaty) {
+        if (!k.duza || k.wejscie) continue;
+        if (k.skarb) {
+          const x0 = (k.cx - 1) * t, x1 = (k.cx + 2) * t, y0 = (p.skrzynia.y + 1) * t, y1 = (k.y1 - 1) * t;
+          if (y1 > y0) {
+            x.fillStyle = UK.dywanCien; x.fillRect(x0 + 2, y0 + 2, x1 - x0, y1 - y0);
+            x.fillStyle = UK.dywan; x.fillRect(x0, y0, x1 - x0, y1 - y0);
+            x.fillStyle = UK.zloto; x.fillRect(x0 + 2, y0, 1, y1 - y0); x.fillRect(x1 - 3, y0, 1, y1 - y0);
+            for (let yy = y0 + 6; yy < y1 - 4; yy += 12) {
+              const cx = (x0 + x1) / 2;
+              x.fillRect(cx - 1, yy - 2, 2, 1); x.fillRect(cx - 2, yy - 1, 4, 2); x.fillRect(cx - 1, yy + 1, 2, 1);
+            }
+          }
+          continue;
+        }
+        const cx = (k.cx + 0.5) * t, cy = (k.cy + 0.5) * t, R = 2.2 * t;
+        const romb = (rr: number) => { x.beginPath(); x.moveTo(cx, cy - rr); x.lineTo(cx + rr, cy); x.lineTo(cx, cy + rr); x.lineTo(cx - rr, cy); x.closePath(); };
+        x.fillStyle = UK.zloto; romb(R + 2); x.fill();
+        x.fillStyle = UK.ciemny[1]; romb(R); x.fill();
+        x.fillStyle = UK.zloto; romb(R * 0.45 + 1); x.fill();
+        x.fillStyle = UK.jasny[0]; romb(R * 0.45); x.fill();
+      }
+    }
+    const key = `loch-${p.rodzaj}-${p.seed}-${p.poziom}`;
     if (s.textures.exists(key)) s.textures.remove(key);
     s.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.img = s.add.image(0, 0, key).setOrigin(0).setScale(1 / D).setDepth(-1e8);
@@ -722,17 +1046,38 @@ export class LochWnetrze {
     s.add.image(sch.x, sch.y - T * 0.5, 'loch-schody').setOrigin(0.5, 0).setScale(1 / D).setDepth(-1e8 + 1);
     const dzien = s.add.image(sch.x, sch.y + T * 0.6, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0xdfe8ff).setDisplaySize(T * 5, T * 4).setDepth(1_041_200).setAlpha(0.35);
     s.tweens.add({ targets: dzien, alpha: { from: 0.28, to: 0.4 }, duration: 2600, yoyo: true, repeat: -1 });
-    // Skrzynia.
+    // Schody w dół (najdalsza komnata poziomu nad ostatnim) i ukryte za luźną ścianą.
+    if (p.zejscie) {
+      const z = this.px(p.zejscie.x, p.zejscie.y);
+      s.add.image(z.x, z.y - T * 0.5, 'loch-w-dol').setOrigin(0.5, 0).setScale(1 / D).setDepth(-1e8 + 1);
+    }
+    if (p.ukryte) {
+      const u = this.px(p.ukryte.x, p.ukryte.y);
+      const top = p.ukryte.y * T - T * 0.6;
+      s.add.image(u.x, top, 'loch-w-dol').setOrigin(0.5, 0).setScale(1 / D).setDepth(-1e8 + 1);
+      if (!this.stan.odkryte) {
+        const key = teksturaGruzu(s, p.rodzaj);
+        this.gruz = s.add.image(u.x, top - 2, key, Math.min(2, this.stan.sciana)).setOrigin(0.5, 0).setScale(1 / D).setDepth(top + 20);
+      }
+    }
+    // Skrzynia (tylko na ostatnim zwykłym i ukrytym poziomie).
     const sk = this.skrzynia;
-    this.skrzyniaImg = s.add.image(sk.x, sk.y + T * 0.4, 'loch-skrzynia', this.stan.skrzynia ? 'o' : 'z').setOrigin(0.5, 1).setScale(1 / D).setDepth(sk.y);
+    this.skrzyniaImg = s.add.image(sk.x, sk.y + T * 0.4, 'loch-skrzynia', this.stan.skrzynia ? 'o' : 'z').setOrigin(0.5, 1).setScale(1 / D).setDepth(sk.y).setVisible(p.maSkrzynie);
     // A warm pulse round the chest while it can be opened (guardian beaten, not opened yet).
     this.skrzyniaPuls = s.add.image(sk.x, sk.y + T * 0.1, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffc65a).setDisplaySize(T * 4.5, T * 3.4).setDepth(sk.y - 0.5).setVisible(false);
     // Pochodnie na licach ścian.
     for (const q of p.pochodnie) {
       const at = this.px(q.x, q.y);
-      const fire = s.add.image(at.x, at.y + T * 0.15, 'loch-pochodnia').setOrigin(0.5, 1).setScale(1 / D).setDepth(at.y + T * 0.5);
+      const fire = s.add.image(at.x, at.y + T * 0.15, marmur ? 'loch-kandelabr' : 'loch-pochodnia').setOrigin(0.5, 1).setScale(1 / D).setDepth(at.y + T * 0.5);
       const glow = s.add.image(at.x, at.y + T * 0.6, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setDisplaySize(T * 9, T * 8).setDepth(1_041_300).setAlpha(0.5);
+      if (marmur) glow.setTint(0xfff0d8);
       this.plomienie.push({ glow, fire, f: r() * 10 });
+    }
+    // Krople wody: ukryte, dopóki nie spadają (update).
+    for (const q of kapiace) {
+      const kropla = s.add.image(q.x, q.y0, 'loch-kropla').setOrigin(0.5, 1).setScale(1 / D).setDepth(q.y1 + 1).setVisible(false);
+      const plusk = s.add.image(q.x, q.y1, 'loch-plusk', 'p0').setScale(1 / D).setDepth(q.y1 + 0.5).setVisible(false);
+      this.krople.push({ ...q, kropla, plusk, dzwiek: -1 });
     }
     // Ciemność poza lampą i pochodniami (nad mgłą wojny, pod światłami).
     this.ciemno = s.add.rectangle(0, 0, 10, 10, 0x05040a, LOCH.ciemnosc).setOrigin(0).setDepth(999_500);
@@ -746,9 +1091,19 @@ export class LochWnetrze {
       const kinds: { kind: RodzajWroga; straznik: boolean }[] = [];
       if (p.tutorial) {
         kinds.push({ kind: 'glut', straznik: false });
-      } else if (k.skarb) {
+      } else if (k.skarb && p.maSkrzynie) {
         kinds.push({ kind: O.straznik, straznik: true });
         for (const o of O.obstawa) kinds.push({ kind: o, straznik: false });
+        if (p.ukrytyPoziom) for (const o of UKRYTY_POZIOM.obstawa[p.rodzaj]) kinds.push({ kind: o, straznik: false });
+      } else if (p.ukrytyPoziom) {
+        // Ukryty poziom: grupa w każdej komnacie, liczniejsza, część z elity.
+        const U = UKRYTY_POZIOM;
+        const [a, b] = LOCH.wKomnacie;
+        const ile = Math.round((a + (b - a) * (0.4 + 0.6 * k.glebokosc) * (0.7 + 0.3 * r())) * U.liczniej);
+        for (let j = 0; j < ile; j++) {
+          const elita = U.elita[p.rodzaj];
+          kinds.push({ kind: r() < U.szansaElity ? elita[Math.floor(r() * elita.length)] : O.potwory[Math.floor(r() * O.potwory.length)], straznik: false });
+        }
       } else {
         if (r() > LOCH.szansaGrupy) return;
         const [a, b] = LOCH.wKomnacie;
@@ -773,7 +1128,14 @@ export class LochWnetrze {
       const R = Math.max(k.x1 - k.x0, k.y1 - k.y0) * T * 0.9 + 4 * T;
       const e = this.h.spawn(l.x, l.y, l.kind, { x: (k.cx + 0.5) * T, y: (k.cy + 0.5) * T, r: R });
       // Jaskinia pod wielkim obozem: groźniejsza niż krypta (właściciel: „trudniejsze potworki”) – życie i ciosy ×1,4.
-      if (p.rodzaj === 'jaskinia' && !this.plan.tutorial) { e.power = (e.power ?? 1) * 1.4; e.hp = Math.max(1, Math.round(e.hp * 1.4)); }
+      // Niżej położone poziomy – coraz groźniej; ukryty najgroźniej.
+      const moc = (p.rodzaj === 'jaskinia' && !p.tutorial ? 1.4 : 1) * (1 + POZIOMY_LOCHU.mocNaPoziom * (p.poziom - 1)) * (p.ukrytyPoziom ? POZIOMY_LOCHU.mocUkrytego : 1);
+      if (moc !== 1) { e.power = (e.power ?? 1) * moc; e.hp = Math.max(1, Math.round(e.hp * moc)); }
+      // Ukryty poziom: część zwykłych potworów w szale (osobne ziarno – rozstawienie się nie zmienia).
+      if (p.ukrytyPoziom && !l.straznik && rng(p.seed ^ (i * 2654435761))() < UKRYTY_POZIOM.berserk) {
+        const b = e as unknown as { makeBerserk?: (z: number, k: number, m: number, v?: number) => void };
+        b.makeBerserk?.(BERSERKER.zycie * moc, BERSERKER.auraKolor, BERSERKER.mrugMs, BERSERKER.predkosc);
+      }
       this.zywi.set(e, i);
     });
   }
@@ -785,7 +1147,7 @@ export class LochWnetrze {
 
   /** Strażnicy skrzyni (komnata skarbu) wciąż żyją? */
   private skrzyniaPilnowana() {
-    return this.lokatorzy.some((l, i) => this.plan.komnaty[l.komnata].skarb && !this.stan.zabici.has(i));
+    return this.plan.maSkrzynie && this.lokatorzy.some((l, i) => this.plan.komnaty[l.komnata].skarb && !this.stan.zabici.has(i));
   }
 
   /** GameScene: ten potwór padł (true = był z lochu). */
@@ -794,7 +1156,7 @@ export class LochWnetrze {
     if (i === undefined) return false;
     this.zywi.delete(e);
     this.stan.zabici.add(i);
-    this.wyjscie.ustawOczyszczony(this.zostalo === 0);
+    if (this.plan.tutorial) this.wyjscie.ustawOczyszczony(this.zostalo === 0);
     if (this.h.progress && !this.h.progress.killed.includes(i)) this.h.progress.killed.push(i);
     const k = this.lokatorzy[i].komnata;
     const komnataPusta = !this.lokatorzy.some((l, j) => l.komnata === k && !this.stan.zabici.has(j));
@@ -818,17 +1180,19 @@ export class LochWnetrze {
   /** Zbliżył się do skarbca – raz ostrzega. */
   private ostrzegl = false;
 
-  /** Co jest w zasięgu ręki: schody albo skrzynia. */
-  przy(x: number, y: number): 'schody' | 'skrzynia' | null {
+  /** Co jest w zasięgu ręki: schody w górę, zejście w głąb albo skrzynia. */
+  przy(x: number, y: number): 'schody' | 'zejscie' | 'skrzynia' | null {
     const r = LOCH.dotykM * M;
-    const s = this.schody, k = this.skrzynia;
+    const s = this.schody, k = this.skrzynia, z = this.zejscie;
     if (Math.hypot(s.x - x, s.y - y) < r) return 'schody';
-    if (Math.hypot(k.x - x, k.y - y) < r) return 'skrzynia';
+    if (z && Math.hypot(z.x - x, z.y - y) < r) return 'zejscie';
+    if (this.plan.maSkrzynie && Math.hypot(k.x - x, k.y - y) < r) return 'skrzynia';
     return null;
   }
 
-  /** Skrzynię można otworzyć? null = tak; inaczej powód. */
+  /** Skrzynię można otworzyć? null = tak; inaczej powód ('brak' = ten poziom nie ma skrzyni). */
   skrzyniaPowod(): string | null {
+    if (!this.plan.maSkrzynie) return 'brak';
     if (this.stan.skrzynia) return 'pusta';
     if (this.skrzyniaPilnowana()) return 'pilnowana';
     return null;
@@ -868,8 +1232,32 @@ export class LochWnetrze {
       q.glow.setAlpha(0.42 + m * 0.1);
       q.fire.setScale((1 / D) * (1 + m * 0.04), (1 / D) * (1 + m * 0.08));
     }
+    // Kapiąca woda: kropla spada z góry zacieku (przyspiesza), plusk w kałuży, ciche „kap” z bliska.
+    const slychac = DEKOR_LOCHU.kapanieSlychacM * M;
+    for (const q of this.krople) {
+      const on = q.x > v.x - 20 && q.x < v.right + 20 && q.y0 > v.y - 30 && q.y0 < v.bottom + 20 && znane(q.x, q.y1);
+      if (!on) { q.kropla.setVisible(false); q.plusk.setVisible(false); continue; }
+      const cyklTeraz = t / q.okres + q.faza, cykl = Math.floor(cyklTeraz), u = cyklTeraz - cykl;
+      const spad = 0.38 / q.okres; // ~0,38 s lotu
+      if (u < spad) {
+        const k = u / spad;
+        q.kropla.setVisible(true).setY(q.y0 + (q.y1 - q.y0) * k * k);
+        q.plusk.setVisible(false);
+      } else {
+        q.kropla.setVisible(false);
+        const po = (u - spad) * q.okres;
+        if (po < 0.36) {
+          q.plusk.setVisible(true).setFrame(`p${Math.min(2, Math.floor(po / 0.12))}`);
+          if (q.dzwiek !== cykl) {
+            q.dzwiek = cykl;
+            const d = Math.hypot(q.x - hero.x, q.y1 - hero.y);
+            if (d < slychac) kapniecie(DEKOR_LOCHU.kapanieGlosnosc * (1 - d / slychac), (q.x - hero.x) / slychac);
+          }
+        } else q.plusk.setVisible(false);
+      }
+    }
     {
-      const czeka = !this.stan.skrzynia && !this.skrzyniaPilnowana() && !this.skrzyniaPuls.scene.tweens.isTweening(this.skrzyniaPuls);
+      const czeka = this.plan.maSkrzynie && !this.stan.skrzynia && !this.skrzyniaPilnowana() && !this.skrzyniaPuls.scene.tweens.isTweening(this.skrzyniaPuls);
       if (czeka) {
         const k = this.skrzynia;
         const widac = k.x > v.x - 40 && k.x < v.right + 40 && k.y > v.y - 40 && k.y < v.bottom + 40 && znane(k.x, k.y);

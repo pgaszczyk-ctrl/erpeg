@@ -8,6 +8,8 @@
 import { createRequire } from 'node:module';
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import { ziarno } from './lochy-ziarna.mjs';
+const JEDEN_POZIOM = ziarno('krypta', 1, false); // this test plays a one-level crypt (levels: browser-lochy-poziomy.mjs)
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 await mkdir('work', { recursive: true });
@@ -96,7 +98,7 @@ try {
   });
   console.log('zejścia', JSON.stringify(wej));
   // Behind every second church: some found around (Śródmieście has many).
-  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 10); }, [wej.k.x, wej.k.y]);
+  await g(([x, y, seed]) => { const s = window.__game.scene.getScene('game'); const w = s.lochy.lista.find((q) => q.x === x && q.y === y); w.seed = seed; s.player.setPosition(x, y + 10); }, [wej.k.x, wej.k.y, JEDEN_POZIOM]);
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `work/lochy-${tag}-wejscie.png` });
   await page.keyboard.press('KeyE');
@@ -150,7 +152,6 @@ try {
     assert(!srodek.bounds && Math.abs(srodek.dx) < 6 && Math.abs(srodek.dy) < 6, `hero stays centred by the dungeon edge (${rog})`);
   }
 
-  assert(!(await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).isVisible()), 'no shortcut before clearing the floor');
 
   // 3. A fight: next to the nearest monster for a while (StworAI telegraphs).
   await g(() => {
@@ -173,7 +174,7 @@ try {
     for (const e of [...s.enemies]) { e.hp = 0; s.onEnemyKilled(e); e.destroy(); }
   });
   assert.equal(await g(() => window.__game.scene.getScene('game').loch.zostalo), 0, 'all monsters beaten');
-  assert(await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).isVisible(), 'clearing the floor shows the exit bar before collecting the chest');
+  assert(await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).isVisible(), 'the escape button is up (10 s after arriving)');
   const coins0 = await g(() => window.__session.coins);
   await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.player.setPosition(x, y + 12); }, [skrzynia.x, skrzynia.y]);
   await page.waitForTimeout(1200);
@@ -210,6 +211,8 @@ try {
   await page.waitForFunction(() => window.__game.scene.isActive('game'), null, { timeout: 10000 });
   await page.waitForTimeout(1000); // the button fades in
   await page.getByRole('button', { name: 'Ucieknij z lochu', exact: true }).click();
+  await page.waitForFunction(() => window.__dialogi.some((d) => /Ucieczka/.test(d.title)), null, { timeout: 10000 });
+  await wybierz(0); // „Na pewno?” → running animation, then the surface
   await page.waitForFunction(() => !window.__game.scene.getScene('game').city?.loch && window.__game.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 60000 });
   await page.waitForTimeout(1500);
   const gora = await g(() => { const s = window.__game.scene.getScene('game'); return { id: s.city.id, x: s.player.x, y: s.player.y }; });

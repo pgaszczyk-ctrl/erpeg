@@ -61,7 +61,7 @@ type Cios = { rodzaj: Rodzaj; wariant: 'A' | 'B' | 'C' | 'wir'; p: number; D: nu
 type Klatka = { klucz: string; ox: number; oy: number; w: number; h: number };
 type Efekt = { typ: string; t0: number; zyc: number; x: number; y: number; vx?: number; vy?: number; kol?: string; seed?: number; r?: number };
 
-interface Zadanie { id: number; klucz: string; o: Record<string, unknown>; yaw: number; faza: number; pr: number }
+interface Zadanie { id: number; klucz: string; o: Record<string, unknown>; yaw: number; faza: number; pr: number; H: number }
 
 /** One shared pool of workers and the frame cache (several scenes may show the hero). */
 class Pracownia {
@@ -103,34 +103,39 @@ class Pracownia {
       const z = this.kolejka.shift()!;
       if (this.gotowe.has(z.klucz)) continue;
       this.wToku.set(z.id, z);
-      this.wolne.pop()!.postMessage({ id: z.id, o: z.o, yaw: z.yaw, faza: z.faza, H: CHIBI.wysokosc });
+      this.wolne.pop()!.postMessage({ id: z.id, o: z.o, yaw: z.yaw, faza: z.faza, H: z.H });
     }
   }
   /** The frame if ready, else asks for it (priority pr: higher first). */
-  klatka(o: Record<string, unknown>, k: number, faza: number, pr: number): Klatka | undefined {
-    const klucz = JSON.stringify(o) + '|' + k + '|' + faza;
+  klatka(o: Record<string, unknown>, k: number, faza: number, pr: number, H = CHIBI.wysokosc, grupa = 'B'): Klatka | undefined {
+    const klucz = Pracownia.klucz(o, k, faza, H, grupa);
     const g = this.gotowe.get(klucz);
     if (g) return g;
     const q = this.kolejka.find((z) => z.klucz === klucz);
     if (q) q.pr = Math.max(q.pr, pr);
     else if (![...this.wToku.values()].some((z) => z.klucz === klucz))
-      this.kolejka.push({ id: ++this.nr, klucz, o, yaw: (k * Math.PI * 2) / CHIBI.katy, faza, pr });
+      this.kolejka.push({ id: ++this.nr, klucz, o, yaw: (k * Math.PI * 2) / CHIBI.katy, faza, pr, H });
     this.pompuj();
     return undefined;
   }
-  ma(o: Record<string, unknown>, k: number, faza: number) { return this.gotowe.get(JSON.stringify(o) + '|' + k + '|' + faza); }
-  /** Old outfits' frames go when the outfit changes (textures freed). */
+  static klucz(o: Record<string, unknown>, k: number, faza: number, H: number, grupa: string) { return grupa + '|' + H + '|' + JSON.stringify(o) + '|' + k + '|' + faza; }
+  ma(o: Record<string, unknown>, k: number, faza: number, H = CHIBI.wysokosc, grupa = 'B') { return this.gotowe.get(Pracownia.klucz(o, k, faza, H, grupa)); }
+  /** Old outfits' frames go when the outfit changes (textures freed); creatures' frames stay. */
   zapomnijInne(stroj: string) {
+    const p = 'B|' + CHIBI.wysokosc + '|' + stroj;
     for (const [klucz, kl] of this.gotowe) {
-      if (klucz.startsWith(stroj)) continue;
+      if (!klucz.startsWith('B|') || klucz.startsWith(p)) continue;
       this.textures?.remove(kl.klucz);
       this.gotowe.delete(klucz);
     }
-    this.kolejka = this.kolejka.filter((z) => z.klucz.startsWith(stroj));
+    this.kolejka = this.kolejka.filter((z) => !z.klucz.startsWith('B|') || z.klucz.startsWith(p));
   }
   get czeka() { return this.kolejka.length + this.wToku.size; }
 }
 let pracownia: Pracownia | undefined;
+/** The shared worker pool + frame cache (the hero and the creatures). */
+export function pracowniaChibi(textures: Phaser.Textures.TextureManager) { pracownia ??= new Pracownia(); pracownia.textures = textures; return pracownia; }
+export type { Klatka };
 
 export class LudzikChibi {
   private image?: Phaser.GameObjects.Image;
