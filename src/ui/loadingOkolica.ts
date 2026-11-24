@@ -11,7 +11,7 @@
 /** Tunables. Spans are the screen's width in km. */
 export const OKOLICA = {
   /** Where the zoom stops (km across the screen): the destination's country and its neighbours. */
-  doKm: 900,
+  doKm: 1300,
   /** Length of the zoom (ms); slow at the end, then it holds still until the game is shown. */
   czasMs: 6000,
   /** A tile zoom is used once one of its pixels takes at most this many canvas pixels (smaller = sharper, more tiles). */
