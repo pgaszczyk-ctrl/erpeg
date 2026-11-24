@@ -246,6 +246,10 @@ export interface Wiesc {
 /** „Co nowego” – newest first. Written for players, short and without jargon. Update with each release. */
 export const NOWOSCI: Wiesc[] = [
   {
+    data: '24.11.2026', tytul: { pl: 'Muzyka na powitanie', en: 'A welcome tune' },
+    tresc: { pl: 'Od otwarcia gry do pokazania mapy gra nowy utwór „Brassbound Horizons”, który płynnie przechodzi w muzykę świata. Przeglądarki puszczają dźwięk dopiero po pierwszym dotknięciu ekranu albo klawiszu.', en: 'From opening the game until the map appears, a new piece, “Brassbound Horizons”, plays and fades smoothly into the world’s music. Browsers allow sound only after the first tap or key press.' },
+  },
+  {
     data: '21.11.2026', tytul: { pl: 'Drogowskazy niebezpieczeństwa', en: 'Danger signposts' },
     tresc: { pl: 'Na dużych skrzyżowaniach i rondach w miastach stoją drewniane drogowskazy z niedbale namalowanym stworem i strzałką do najbliższego obozu potworów – z odległością i kierunkiem. Podejdź, przeczytaj i każ strzałce prowadzić. Bohater w biegu macha też rękami.', en: 'Big crossings and roundabouts in towns now have wooden signposts with a hastily painted creature and an arrow to the nearest monster camp – with the distance and direction. Walk up, read it and let the arrow guide you. The running hero now swings his arms too.' },
   },
