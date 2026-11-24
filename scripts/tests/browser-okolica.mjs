@@ -1,5 +1,6 @@
-// Loading zoom close-up layers (loadingOkolica.ts): the poster hands over to a drawn map that zooms in sharply.
-// Needs `npm run build`. Uses data/world-sample/lublin.pmtiles; the Lublin map is held back so the cover stays.
+// Loading zoom (loadingOkolica.ts): the poster hands over to our world map tiles (public/mapa-swiata), which zoom in
+// to a country-sized view gaining detail. Needs `npm run build`. Uses data/world-sample/lublin.pmtiles for the game;
+// the Lublin map is held back so the cover stays.
 // TELEFON=1 = upright phone.
 import { createRequire } from 'node:module';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -29,6 +30,8 @@ try {
     if (fn === 'game_settings') body = {}; if (fn === 'server_now') body = new Date().toISOString();
     return r.fulfill({ json: body });
   });
+  const kafle = new Set();
+  context.on('request', (q) => { const m = /mapa-swiata\/(\d)\//.exec(q.url()); if (m) kafle.add(Number(m[1])); });
   const page = await context.newPage(), errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('http://127.0.0.1:4191/?lang=pl&world=http://127.0.0.1:4191/swiat.pmtiles#postac=Jam&kod=ANGELIKA', { waitUntil: 'commit' });
@@ -40,6 +43,7 @@ try {
   }
   const px = await page.evaluate(() => { const c = document.querySelector('.lm-okolica'); return { w: c.width, h: c.height, css: c.clientWidth }; });
   assert(px.w >= px.css, 'canvas drawn at the screen\'s real pixels');
+  assert(kafle.has(0) && kafle.has(6), `tiles from coarse to fine were read: ${[...kafle].sort()}`);
   puscMape = true;
   await page.waitForFunction(() => document.getElementById('loading-map')?.hidden, null, { timeout: 120000 });
   assert.equal(await page.locator('.lm-okolica').count(), 0, 'canvas removed after reveal');

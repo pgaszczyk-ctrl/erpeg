@@ -1,7 +1,7 @@
 import { punktNaMapieWczytywania } from '../content/mapaWczytywania';
 import { tx } from '../i18n';
 import { resetTouch, resetKeys } from '../controls';
-import { przygotujOkolice, zamknijOkolice } from './loadingOkolica';
+import { przygotujOkolice, zamknijOkolice, wczytajMapeSwiata } from './loadingOkolica';
 
 // Ekran pozostaje nad grą aż do narysowania pierwszego widoku. Oglądanie
 // animacji i przygotowanie terenu biegną równolegle.
@@ -63,6 +63,7 @@ export function showLoginMap() {
   };
   window.addEventListener('resize', resize);
   preparePoster(r);
+  wczytajMapeSwiata();
 }
 
 function preparePoster(r: HTMLElement) {
@@ -97,10 +98,10 @@ const initialScale = (r: HTMLElement) => portrait(r)
   ? Math.max(r.clientWidth / 1280, r.clientHeight / 720) * 1.8
   : Math.max(r.clientWidth / 1280, r.clientHeight / 720);
 /**
- * How far the painted poster is enlarged before the drawn map takes over (owner, 24 Nov 2026: big pixels
- * looked ugly). Beyond this the close-up layers of loadingOkolica.ts carry on, sharp at any zoom.
+ * How far the painted poster is enlarged before our world map takes over (owner, 24 Nov 2026: big pixels
+ * looked ugly). Beyond this the tiles of loadingOkolica.ts carry on, gaining detail instead of growing pixels.
  */
-const posterScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 1.6 : 3);
+const posterScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 1.25 : 1.5);
 /** Kilometres across the screen when the poster is at `scale` (the poster: 360° of longitude = 1152 px). */
 const kmNaEkranie = (r: HTMLElement, scale: number, lat: number) => (r.clientWidth / scale) * (360 / 1152) * 111.32 * Math.cos((lat * Math.PI) / 180);
 
@@ -109,7 +110,7 @@ function przejdzDoOkolicy(r: HTMLElement, lat: number, lon: number, lot: Promise
   const ok = przygotujOkolice(r, lat, lon);
   void Promise.all([ok.gotowa, lot.catch(() => {})]).then(([jest]) => {
     if (!jest || finished || r.hidden || r.dataset.phase === 'error') return;
-    ok.start(Math.max(800, kmNaEkranie(r, scale, lat)));
+    ok.start(kmNaEkranie(r, scale, lat));
     requestAnimationFrame(() => ok.canvas.classList.add('on'));
   });
 }
@@ -194,6 +195,7 @@ export function demoMapAtOnce() {
   resize = () => { if (!flight) startDrift(r); };
   window.addEventListener('resize', resize);
   preparePoster(r);
+  wczytajMapeSwiata();
   // The badge logo: index.html already shows it before any code loads; otherwise (e.g. a scene restart) add it now.
   logoImg = r.querySelector<HTMLImageElement>('.lm-logo');
   if (!logoImg) {

@@ -1,49 +1,55 @@
-// The loading zoom's close-up layers (owner, 24 Nov 2026: „zoomowana mapa jest bardzo brzydka – zróbmy więcej
-// warstw i zbliżajmy, ujawniając więcej szczegółów, a nie coraz większe piksele”).
+// The loading zoom's close-up (owner, 24 Nov 2026: „zoom nie na wielkie piksele, tylko na orientacyjny teren, w którym
+// jesteśmy – żeby gracz wiedział, że jest w Polsce, a nie na Madagaskarze; bez pinezki i napisów”).
 //
-// The painted Earth poster is only enlarged a little; then this canvas takes over: an old-map drawing made
-// in the phone from the world map's own vector tiles (land, water, forests, towns, roads, borders, names),
-// redrawn every frame at the screen's real pixels, so it stays sharp at any zoom. Each step closer brings in
-// tiles of a finer zoom (continent → region → surroundings → town), cross-faded over the coarser ones.
-// Only the few tiles around the destination are read, a level at a time, while the zoom reaches it.
-
-import { tx as txt } from '../i18n';
-
-type VT = import('@mapbox/vector-tile').VectorTile;
-type Pt = Float64Array; // x0, y0, x1, y1… in world units (0..1 = whole Web Mercator world)
-type Napis = { x: number; y: number; t: string; r: number; stolica: boolean };
-type Poziom = { z: number; ziemia: Pt[][]; woda: Pt[][]; rzeki: Pt[]; ziel: Pt[][]; miasto: Pt[][]; drogi: Record<string, Pt[]>; granice: Pt[]; napisy: Napis[]; kafle: [number, number, boolean][]; gotowe: boolean; alfa: number };
+// The painted Earth poster is enlarged only a little; then this canvas takes over with our own world map: Natural
+// Earth II (painted land cover + shaded relief + rivers, public domain) cut into Web Mercator tiles 512 px, zooms
+// 0..7, with a crisp coastline and country borders (scripts/mapa-swiata/generuj.py → public/mapa-swiata/). It is
+// drawn every frame at the screen's real pixels; every step closer brings in the next zoom's tiles over the coarser
+// ones, so the picture gains detail instead of growing pixels. A few clouds rush past on the way down. The zoom
+// stops at a country-sized view around the destination – never the street.
 
 /** Tunables. Spans are the screen's width in km. */
 export const OKOLICA = {
-  /** Tile zooms used, coarse to fine. */
-  poziomy: [2, 5, 8, 11],
-  /** Where the canvas starts (km across the screen) and where the zoom stops. */
-  odKm: 7000,
-  doKm: 5,
+  /** Where the zoom stops (km across the screen): the destination's country and its neighbours. */
+  doKm: 900,
   /** Length of the zoom (ms); slow at the end, then it holds still until the game is shown. */
-  czasMs: 6500,
-  /** A finer level fades in between these multiples of its tile's width. */
-  wejscieOd: 2.4,
-  wejscieDo: 1.3,
-  kolory: {
-    morze: '#9fb8b8', lad: '#e9dcb8', ziel: '#c3c993', miasto: '#d7b98f', woda: '#8fb0b4', brzeg: '#6f5a3c',
-    droga: '#9a5a32', autostrada: '#7e3a1e', granica: '#8d6b4d', tusz: '#3a2716', aureola: 'rgba(240,228,196,.85)',
-  },
+  czasMs: 6000,
+  /** A tile zoom is used once one of its pixels takes at most this many canvas pixels (smaller = sharper, more tiles). */
+  ostrosc: 1.15,
+  /** Fade-in of a tile that has just arrived (ms). */
+  pojawianieMs: 260,
+  /** Clouds on the way down: share of the zoom when they pass, how many, how opaque. */
+  chmury: { od: 0.12, do: 0.62, ile: 9, alfa: 0.82 },
 };
 
-const ZIEL = new Set(['forest', 'wood', 'nature_reserve', 'national_park', 'park', 'protected_area']);
-const MIASTO = new Set(['residential', 'commercial', 'industrial', 'retail', 'urban_area']);
-const WODA = new Set(['ocean', 'sea', 'lake', 'water', 'reservoir', 'basin', 'bay', 'strait', 'river', 'riverbank', 'lagoon']);
-const SZEROKOSC_DROGI: Record<string, number> = { minor_road: 0.7, medium_road: 1.2, major_road: 2, highway: 3 };
 const KM_SWIATA = 40075.016686;
+const KATALOG = 'mapa-swiata';
+type Spis = { rozmiar: number; maxz: number; morze: string; kafle: Record<string, string[]> };
+type Kafel = { img: HTMLImageElement; ok: boolean; od: number };
 
 const mx = (lon: number) => (lon + 180) / 360;
 const my = (lat: number) => (1 - Math.asinh(Math.tan((Math.max(-85, Math.min(85, lat)) * Math.PI) / 180)) / Math.PI) / 2;
+const url = (p: string) => new URL(`${KATALOG}/${p}`, document.baseURI).href;
+
+let spisP: Promise<{ spis: Spis; jest: Set<string> } | null> | null = null;
+/** The list of tiles (which exist – open sea has none), read once per page. */
+function spis() {
+  spisP ??= fetch(url('kafle.json')).then((r) => (r.ok ? r.json() : null)).then((s: Spis | null) => {
+    if (!s) return null;
+    const jest = new Set<string>();
+    for (const [z, lista] of Object.entries(s.kafle)) for (const k of lista) jest.add(`${z}/${k}`);
+    return { spis: s, jest };
+  }).catch(() => { spisP = null; return null; });
+  return spisP;
+}
+/** Called while the start menu is up: the list and the whole world at zoom 0–1 are tiny, so read them early. */
+export function wczytajMapeSwiata() {
+  void spis().then((s) => { if (s) for (const k of s.jest) if (/^[01]\//.test(k)) new Image().src = url(`${k}.webp`); });
+}
 
 let biezace: Okolica | null = null;
 
-/** Start reading the levels for a destination (call as soon as it is known). */
+/** Start reading the map for a destination (call as soon as it is known). */
 export function przygotujOkolice(host: HTMLElement, lat: number, lon: number) {
   if (biezace && biezace.lat === lat && biezace.lon === lon) return biezace;
   biezace?.zamknij();
@@ -54,113 +60,76 @@ export function zamknijOkolice() { biezace?.zamknij(); biezace = null; }
 
 class Okolica {
   readonly canvas = document.createElement('canvas');
-  private poziomy: Poziom[];
   private cx: number; private cy: number;
   private kmNaJednostke: number;
   private t0 = 0; private raf = 0; private zamkniete = false;
-  private startKm = OKOLICA.odKm;
-  /** Resolved when the coarsest level is in (the canvas can be shown). */
+  private startKm = 20000;
+  private kafle = new Map<string, Kafel>();
+  private dane: { spis: Spis; jest: Set<string> } | null = null;
+  private chmury: { kat: number; r0: number; w: number; obr: number; faza: number; wzor: number }[] = [];
+  private obrazyChmur: HTMLCanvasElement[] = [];
+  /** Resolved when the coarse map around the destination is in (the canvas can be shown). */
   readonly gotowa: Promise<boolean>;
 
   constructor(private host: HTMLElement, readonly lat: number, readonly lon: number) {
     this.cx = mx(lon); this.cy = my(lat);
     this.kmNaJednostke = KM_SWIATA * Math.cos((lat * Math.PI) / 180);
-    this.poziomy = OKOLICA.poziomy.map((z) => ({ z, ziemia: [], woda: [], rzeki: [], ziel: [], miasto: [], drogi: {}, granice: [], napisy: [], kafle: [], gotowe: false, alfa: 0 }));
     this.canvas.className = 'lm-okolica';
     this.canvas.setAttribute('aria-hidden', 'true');
     host.querySelector('.lm-plate')?.after(this.canvas);
-    // The first two levels at once; finer ones when the zoom gets near them.
-    this.gotowa = this.wczytaj(0).then((ok) => { void this.wczytaj(1); return ok; });
+    this.gotowa = spis().then(async (d) => {
+      if (!d || this.zamkniete) return false;
+      this.dane = d;
+      // Zooms 0–2 around the destination: enough to start, the rest comes while zooming in.
+      const lista: Kafel[] = [];
+      for (let z = 0; z <= 2; z++) {
+        const n = 2 ** z, kx = Math.floor(this.cx * n), ky = Math.floor(this.cy * n);
+        for (let x = kx - 1; x <= kx + 1; x++) for (let y = ky - 1; y <= ky + 1; y++) { const k = this.kafel(z, x, y); if (k) lista.push(k); }
+      }
+      await Promise.all(lista.map((k) => k.img.decode().catch(() => {})));
+      return !this.zamkniete && lista.some((k) => k.ok);
+    });
   }
 
-  /** Width of one tile of level i in km at this latitude. */
-  private kafelKm(i: number) { return this.kmNaJednostke / 2 ** this.poziomy[i].z; }
-
-  private async wczytaj(i: number): Promise<boolean> {
-    const p = this.poziomy[i];
-    if (!p || p.gotowe || this.zamkniete) return !!p?.gotowe;
-    const { kafelSwiata } = await import('../map/world');
-    const n = 2 ** p.z;
-    // The tiles that can be on screen while this level shows: around the destination ± its widest view.
-    const W = Math.max(1, this.host.clientWidth), H = Math.max(1, this.host.clientHeight);
-    const rJ = (Math.min(this.startKm, this.kafelKm(i) * OKOLICA.wejscieOd) / this.kmNaJednostke) / 2;
-    const rY = rJ * (H / W);
-    const x0 = Math.floor((this.cx - rJ) * n), x1 = Math.floor((this.cx + rJ) * n);
-    const y0 = Math.max(0, Math.floor((this.cy - rY) * n)), y1 = Math.min(n - 1, Math.floor((this.cy + rY) * n));
-    const lista: [number, number][] = [];
-    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) lista.push([x, y]);
-    lista.sort((a, b) => Math.hypot(a[0] + 0.5 - this.cx * n, a[1] + 0.5 - this.cy * n) - Math.hypot(b[0] + 0.5 - this.cx * n, b[1] + 0.5 - this.cy * n));
-    const kafle = await Promise.all(lista.slice(0, 9).map(([x, y]) => kafelSwiata(p.z, x, y).then((vt) => ({ vt, x, y })).catch(() => null)));
-    if (this.zamkniete) return false;
-    let jest = false;
-    for (const k of kafle) if (k?.vt) { const z0 = p.ziemia.length; this.dodaj(p, k.vt, k.x, k.y); p.kafle.push([k.x, k.y, p.ziemia.length > z0]); jest = true; }
-    p.gotowe = jest;
-    return jest;
-  }
-
-  private dodaj(p: Poziom, vt: VT, tx: number, ty: number) {
-    const n = 2 ** p.z;
-    const geo = (ext: number, g: { x: number; y: number }[][]) => g.map((r) => {
-      const a = new Float64Array(r.length * 2);
-      r.forEach((q, j) => { a[j * 2] = (tx + q.x / ext) / n; a[j * 2 + 1] = (ty + q.y / ext) / n; });
-      return a;
-    });
-    const L = vt.layers;
-    const kazdy = (name: string, fn: (f: import('@mapbox/vector-tile').VectorTileFeature, ext: number) => void) => {
-      const l = L[name];
-      for (let i = 0; l && i < l.length; i++) fn(l.feature(i), l.extent);
-    };
-    kazdy('earth', (f, e) => { if (f.type === 3) p.ziemia.push(geo(e, f.loadGeometry())); });
-    kazdy('water', (f, e) => {
-      const k = String(f.properties.kind_detail ?? f.properties.kind ?? '');
-      if (f.type === 3 && (WODA.has(k) || f.properties.kind === 'water')) p.woda.push(geo(e, f.loadGeometry()));
-      else if (f.type === 2) p.rzeki.push(...geo(e, f.loadGeometry()));
-    });
-    kazdy('landuse', (f, e) => {
-      if (f.type !== 3) return;
-      const k = String(f.properties.kind ?? '');
-      if (ZIEL.has(k)) p.ziel.push(geo(e, f.loadGeometry()));
-      else if (MIASTO.has(k)) p.miasto.push(geo(e, f.loadGeometry()));
-    });
-    kazdy('natural', (f, e) => { if (f.type === 3 && ZIEL.has(String(f.properties.kind ?? ''))) p.ziel.push(geo(e, f.loadGeometry())); });
-    kazdy('roads', (f, e) => {
-      if (f.type !== 2) return;
-      const k = String(f.properties.kind ?? '');
-      if (!SZEROKOSC_DROGI[k] || (k === 'minor_road' && p.z < 11)) return;
-      (p.drogi[k] ??= []).push(...geo(e, f.loadGeometry()));
-    });
-    kazdy('boundaries', (f, e) => {
-      const lvl = Number(f.properties.kind_detail ?? f.properties.admin_level ?? 9);
-      if (f.type === 2 && (f.properties.kind === 'country' || lvl <= 2)) p.granice.push(...geo(e, f.loadGeometry()));
-    });
-    const pl = txt('pl', 'en') === 'pl';
-    kazdy('places', (f, e) => {
-      const pr = f.properties, k = String(pr.kind ?? '');
-      if (k !== 'locality' && k !== 'country' && !(k === 'region' && p.z <= 5)) return;
-      const q = f.loadGeometry()[0]?.[0];
-      const nazwa = String((pl ? pr['name:pl'] : pr['name:en']) ?? pr.name ?? '');
-      if (!q || !nazwa) return;
-      const rank = Number(pr.population_rank ?? 0) + (k === 'country' ? 20 : 0);
-      p.napisy.push({ x: (tx + q.x / e) / n, y: (ty + q.y / e) / n, t: k === 'country' ? nazwa.toUpperCase() : nazwa, r: rank, stolica: !!pr.capital });
-    });
-    p.napisy.sort((a, b) => b.r - a.r);
+  /** The tile (z, x, y), asked for on first use; null = open sea (none exists) or outside the world. */
+  private kafel(z: number, x: number, y: number): Kafel | null {
+    const n = 2 ** z;
+    if (y < 0 || y >= n || !this.dane) return null;
+    x = ((x % n) + n) % n;
+    const klucz = `${z}/${x}_${y}`;
+    if (!this.dane.jest.has(klucz)) return null;
+    let k = this.kafle.get(klucz);
+    if (!k) {
+      const img = new Image();
+      img.decoding = 'async';
+      k = { img, ok: false, od: 0 };
+      const kk = k;
+      img.onload = () => { kk.ok = true; kk.od = performance.now(); };
+      img.src = url(`${klucz}.webp`);
+      this.kafle.set(klucz, k);
+    }
+    return k;
   }
 
   /** Begin the zoom at `odKm` across the screen (where the poster leaves off). */
-  start(odKm = OKOLICA.odKm) {
-    this.startKm = odKm;
+  start(odKm: number) {
+    const W = Math.max(1, this.host.clientWidth), H = Math.max(1, this.host.clientHeight);
+    // Never wider than the whole world fits from top to bottom.
+    this.startKm = Math.max(OKOLICA.doKm * 1.5, Math.min(odKm, this.kmNaJednostke * (W / H) * 0.95));
     this.t0 = performance.now();
+    this.przygotujChmury();
     cancelAnimationFrame(this.raf);
     const krok = () => { if (this.zamkniete) return; this.rysuj(); this.raf = requestAnimationFrame(krok); };
     krok();
   }
 
-  /** Current screen width in km: geometric zoom, quick at first, settling at the end. */
-  private km(now: number) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return Math.max(OKOLICA.doKm, 40);
+  private zredukowany() { return matchMedia('(prefers-reduced-motion: reduce)').matches; }
+
+  /** Share of the zoom done (0..1) with its easing: quick at first, settling at the end. */
+  private postep(now: number) {
+    if (this.zredukowany()) return 1;
     const t = Math.min(1, (now - this.t0) / OKOLICA.czasMs);
-    const u = 1 - (1 - t) ** 2.4;
-    return this.startKm * (OKOLICA.doKm / this.startKm) ** u;
+    return 1 - (1 - t) ** 2.4;
   }
 
   private rysuj() {
@@ -168,102 +137,90 @@ class Okolica {
     const W = this.host.clientWidth, H = this.host.clientHeight;
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
     const g = c.getContext('2d')!;
-    const km = this.km(performance.now());
-    const s = (W * dpr) / (km / this.kmNaJednostke); // canvas px per world unit
-    const ox = (W * dpr) / 2 - this.cx * s, oy = (H * dpr) / 2 - this.cy * s;
-    const K = OKOLICA.kolory;
-    // Which levels show: the coarsest loaded is the base; finer ones fade in as the view gets small enough.
-    let baza = -1;
-    this.poziomy.forEach((p, i) => {
-      if (!p.gotowe) { p.alfa = 0; return; }
-      const r = km / this.kafelKm(i);
-      const cel = baza < 0 ? 1 : Math.max(0, Math.min(1, (OKOLICA.wejscieOd - r) / (OKOLICA.wejscieOd - OKOLICA.wejscieDo)));
-      if (baza < 0) baza = i;
-      p.alfa += (cel - p.alfa) * 0.15;
-      if (cel === 1 && p.alfa > 0.99) p.alfa = 1;
-      // Read the next level once this one is in use.
-      if (p.alfa > 0.2 && i + 1 < this.poziomy.length) void this.wczytaj(i + 1);
-    });
+    const now = performance.now();
+    const u = this.postep(now);
+    const km = this.startKm * (OKOLICA.doKm / this.startKm) ** u;
+    const s = c.width / (km / this.kmNaJednostke); // canvas px per world unit
+    const ox = c.width / 2 - this.cx * s, oy = c.height / 2 - this.cy * s;
+    const T = this.dane?.spis.rozmiar ?? 512, maxz = this.dane?.spis.maxz ?? 0;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1;
-    g.fillStyle = K.morze;
+    g.fillStyle = this.dane?.spis.morze ?? '#96b6be';
     g.fillRect(0, 0, c.width, c.height);
-    const sciezka = (rings: Pt[], zamknij: boolean) => {
-      g.beginPath();
-      for (const a of rings) {
-        for (let j = 0; j < a.length; j += 2) {
-          const x = a[j] * s + ox, y = a[j + 1] * s + oy;
-          if (j === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    // The finest zoom needed now; every coarser one stays drawn underneath, so nothing is ever blank.
+    const zc = Math.max(0, Math.min(maxz, Math.ceil(Math.log2(s / (T * OKOLICA.ostrosc)))));
+    // Read one zoom ahead while zooming in, so its tiles are there when needed.
+    const zp = Math.min(maxz, zc + (u < 1 ? 1 : 0));
+    for (let z = 0; z <= zp; z++) {
+      const n = 2 ** z, b = s / n;
+      const x0 = Math.floor(-ox / b), x1 = Math.floor((c.width - ox) / b);
+      const y0 = Math.max(0, Math.floor(-oy / b)), y1 = Math.min(n - 1, Math.floor((c.height - oy) / b));
+      for (let x = x0; x <= x1; x++) {
+        for (let y = y0; y <= y1; y++) {
+          const k = this.kafel(z, x, y);
+          if (!k?.ok || z > zc) continue;
+          g.globalAlpha = Math.min(1, (now - k.od) / OKOLICA.pojawianieMs);
+          // Whole canvas pixels and a hair of overlap, so seams never show.
+          const X = Math.floor(x * b + ox), Y = Math.floor(y * b + oy);
+          const X2 = Math.ceil((x + 1) * b + ox), Y2 = Math.ceil((y + 1) * b + oy);
+          g.drawImage(k.img, X, Y, X2 - X + (z ? 0.5 : 0), Y2 - Y + 0.5);
         }
-        if (zamknij) g.closePath();
       }
-    };
-    // Each feature on its own (its outer rings and holes), so overlapping lakes or forests never cancel out.
-    const wypelnij = (feats: Pt[][], kolor: string) => { g.fillStyle = kolor; for (const f of feats) { sciezka(f, true); g.fill('evenodd'); } };
-    const linia = (rings: Pt[], kolor: string, w: number, dash?: number[]) => {
-      if (!rings.length) return;
-      sciezka(rings, false); g.strokeStyle = kolor; g.lineWidth = w * dpr; g.lineJoin = 'round'; g.lineCap = 'round';
-      g.setLineDash(dash ? dash.map((d) => d * dpr) : []); g.stroke(); g.setLineDash([]);
-    };
-    const napisy: { x: number; y: number; w: number; h: number }[] = [];
-    for (let i = 0; i < this.poziomy.length; i++) {
-      const p = this.poziomy[i];
-      if (!p.alfa) continue;
+    }
+    g.globalAlpha = 1;
+    this.rysujChmury(g, u, c.width, c.height);
+  }
+
+  /** Soft clouds made once by code: a few white puffs with a cool shadow underneath. */
+  private przygotujChmury() {
+    if (this.zredukowany() || this.chmury.length) return;
+    const los = (() => { let a = Math.floor((this.lat * 131 + this.lon * 71) * 1000) >>> 0; return () => ((a = (a * 1664525 + 1013904223) >>> 0) / 2 ** 32); })();
+    for (let w = 0; w < 3; w++) {
+      const cv = document.createElement('canvas'); cv.width = 256; cv.height = 160;
+      const g = cv.getContext('2d')!;
+      const puchy = Array.from({ length: 9 }, () => ({ x: 50 + los() * 156, y: 60 + los() * 50, r: 22 + los() * 34 }));
+      for (const [kolor, dy] of [['rgba(120,140,165,.30)', 10], ['rgba(255,255,255,.92)', 0]] as const) {
+        for (const p of puchy) {
+          const gr = g.createRadialGradient(p.x, p.y + dy, 0, p.x, p.y + dy, p.r);
+          gr.addColorStop(0, kolor); gr.addColorStop(0.6, kolor); gr.addColorStop(1, kolor.replace(/[\d.]+\)$/, '0)'));
+          g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y + dy, p.r, 0, Math.PI * 2); g.fill();
+        }
+      }
+      this.obrazyChmur.push(cv);
+    }
+    const ile = OKOLICA.chmury.ile;
+    for (let i = 0; i < ile; i++) {
+      this.chmury.push({ kat: (i / ile) * Math.PI * 2 + los() * 0.6, r0: 0.05 + los() * 0.35, w: 0.55 + los() * 0.6, obr: (los() - 0.5) * 0.5, faza: los() * 0.25, wzor: i % 3 });
+    }
+  }
+
+  /** Clouds rushing outwards past the viewer while the map falls closer. */
+  private rysujChmury(g: CanvasRenderingContext2D, u: number, W: number, H: number) {
+    const { od, do: d, alfa } = OKOLICA.chmury;
+    if (!this.chmury.length || u <= od || u >= d) return;
+    const D = Math.hypot(W, H) / 2;
+    for (const ch of this.chmury) {
+      const p = (u - od) / (d - od) - ch.faza;
+      if (p <= 0 || p >= 1) continue;
+      const r = (ch.r0 + p * 1.25) * D;
+      const skala = (0.6 + p * 2.6) * ch.w * (Math.min(W, H) / 256);
       g.save();
-      g.globalAlpha = p.alfa;
-      if (i > baza) { // a finer level covers only what lies under its own tiles
-        const n = 2 ** p.z, b = s / n;
-        g.beginPath();
-        for (const [x, y] of p.kafle) g.rect(x * b + ox - 0.5, y * b + oy - 0.5, b + 1, b + 1);
-        g.clip();
-        // A tile at a closer zoom often carries no land polygon (it is all land); then the sea comes from the water layer.
-        for (const [x, y, lad] of p.kafle) { g.fillStyle = lad ? K.morze : K.lad; g.fillRect(x * b + ox - 0.5, y * b + oy - 0.5, b + 1, b + 1); }
-      }
-      wypelnij(p.ziemia, K.lad);
-      wypelnij(p.ziel, K.ziel);
-      wypelnij(p.miasto, K.miasto);
-      wypelnij(p.woda, K.morze);
-      linia(p.ziemia.flat(), K.brzeg, 0.8);
-      linia(p.rzeki, K.woda, p.z >= 8 ? 1.4 : 0.8);
-      linia(p.granice, K.granica, 1.1, [5, 4]);
-      for (const k of Object.keys(SZEROKOSC_DROGI)) if (p.drogi[k]) linia(p.drogi[k], k === 'highway' ? K.autostrada : K.droga, SZEROKOSC_DROGI[k]);
+      g.globalAlpha = alfa * Math.sin(Math.PI * p) ** 1.5;
+      g.translate(W / 2 + Math.cos(ch.kat) * r, H / 2 + Math.sin(ch.kat) * r);
+      g.rotate(ch.obr);
+      g.scale(skala, skala);
+      g.drawImage(this.obrazyChmur[ch.wzor], -128, -80);
       g.restore();
     }
-    // Names: from the most visible level, biggest first, no overlaps.
-    const zrodlo = [...this.poziomy].reverse().find((p) => p.alfa > 0.55) ?? this.poziomy.find((p) => p.alfa > 0);
-    if (zrodlo) {
-      g.globalAlpha = 1;
-      g.textAlign = 'center'; g.textBaseline = 'middle';
-      let ile = 0;
-      for (const n of zrodlo.napisy) {
-        if (ile > 14) break;
-        const x = n.x * s + ox, y = n.y * s + oy;
-        if (x < 0 || y < 0 || x > c.width || y > c.height) continue;
-        const duzy = n.r >= 20 || n.stolica;
-        const f = (duzy ? 15 : 12.5) * dpr;
-        g.font = `${duzy ? 700 : 600} ${f}px 'Alegreya Sans', Georgia, serif`;
-        const w = g.measureText(n.t).width, h = f * 1.2;
-        const ty = y - (n.r >= 20 ? 0 : f * 0.9);
-        const box = { x: x - w / 2 - 4, y: ty - h / 2, w: w + 8, h };
-        if (napisy.some((b) => b.x < box.x + box.w && box.x < b.x + b.w && b.y < box.y + box.h && box.y < b.y + b.h)) continue;
-        napisy.push(box); ile++;
-        if (n.r < 20) { g.fillStyle = K.tusz; g.beginPath(); g.arc(x, y, (duzy ? 3 : 2.2) * dpr, 0, Math.PI * 2); g.fill(); }
-        g.lineWidth = 3 * dpr; g.strokeStyle = K.aureola; g.strokeText(n.t, x, ty);
-        g.fillStyle = K.tusz; g.fillText(n.t, x, ty);
-      }
-    }
-    // The destination: a brass ring with a red enamel dot, gently pulsing.
-    const px = (W * dpr) / 2, py = (H * dpr) / 2, puls = 1 + 0.12 * Math.sin(performance.now() / 260);
-    g.globalAlpha = 1;
-    g.beginPath(); g.arc(px, py, 9 * dpr * puls, 0, Math.PI * 2);
-    g.lineWidth = 3 * dpr; g.strokeStyle = '#b8862f'; g.stroke();
-    g.lineWidth = 1 * dpr; g.strokeStyle = '#3a2716'; g.stroke();
-    g.beginPath(); g.arc(px, py, 3.6 * dpr, 0, Math.PI * 2); g.fillStyle = '#b3261e'; g.fill();
   }
 
   zamknij() {
     this.zamkniete = true;
     cancelAnimationFrame(this.raf);
     this.canvas.remove();
+    for (const k of this.kafle.values()) k.img.src = '';
+    this.kafle.clear();
   }
 }
