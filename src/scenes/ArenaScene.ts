@@ -11,7 +11,7 @@ import { ARENA, ARENA_TEKSTY } from '../content/arena';
 import { resetTouch, resetKeys } from '../controls';
 import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';
 import { PLAYER_TEX } from '../art';
-import { Ludzik3D, ludzik3d } from '../ludzik3d';
+import { nowyBohater, type Bohater } from '../chibi/bohater';
 import type { DuchAreny } from '../api';
 import { FLAGI, FLAGA_NIEZNANA, KOLORY_FLAG } from '../content/flagi';
 import { choragiewKraju } from '../arenaChoragiew';
@@ -82,8 +82,8 @@ export class ArenaScene extends Phaser.Scene {
     this.player.hp = PLAYER.maxHp;
     this.player.setDepth(start);
     // The same 3D model as on the street and in dungeons (its own texture: the street's hero still exists).
-    if (ludzik3d()) {
-      const l = new Ludzik3D(this, { klucz: 'ludzik3d-arena' });
+    const l = nowyBohater(this, { klucz: 'ludzik3d-arena' });
+    if (l) {
       this.ludzik = l;
       l.ukryjNaStart(this.player);
       const krok = (_t: number, d: number) => l.update(this.player, Math.min(0.05, d / 1000));
@@ -165,7 +165,7 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   /** The hero as the 3D model (src/ludzik3d.ts); none = his drawn sheet. */
-  ludzik?: Ludzik3D;
+  ludzik?: Bohater;
 
   private zamach(aim: number) {
     this.ludzik?.atakuj(aim);

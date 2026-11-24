@@ -434,7 +434,7 @@ export class Ludzik3D {
    * different cuts (A right→left, B left→right, C over the head and down; a strong blow is always C); a shot
    * (`strzal`) plays the bow's draw and release or the mage's gesture, started so the release shows at once.
    */
-  atakuj(aim: number, sound?: (remainingMs: number) => void, leadMs = 0, opcje: { mocny?: boolean; strzal?: 'luk' | 'magia' } = {}): boolean {
+  atakuj(aim: number, sound?: (remainingMs: number) => void, leadMs = 0, opcje: { mocny?: boolean; strzal?: 'luk' | 'magia'; wir?: boolean } = {}): boolean {
     const g = this.g;
     if (!g) return false;
     if(this.changing){this.pendingAim=aim;this.pendingSound=sound?{fn:sound,leadMs}:undefined;this.pendingOpcje=opcje;return true;}

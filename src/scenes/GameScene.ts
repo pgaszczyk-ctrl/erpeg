@@ -33,7 +33,7 @@ import { OSTROSC, zoomZPrzyblizeniem, nastepnePrzyblizenie } from '../screen';
 import { hdOn, fitHd, useHdHero, isHd, ensureRed, ensureHd, heroTextureKey, walkHd } from '../sprites';
 import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
-import { Ludzik3D, ludzik3d } from '../ludzik3d';
+import { nowyBohater, type Bohater } from '../chibi/bohater';
 import { Stwory3D, stwory3d } from '../stwory3d';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim, resetTouch, resetKeys } from '../controls';
@@ -432,7 +432,7 @@ export class GameScene extends Phaser.Scene {
   private mapView!: MapRenderer;
   private testRide!: TestRide;
   /** The hero as a live 3D model (TEST, src/ludzik3d.ts); none = the drawn sheet. */
-  private ludzik3d?: Ludzik3D;
+  private ludzik3d?: Bohater;
   /** Combat presentation: sparks, trails, hit stop, shake, contact and fall sounds (walka/oprawa.ts). */
   private oprawa?: OprawaWalki;
   /** Movement feel: run-up/braking, look-ahead camera, dust, footsteps (src/ruch.ts). */
@@ -628,7 +628,7 @@ export class GameScene extends Phaser.Scene {
       const models = this.stwory3d;
       this.events.once('shutdown', () => { models.destroy(); if (this.stwory3d === models) this.stwory3d = undefined; });
     }
-    this.ludzik3d = ludzik3d() ? new Ludzik3D(this) : undefined;
+    this.ludzik3d = nowyBohater(this);
     if (this.ludzik3d) {
       const l = this.ludzik3d;
       this.events.once('shutdown', () => { l.destroy(); if (this.ludzik3d === l) this.ludzik3d = undefined; });
@@ -2493,12 +2493,12 @@ export class GameScene extends Phaser.Scene {
 
   private swingSide = 1;
 
-  private animateMelee(aim: number, strong: boolean) {
+  private animateMelee(aim: number, strong: boolean, wir = false) {
     const id = meleeSound(gear.equip.bron, strong);
     const epoch = this.combatAudio.epoch;
     const sound = (ms: number) => { if (this.combatAudio.epoch === epoch) this.combatAudio.at(id, ms, () => !this.player.isDead && !this.leaving); };
     // The mixer fires when the arm reaches the sample's lead-in, also after an asynchronous weapon swap.
-    if (!this.ludzik3d?.atakuj(aim, sound, COMBAT_SOUNDS[id].cue * 1000, { mocny: strong })) sound(WALKA.ciosMs * (strong ? 1.6 : 1) * .206);
+    if (!this.ludzik3d?.atakuj(aim, sound, COMBAT_SOUNDS[id].cue * 1000, { mocny: strong, wir })) sound(WALKA.ciosMs * (strong ? 1.6 : 1) * .206);
   }
 
   /**
@@ -6940,7 +6940,7 @@ export class GameScene extends Phaser.Scene {
   private zamach(now: number) {
     const reach = this.swingReach(1.3);
     this.drawSweep(0, Math.PI * 2, reach);
-    this.animateMelee(Math.atan2(this.player.facing.y, this.player.facing.x), true);
+    this.animateMelee(Math.atan2(this.player.facing.y, this.player.facing.x), true, true);
     this.swingWeapon(Math.atan2(this.player.facing.y, this.player.facing.x), true);
     let landed = false;
     for (const e of [...this.enemies]) {
