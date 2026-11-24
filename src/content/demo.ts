@@ -36,21 +36,14 @@ export const SEN = {
   owocowNaSerce: 5,
   /** Hero's experience in the dream (level 20). */
   exp: 19000,
-  /** Health in ordinary sword blows; strong blows still do more damage. */
-  ciosow: 18,
-  /** Take flight after losing this many ordinary blows, even in close combat. */
-  ciosyDoLotu: 2,
+  /** The dragon is never beaten: after this many hits it flies off (owner, 19 Oct 2026). */
+  ciosowDoOdlotu: 3,
   /** Dragon attack timing/damage: medium, independently of the demo's forgiving controls. */
   trudnoscSmoka: 2,
   /** Metres of walking in the dream before the hero wakes up anyway, dragon fought or not (owner, 12 Oct 2026). */
   limitM: 1000,
   /** "Kliknij, żeby strącić owoce" shows over an apple tree this close to the hero (m). */
   podpowiedzM: 9,
-  /**
-   * Turn fight in the dream (test server, owner 18 Oct 2026): the hero starts with this share of his life (the apples
-   * he picks are his healing in the fight); after ciosow − 1 hits the dragon bites back, the last hit makes it fly off.
-   */
-  tury: { zycie: 0.75, ciosow: 3, poUcieczceM: 300 },
   /** Best gear (equip slots of inventory.ts). */
   ekwipunek: { bron: 'rycerski', zbroja: 'kolczuga', helm: 'zelazny_helm', buty: 'zelazne_buty' },
 };
@@ -77,25 +70,8 @@ export const DEMO_TEKSTY = {
   wPrzod: 'Smok mnie zauważył!',
   celSmok: 'Obejdź zamek – smok czeka na placu od północy!',
   smokPokonany: 'Smok pokonany! Ucieka w przestworza!',
-  /** The turn-fight tutorial (test server): one short line at a time, the panel button it talks about glows. */
-  walkaStart: 'Walka na tury! Dotknij smoka, a potem przycisk ⚔ CIOS.',
-  walkaLecz: 'Masz tylko 3/4 życia – czerwony pasek na dole. Otwórz ✨ SPECJALNE i wybierz LECZ: zjesz zebrane jabłka.',
-  walkaLeczTeraz: 'Teraz LECZ – kosztuje jeden ruch.',
-  walkaDobij: (n: number) => `Brawo! Bij dalej – ${n === 1 ? 'jeszcze jeden cios' : `jeszcze ${n} ciosy`}. Gdy skończą się ruchy, smok odpowie.`,
-  walkaSmokAtakuje: 'Smok się wścieka – teraz jego kolej! Spokojnie, przeżyjesz.',
-  walkaOstatni: 'Smok słabnie! Jeszcze jeden ⚔ CIOS, a odleci. (Ranny? ✨ SPECJALNE → LECZ.)',
   /** On a computer (no touch): how to walk, until the hero has walked a few steps. */
   sterowanie: 'Chodzisz strzałkami ← ↑ → ↓ albo klawiszami W A S D',
-  walkaRuchy: 'Każda akcja kosztuje ruchy (licznik po prawej). Gdy się skończą, rusza smok.',
-  /** The same tutorial for the new controls (test server, walka/tryb.ts nowyPanel): no buttons, taps on the map. */
-  kolo: {
-    walkaStart: 'Walka na tury! Dotknij smoka, potem dwa razy ATAK – bohater sam podejdzie.',
-    walkaLecz: 'Masz tylko 3/4 życia – pasek u góry. Dotknij swojego bohatera: wokół niego są akcje.',
-    walkaLeczTeraz: 'Teraz LECZENIE – zjesz zebrane jabłka. Kosztuje jeden ruch.',
-    walkaDobij: (n: number) => `Brawo! Atakuj dalej – ${n === 1 ? 'jeszcze jeden atak' : `jeszcze ${n} ataki`}. Gdy zgasną bursztynki pod bohaterem, smok odpowie.`,
-    walkaOstatni: 'Smok słabnie! Dotknij go i dwa razy ATAK, a odleci. (Ranny? Dotknij bohatera → Leczenie.)',
-    walkaRuchy: 'Każda akcja zjada bursztynki ruchów pod bohaterem. Gdy zgasną, rusza smok.',
-  },
   smokUciekl: 'Smok uciekł w przestworza!',
   zaDaleko: 'Oczy same się zamykają… Ten sen zaraz się skończy.',
   pobudkaTytul: '💤 Pobudka',

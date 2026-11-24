@@ -54,19 +54,15 @@ try {
         const t = document.getElementById(id)?.textContent;
         if (t && window.__widziane[window.__widziane.length - 1] !== t) window.__widziane.push(t);
       }
-      const z = /(?:Życie\s*|♥ )(\d+)/.exec(document.getElementById('walka-panel')?.textContent ?? '')?.[1];
-      if (z && window.__zycieOst !== z) { window.__zycieOst = z; window.__widziane.push('♥' + z); }
     }).observe(document, { subtree: true, childList: true, characterData: true });
   });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.text().startsWith('T ')) console.log(m.text()); });
   page.on('dialog', (d) => d.accept());
-  const tury = process.env.TURY !== '0';
+
   const PROD = !!process.env.PROD;
-  // The turn fight's new controls (walka/tryb.ts nowyPanel: test server and every QR demo) unless PANEL=stary.
-  const nowy = process.env.PANEL !== 'stary';
-  await page.goto(`http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8${process.env.TURY ? `&tury=${process.env.TURY}` : ''}${nowy ? '' : '&panel=stary'}`);
+  await page.goto('http://127.0.0.1:4173/?lang=pl&d=ShgD6aib8');
 
   // 1. The simplified form: only the name (and an optional account).
   await page.waitForSelector('#menu.m-demo input', { timeout: 90000 });
@@ -111,14 +107,6 @@ try {
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); let n = 0; for (const t of s.demoRun.trees) while (n < 5 && s.orchards.shake(t)) { s.dropFruit(t.x, t.y, t.fruit); n++; } });
   await page.waitForFunction(() => { const s = window.__game.scene.getScene('game'); return s.pickups.filter((i) => i.getData('kind') === 'fruit:jablko').length + window.__session.stats.fruit >= 5; }, null, { timeout: 30000 });
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'); for (const i of [...s.pickups]) if (i.getData('kind') === 'fruit:jablko') s.collect(i); });
-  // On the test server the demo has the telescope HUD too (owner, 18 Oct 2026).
-  assert.equal(await page.evaluate(() => !!document.querySelector('#hud-tel')), tury, 'Telescope HUD in the demo (every server since 1.032)');
-  if (tury) {
-    // Turn fights: 3/4 of life, the apples wait for the fight (no eating step).
-    const zycie = await page.evaluate(() => ({ hp: window.__game.scene.getScene('game').player.hp, max: window.__session.hp }));
-    console.log(name, 'życie na starcie', JSON.stringify(zycie));
-  } else {
-  }
   try {
     await page.waitForFunction(() => /uderzyło mnie w głowę![\s\S]*jestem Zosia/.test(document.getElementById('demo-big')?.textContent ?? ''), null, { timeout: 60000 });
   } catch (e) {
@@ -146,131 +134,23 @@ try {
   await page.waitForTimeout(1500);
   assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful), true, 'Far away the dragon still waits');
   await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.player.setPosition(d.x - 30, d.y); });
-  if (tury) {
-    // 4. The turn fight with its tutorial: strike, heal (Specjalne → Lecz), strike until it flies off after 3 hits.
-    await page.waitForSelector('#walka-panel', { timeout: 15000 });
-    const rada = () => page.evaluate(() => ({ t: document.getElementById('demo-rada')?.textContent ?? '', w: document.getElementById('walka-panel')?.getAttribute('data-wskaz') ?? '' }));
-    const hp0 = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { hp: s.player.hp, max: s.player.maxHp ?? null }; });
-    await page.waitForFunction((nowy) => (nowy ? /Dotknij smoka/ : /CIOS/).test(document.getElementById('demo-rada')?.textContent ?? ''), nowy, { timeout: 30000 });
-    assert.equal((await rada()).w, 'cios');
-    await page.screenshot({ path: `work/onb-${name}-4-walka-cios.png` });
-    // Nobody strolls near the dragon (owner, 19 Oct 2026).
-    const ludzie = await page.evaluate(() => {
-      const s = window.__game.scene.getScene('game'), d = s.demoRun.dragonSpot;
-      return [...s.folk.active].filter((f) => f.sprite?.visible && Math.hypot(f.x - d.x, f.y - d.y) < 90 * 1.92).map((f) => Math.round(Math.hypot(f.x - d.x, f.y - d.y) / 1.92));
-    });
-    assert.deepEqual(ludzie, [], 'Townsfolk near the dragon (m): ' + JSON.stringify(ludzie));
-    const smokNaEkranie = () => page.evaluate(() => {
-      const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon, cam = s.cameras.main, o = window.devicePixelRatio >= 2 ? 2 : 1;
-      if (!d || !d.visible) return null;
-      const k = cam.zoom / (cam.width / document.querySelector('#game canvas').getBoundingClientRect().width);
-      return { x: (d.x - cam.worldView.x) * k, y: (d.y - 6 - cam.worldView.y) * k };
-    });
-    const klik = (x, y) => (phone ? page.touchscreen.tap(x, y) : page.mouse.click(x, y));
-    const mojaTura = () => page.waitForFunction(() => {
-      const p = document.getElementById('walka-panel'), w = window.__game.scene.getScene('game').walka;
-      return !p || (!p.classList.contains('czekaj') && !p.classList.contains('wrog') && (!w || (w.faza === 'gracz' && !w.busy)));
-    }, null, { timeout: 60000 });
-    const bohaterNaEkranie = () => page.evaluate(() => {
-      const s = window.__game.scene.getScene('game'), cam = s.cameras.main;
-      const k = cam.zoom / (cam.width / document.querySelector('#game canvas').getBoundingClientRect().width);
-      return { x: (s.player.x - cam.worldView.x) * k, y: (s.player.y - 4 - cam.worldView.y) * k };
-    });
-    const kolo = async (sel) => {
-      // New controls: tap the hero, then the ring's button.
-      const h = await bohaterNaEkranie();
-      await klik(h.x, h.y);
-      await page.waitForSelector(`#walka-kolo .wk-b.${sel}`, { timeout: 5000 });
-      await page.waitForTimeout(250);
-      await page.evaluate((sel) => document.querySelector(`#walka-kolo .wk-b.${sel}`).click(), sel);
-      await page.waitForTimeout(200);
-    };
-    const uderz = async () => {
-      await mojaTura();
-      const at = await smokNaEkranie();
-      if (!at || !(await page.$('#walka-panel'))) return;
-      await klik(at.x, at.y);
-      await page.waitForTimeout(250);
-      if (nowy) {
-        // A phone: the second tap strikes (a computer struck on the click); nothing to do → end the turn.
-        // The dragon's ring of blows: „Cios” (nothing to do → end the turn).
-        const zrobil = await page.evaluate(() => { const b = document.querySelector('#walka-kolo .wk-b.cios'); if (b && b.getAttribute('aria-disabled') !== 'true') { b.click(); return true; } return false; });
-        // Picking „Atak” only previews it (the ambers pulse); the second tap attacks (20 Oct 2026).
-        if (zrobil) {
-          await page.waitForTimeout(200);
-          await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.cios.wybrany:not([aria-disabled="true"])')?.click());
-        } else await page.evaluate(() => document.querySelector('#walka-panel .wn-koniec:not(:disabled)')?.click());
-      } else await page.evaluate(() => {
-        const b = document.querySelector('#walka-panel .wp-b.cios:not([disabled])') ?? document.querySelector('#walka-panel .wp-koniec:not(.wp-wroc)');
-        b?.click();
-      });
-      await page.waitForTimeout(900);
-    };
-    if (process.env.UCIECZKA) {
-      // Run away and wander off: after 300 m of the dream the hero wakes up anyway (owner, 18 Oct 2026).
-      await mojaTura();
-      if (nowy) {
-        await page.evaluate(() => document.querySelector('#walka-panel .wn-ucieczka').click());
-        await page.waitForTimeout(150);
-        await page.evaluate(() => document.querySelector('#walka-panel .wn-ucieczka').click());
-      } else {
-        await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
-        await page.waitForTimeout(200);
-        await page.evaluate(() => document.querySelector('#walka-panel .wp-b.uciekaj').click());
-      }
-      await page.waitForFunction(() => !document.getElementById('walka-panel'), null, { timeout: 5000 });
-      await page.evaluate(() => { window.__game.scene.getScene('game').demoRun.dreamWalked += 600; });
-    } else {
-    await uderz();
-    await page.waitForFunction((nowy) => (nowy ? /Dotknij swojego bohatera/ : /SPECJALNE/).test(document.getElementById('demo-rada')?.textContent ?? ''), nowy, { timeout: 30000 });
-    assert.equal((await rada()).w, 'spec');
-    await page.screenshot({ path: `work/onb-${name}-4-walka-lecz.png` });
-    await mojaTura();
-    let przed;
-    if (nowy) {
-      const h = await bohaterNaEkranie();
-      await klik(h.x, h.y);
-      await page.waitForFunction(() => document.getElementById('walka-panel')?.getAttribute('data-wskaz') === 'lecz', null, { timeout: 5000 });
-      await page.waitForSelector('#walka-kolo .wk-b.lecz.blysk', { timeout: 5000 });
-      await page.waitForTimeout(250);
-      await page.screenshot({ path: `work/onb-${name}-4-walka-kolo.png` });
-      przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
-      await page.evaluate(() => document.querySelector('#walka-kolo .wk-b.lecz').click());
-    } else {
-      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.spec').click());
-      await page.waitForFunction(() => document.getElementById('walka-panel')?.getAttribute('data-wskaz') === 'lecz', null, { timeout: 5000 });
-      przed = await page.evaluate(() => window.__game.scene.getScene('game').player.hp);
-      await page.evaluate(() => document.querySelector('#walka-panel .wp-b.lecz').click());
-    }
-    await page.waitForFunction((h) => window.__game.scene.getScene('game').player.hp > h, przed, { timeout: 5000 });
-    await page.waitForFunction(() => /Bij dalej|Atakuj dalej|Dobij/.test(document.getElementById('demo-rada')?.textContent ?? ''), null, { timeout: 5000 });
-    for (let i = 0; i < 40 && await page.$('#walka-panel'); i++) await uderz();
-    console.log(name, 'po walce', await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return JSON.stringify({ panel: !!document.getElementById('walka-panel'), big: document.getElementById('demo-big')?.textContent, trafien: s.demoRun?.trafien, zaatak: s.demoRun?.zaatakowal, w: window.__widziane, pod: document.getElementById('walka-panel')?.textContent?.slice(0,200), dv: s.demoRun?.dragon?.visible, dact: s.demoRun?.dragon?.active, dhp: s.demoRun?.dragon?.hp, walczy: s.demoRun?.walczy, busy: s.demoRun?.busy, hp: s.player.hp, dead: s.player.isDead, phase: window.__demo?.phase, frozen: s.demoRun?.frozen, black: !!document.getElementById('demo-black') }); }));
-    await page.waitForFunction(() => /uciekł/.test(document.getElementById('demo-big')?.textContent ?? '') || document.getElementById('demo-black'), null, { timeout: 30000 });
-    // It flies off (take-off picture), never dies.
-    const odlot = await page.evaluate(() => !!window.__game.scene.getScene('game').children.getByName('smok-odlot'));
-    await page.screenshot({ path: `work/onb-${name}-4-odlot.png` });
-    // Owner, 19 Oct 2026: 3 hits, then the dragon's turn (it strikes, the hero lives), then the finishing blow.
-    const w = await page.evaluate(() => window.__widziane);
-    const iKolej = w.findIndex((t) => /jego kolej/.test(t));
-    assert(iKolej >= 0, 'The dragon gets its turn after the 3rd hit: ' + JSON.stringify(w));
-    const zycie = w.filter((t, i) => t[0] === '♥' && i < iKolej).map((t) => +t.slice(1));
-    const iOst = w.findIndex((t) => /odleci/.test(t));
-    const poAtaku = w.slice(iKolej, iOst).filter((t) => t[0] === '♥').map((t) => +t.slice(1));
-    assert(poAtaku.length && poAtaku[poAtaku.length - 1] < zycie[zycie.length - 1], 'The dragon bit: ' + JSON.stringify(w));
-    assert(w.slice(iKolej).some((t) => /odleci/.test(t)), 'Then: one more blow and it flies off');
-    const koniec = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { trafien: s.demoRun.trafien, zaatakowal: s.demoRun.zaatakowal, hp: s.player.hp }; });
-    assert(odlot, 'The dragon flies away');
-    assert(koniec.trafien === 3 && koniec.zaatakowal && koniec.hp >= 1, JSON.stringify(koniec));
-    console.log(name, 'walka turowa OK', JSON.stringify(hp0), JSON.stringify(koniec));
-    }
-  } else {
-    await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });
-    await page.waitForTimeout(2000);
-    await page.screenshot({ path: `work/onb-${name}-4-smok.png` });
-    // 4. Beat it: blackout, real login at home in front of Targi Lublin.
-    await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; s.dragons.get(d).destroy?.(); if (d.hit(s.player, s.time.now, d.hp + 1)) s.onEnemyKilled(d); });
+  await page.waitForFunction(() => window.__game.scene.getScene('game').demoRun.dragon.peaceful === false, null, { timeout: 15000 });
+  // Nobody strolls near the dragon (owner, 19 Oct 2026).
+  const ludzie = await page.evaluate(() => {
+    const s = window.__game.scene.getScene('game'), d = s.demoRun.dragonSpot;
+    return [...s.folk.active].filter((f) => f.sprite?.visible && Math.hypot(f.x - d.x, f.y - d.y) < 90 * 1.92).map((f) => Math.round(Math.hypot(f.x - d.x, f.y - d.y) / 1.92));
+  });
+  assert.deepEqual(ludzie, [], 'Townsfolk near the dragon (m): ' + JSON.stringify(ludzie));
+  await page.waitForTimeout(2000);
+  await page.screenshot({ path: `work/onb-${name}-4-smok.png` });
+  // 4. A live fight: never beaten, it flies off after the 3rd hit (SEN.ciosowDoOdlotu), whatever the hits deal.
+  for (let i = 0; i < 3; i++) {
+    const zyje = await page.evaluate(() => { const s = window.__game.scene.getScene('game'), d = s.demoRun.dragon; if (!d) return false; d.hit(s.player, s.time.now, 5); return true; });
+    if (i < 2) assert(zyje, `Still there after hit ${i + 1}`);
+    await page.waitForTimeout(300);
   }
+  await page.waitForFunction(() => /uciekł w przestworza/.test(document.getElementById('demo-big')?.textContent ?? ''), null, { timeout: 10000 });
+  assert.equal(await page.evaluate(() => window.__game.scene.getScene('game').enemies.some((e) => e.kindId === 'smok')), false, 'The dragon left the map');
   // How long the screen stays black after the dragon (owner, 18 Oct 2026: it was annoying).
   await page.waitForFunction(() => { const b = document.getElementById('demo-black'); return b && getComputedStyle(b).opacity === '1'; }, null, { timeout: 30000 });
   const czarnyOd = Date.now();

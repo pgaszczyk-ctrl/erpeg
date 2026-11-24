@@ -9,7 +9,7 @@ import type { Player } from '../objects/Player';
 import { PLAYER } from '../objects/Player';
 import type { Slime } from '../objects/Slime';
 import { ARENA, ARENA_ZYWA as Z } from '../content/arena';
-import { W } from '../walka/tryb';
+import { W } from '../skala';
 import { WALKA } from '../content/walka';
 import { poPancerzu } from '../content/pancerz';
 import { OSTROSC } from '../screen';

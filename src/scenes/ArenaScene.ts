@@ -6,7 +6,7 @@ import Phaser from 'phaser';
 import { Player, PLAYER } from '../objects/Player';
 import { Slime } from '../objects/Slime';
 import { ArenaWalka } from './ArenaWalka';
-import { W } from '../walka/tryb';
+import { W } from '../skala';
 import { ARENA, ARENA_TEKSTY } from '../content/arena';
 import { resetTouch, resetKeys } from '../controls';
 import { hdOn, useHdHero, fitHd, ensureRed, heroSkin } from '../sprites';

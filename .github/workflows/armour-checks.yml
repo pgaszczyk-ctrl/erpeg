@@ -8,7 +8,6 @@ on:
       - 'src/inventory.ts'
       - 'src/scenes/GameScene.ts'
       - 'src/objects/StworAI.ts'
-      - 'src/walka/TuryWalki.ts'
       - 'src/ui/character.ts'
       - 'src/admin/admin.ts'
       - 'scripts/tests/*pancerz.mjs'

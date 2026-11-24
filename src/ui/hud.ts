@@ -6,15 +6,14 @@ import { obracajMonete, zatrzymajMonete } from './monetaPortretu';
 import { createMachineV5 } from './hudMachineV5';
 import { createReservoirHud } from './hudReservoir';
 import { MAPA_GLADKA, lupaGladka, SAKIEWKA_GLADKA, DIAMENT_GLADKI, zamontujTeleskop, odmontujTeleskop, twarzTeleskopu, ustawTeleskop, teleskopAwatar, teleskopPortret, teleskopWidoczny, teleskopRurki, type AkcjaTeleskopu } from './hudTeleskop';
-import { turyNaSerwerze } from '../walka/tryb';
 import { live } from '../walka/live';
 import { zamontujHudLive, odmontujHudLive, hudLiveWidoczny, ustawHudLive } from './hudLive';
 const hudStyle = new URLSearchParams(location.search).get('hud');
 /**
- * The telescopic HUD at the top left (artist 39-G002, owner 18 Oct 2026): on the turn-fight server (the QR demo too) it replaces the
- * boiler at the bottom (life shows only while hurt); `?hud=kociol` brings the boiler back for comparison.
+ * The telescopic HUD at the top left (artist 39-G002, owner 18 Oct 2026): in live mode it replaces the
+ * boiler at the bottom; `?hud=kociol` brings the boiler back for comparison.
  */
-export const teleskop = () => (turyNaSerwerze() || live()) && !hudStyle;
+export const teleskop = () => live() && !hudStyle;
 /** The steampunk boiler HUD everywhere – test, demo and the ordinary game (owner, 11 Oct 2026: „nie chcę starego huda”); `?hud=old` / `?hud=v5` stay only for comparison. */
 const newMachine = hudStyle !== 'old';
 const reservoir = newMachine && hudStyle !== 'v5';
@@ -442,7 +441,7 @@ export function mountHud(on: HudHandlers) {
   }
   // The coin over the portrait while the character has no account (owner, 26 Oct 2026; ui/monetaPortretu.ts).
   obracajMonete({
-    pokazuj: () => !!session.idik && !session.konto && !demo.on && !stanGry.walka && !document.querySelector('#hud.dim') && !document.body.classList.contains('walka-tur'),
+    pokazuj: () => !!session.idik && !session.konto && !demo.on && !stanGry.walka && !document.querySelector('#hud.dim'),
     twarz: () => {
       if (teleskop()) return twarzTeleskopu();
       const r = avPic.getBoundingClientRect();

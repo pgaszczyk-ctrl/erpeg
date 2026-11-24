@@ -5,14 +5,12 @@ import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { SEN, DEMO_TEKSTY } from '../content/demo';
 import { demo, dreamPlaces, blackout, bigText, wakeUp, przygotujPobudke } from '../demo';
 import { session } from '../quests';
-import { meleeDamage, totalFruit } from '../inventory';
+import { totalFruit } from '../inventory';
 import { pokazOdlot, zaladujSmoka, ubierzSmoka } from '../objects/smokRysunki';
 import type { Slime } from '../objects/Slime';
 import type { Player } from '../objects/Player';
 import type { Orchards, FruitTree } from './Ambient';
 import type { DialogRequest } from './GameScene';
-import { turyWDemo, nowyPanel } from '../walka/tryb';
-import { PLAYER } from '../objects/Player';
 import { loadingMapVisible } from '../ui/loadingMap';
 
 // The QR demo's dream inside the game (the phases are described in src/demo.ts): apple trees south of
@@ -36,21 +34,9 @@ export interface DemoHost {
   /** Fruit pickups lying on the ground. */
   owoceNaZiemi: () => number;
   ready: () => boolean;
-  /** Starts the turn fight with the dragon (test server); false when there are no turn fights. */
-  walcz: (d: Slime) => boolean;
+  /** The dragon flies off for good (out of the fight and the map). */
+  odlot: (d: Slime) => void;
 }
-
-const RADA_CSS = `
-#demo-rada { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(max(6px, env(safe-area-inset-bottom)) + 178px);
-  width: min(400px, calc(100vw - 24px)); z-index: 8; pointer-events: none; text-align: center;
-  font: 600 16px/1.25 'Alegreya Sans', sans-serif; color: #fff4d0; background: #1e1a24e8; border: 2px solid #e9c46a;
-  border-radius: 12px; padding: 9px 12px; box-shadow: 0 4px 14px #0009; }
-#demo-rada::after { content: '👇'; position: absolute; left: 50%; bottom: -24px; transform: translateX(-50%); font-size: 20px; }
-@keyframes demo-wskaz { 0%, 100% { box-shadow: 0 0 0 2px #ffd34a, 0 0 10px 2px #ffd34a99; } 50% { box-shadow: 0 0 0 4px #fff1a8, 0 0 18px 6px #ffd34acc; } }
-#walka-panel[data-wskaz="cios"] .wp-b.cios, #walka-panel[data-wskaz="spec"] .wp-b.spec,
-#walka-panel[data-wskaz="lecz"] .wp-b.lecz { border-color: #ffd34a; animation: demo-wskaz 0.9s ease-in-out infinite; }
-#demo-rada.gora::after { content: none; }
-`;
 
 
 export class DemoRun {
@@ -66,22 +52,21 @@ export class DemoRun {
   /** Metres walked in the dream (owner, 12 Oct 2026: after SEN.limitM the hero wakes up anyway, dragon or not). */
   private dreamWalked = 0;
   private dreamLast: { x: number; y: number } | null = null;
-  /** The dragon fights in turns (every server unless ?tury=0), flies off after SEN.tury.ciosow hits, the fight has its own tutorial. */
-  private tury = turyWDemo();
-  /** Dream metres walked when the hero ran from the fight (SEN.tury.poUcieczceM later he wakes up anyway). */
-  private uciekalOd: number | null = null;
-  private walczy = false;
-  /** The hero ran away from the turn fight: it starts again only after he left the courtyard. */
-  private czekaWyjscie = false;
+  /** Hits the dragon took: after SEN.ciosowDoOdlotu it flies off, never beaten (owner, 19 Oct 2026). */
   private trafien = 0;
-  /** The dragon has had its turn after the hero's 2nd hit (the 3rd hit then makes it fly off). */
-  private zaatakowal = false;
-  private rada: 'start' | 'lecz' | 'dobij' | null = null;
+  private naTrafienie = (t: { cel: unknown }) => {
+    const d = this.dragon;
+    if (!d || t.cel !== d || this.busy) return;
+    this.trafien++;
+    if (this.trafien >= SEN.ciosowDoOdlotu) this.host.odlot(d);
+  };
 
   constructor(private scene: Phaser.Scene, private host: DemoHost) {}
 
   start() {
     this.plantTrees();
+    this.scene.events.on('trafienie', this.naTrafienie);
+    this.scene.events.once('shutdown', () => this.scene.events.off('trafienie', this.naTrafienie));
     // The first words only once the opening (logo over the world map) has gone.
     const hello = () => {
       if (loadingMapVisible()) { this.scene.time.delayedCall(150, hello); return; }
@@ -124,7 +109,6 @@ export class DemoRun {
       const near = left.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
       return { text: DEMO_TEKSTY.celZbierz(Math.min(masz, n), n), pos: near ? { x: near.x, y: near.y } : null };
     }
-    if (this.walczy) return null;
     if (demo.phase === 'smok' && this.dragonSpot) {
       const d = this.dragon;
       return { text: DEMO_TEKSTY.celSmok, pos: d && d.active && !d.isDead ? { x: d.x, y: d.y } : this.dragonSpot };
@@ -154,8 +138,7 @@ export class DemoRun {
         this.klawisze(false);
       }
       this.dreamLast = { x: p.x, y: p.y };
-      const uciekl = this.uciekalOd !== null && this.dreamWalked - this.uciekalOd >= SEN.tury.poUcieczceM * PX_PER_M;
-      if (uciekl || this.dreamWalked >= SEN.limitM * PX_PER_M) {
+      if (this.dreamWalked >= SEN.limitM * PX_PER_M) {
         this.busy = true;
         this.hint?.setVisible(false);
         bigText(DEMO_TEKSTY.zaDaleko, 1800);
@@ -188,8 +171,6 @@ export class DemoRun {
 
   onDragonKilled(d: Slime, uciekl = false) {
     this.busy = true;
-    this.walczy = false;
-    this.pokazRade(null);
     this.host.player.vel.set(0, 0);
     // Replace the generic squashed-enemy death with takeoff and visible ascent.
     pokazOdlot(this.scene, d, 'gorski');
@@ -200,29 +181,15 @@ export class DemoRun {
     this.scene.time.delayedCall(2000, () => this.sleep());
   }
 
-  /** The dragon waits, still, until the hero walks into the courtyard through the gap – then the fight starts. */
+  /** The dragon waits, still, until the hero walks into its square – then the fight starts. */
   private wakeDragon() {
     const d = this.dragon;
-    if (demo.phase !== 'smok' || this.busy || this.walczy || !d?.peaceful || !d.active) return;
+    if (demo.phase !== 'smok' || this.busy || !d?.peaceful || !d.active) return;
     const p = this.host.player;
     const z = dreamPlaces().dziedziniec;
     const ll = this.host.city.toLatLon(p.x, p.y);
-    const wSrodku = !(ll.lat < z.s || ll.lat > z.n || ll.lon < z.w || ll.lon > z.e);
-    if (this.czekaWyjscie) {
-      if (!wSrodku) this.czekaWyjscie = false;
-      return;
-    }
-    if (!wSrodku) return;
-    if (this.tury) {
-      // The dragon stays "peaceful" for the live loop: the turn fight moves it.
-      this.walczy = true;
-      this.rada = null;
-      this.host.toast(DEMO_TEKSTY.wPrzod, 2500);
-      this.klawisze(false);
-      if (this.host.walcz(d)) return;
-      this.walczy = false;
-      this.tury = false;
-    }
+    if (ll.lat < z.s || ll.lat > z.n || ll.lon < z.w || ll.lon > z.e) return;
+    this.klawisze(false);
     d.peaceful = false;
     d.chasing = true;
     this.host.toast(DEMO_TEKSTY.wPrzod, 2500);
@@ -304,139 +271,13 @@ export class DemoRun {
     const spot = this.host.city.isFree(at.x, at.y, 8, 8) ? at : this.host.city.freeNear(at.x, at.y);
     this.dragonSpot = spot;
     const d = this.host.spawnDragon(spot.x, spot.y);
-    // GameScene gives the demo dragon SmokAI's airborne-retreat options once it wakes up (wakeDragon).
-    d.hp = SEN.ciosow * meleeDamage();
-    if (this.tury) {
-      // Turn fight: it flies off after SEN.tury.ciosow hits whatever they deal (trafiony keeps its bar honest).
-      d.hp = 1e6;
-      d.setData('smokZycie', true);
-    }
+    // Never beaten: it flies off after SEN.ciosowDoOdlotu hits (naTrafienie), whatever they deal.
+    d.hp = 1e6;
     d.peaceful = true;
     ubierzSmoka(this.scene, d, 'gorski', 0xffffff, 1);
     this.dragon = d;
   }
 
-  // ------------------------------------------------------------ the turn fight (test server)
-
-  /**
-   * The dragon took a hit in the turn fight (owner, 19 Oct 2026: „pozwól smokowi odlecieć, nie ubijaj – po 3. ciosie
-   * niech po prostu odlatuje”, and earlier: it must strike once itself, the hero survives whatever happens): each hit
-   * takes a third of its bar, the 2nd ends the hero's turn ('koniecTury') so the dragon bites back (never missing, never
-   * killing), and the 3rd hit after that bite makes it fly off (true) – it is never beaten.
-   */
-  trafiony(e: Slime, hp0: number): boolean | 'koniecTury' {
-    if (e !== this.dragon) return false;
-    this.trafien++;
-    const n = SEN.tury.ciosow;
-    if (this.trafien >= n && this.zaatakowal) {
-      this.busy = true; // nothing restarts the fight before it has flown off
-      return true;
-    }
-    e.hp = Math.max(1, (hp0 * Math.max(1, n - this.trafien)) / n);
-    return this.trafien >= n - 1 && !this.zaatakowal ? 'koniecTury' : false;
-  }
-
-  /** The fight is over without the dragon flying off: ran away (try again after leaving the courtyard). */
-  poWalce(wynik: string) {
-    if (!this.walczy) return;
-    this.walczy = false;
-    this.pokazRade(null);
-    if (wynik === 'ucieczka') {
-      this.czekaWyjscie = true;
-      this.uciekalOd = this.dreamWalked;
-    }
-  }
-
-  /** The tutorial inside the turn fight: how to strike, then how to heal, then finish the dragon. */
-  krokWalki(co: 'tura' | 'cios' | 'specjalne' | 'wroc' | 'lecz') {
-    if (!this.walczy) return;
-    // New controls (test server): the same steps, worded for taps on the map and the ring around the hero.
-    const T = nowyPanel() ? { ...DEMO_TEKSTY, ...DEMO_TEKSTY.kolo } : DEMO_TEKSTY;
-    const p = this.host.player;
-    const ranny = p.hp < PLAYER.maxHp;
-    const n = SEN.tury.ciosow;
-    const zostalo = Math.max(1, n - this.trafien);
-    // After the 2nd hit: the dragon's answer, then one more blow and it flies off.
-    if (this.trafien >= n - 1) {
-      if (co === 'cios' && !this.zaatakowal) return this.pokazRade(T.walkaSmokAtakuje);
-      if (co === 'tura' && !this.zaatakowal) {
-        this.zaatakowal = true;
-        this.rada = 'dobij';
-        return this.pokazRade(T.walkaOstatni, 'cios');
-      }
-      if (this.zaatakowal && (co === 'lecz' || co === 'wroc')) return this.pokazRade(T.walkaOstatni, 'cios');
-      if (this.zaatakowal && co === 'specjalne') return this.pokazRade(T.walkaLeczTeraz, 'lecz');
-      return;
-    }
-    if (co === 'lecz' || (this.rada === 'lecz' && !ranny)) {
-      this.rada = 'dobij';
-      return this.pokazRade(T.walkaDobij(zostalo), 'cios');
-    }
-    if (this.rada === null && co === 'tura') {
-      this.rada = 'start';
-      return this.pokazRade(T.walkaStart, 'cios');
-    }
-    if (this.rada === 'start' && co === 'cios') {
-      if (!ranny) {
-        this.rada = 'dobij';
-        return this.pokazRade(T.walkaDobij(zostalo), 'cios');
-      }
-      this.rada = 'lecz';
-      return this.pokazRade(T.walkaLecz, 'spec');
-    }
-    if (this.rada === 'lecz') {
-      if (co === 'specjalne') return this.pokazRade(T.walkaLeczTeraz, 'lecz');
-      if (co === 'wroc' || co === 'tura') return this.pokazRade(T.walkaLecz, 'spec');
-    }
-    if (this.rada === 'dobij' && (co === 'cios' || co === 'tura')) {
-      return this.pokazRade(co === 'tura' ? T.walkaDobij(zostalo) : T.walkaRuchy, 'cios');
-    }
-  }
-
-  private pokazRade(tekst: string | null, wskaz?: 'cios' | 'spec' | 'lecz') {
-    if (!document.getElementById('demo-rada-css')) {
-      const st = document.createElement('style');
-      st.id = 'demo-rada-css';
-      st.textContent = RADA_CSS;
-      document.head.append(st);
-    }
-    const panel = document.getElementById('walka-panel');
-    let el = document.getElementById('demo-rada');
-    if (!tekst) {
-      el?.remove();
-      panel?.removeAttribute('data-wskaz');
-      return;
-    }
-    if (!el) {
-      el = document.createElement('div');
-      el.id = 'demo-rada';
-      el.setAttribute('aria-live', 'polite');
-      document.body.append(el);
-    }
-    el.textContent = tekst;
-    // Just above the fight panel, whatever its height (one row, the special row, a phone).
-    const nad = () => {
-      const e = document.getElementById('demo-rada');
-      if (!e) return;
-      const panel = document.getElementById('walka-panel');
-      const r = panel?.getBoundingClientRect();
-      if (panel?.classList.contains('wn')) {
-        // New controls: the turn bar is at the top – the tip hangs under it.
-        e.classList.add('gora');
-        if (r) {
-          e.style.top = `${Math.round(r.bottom + 8)}px`;
-          e.style.bottom = 'auto';
-        }
-      } else if (r?.top) e.style.bottom = `${Math.round(innerHeight - r.top + 30)}px`;
-      requestAnimationFrame(nad);
-    };
-    if (!el.dataset.sledzi) {
-      el.dataset.sledzi = '1';
-      nad();
-    }
-    if (wskaz) panel?.setAttribute('data-wskaz', wskaz);
-    else panel?.removeAttribute('data-wskaz');
-  }
 
   /** Blackout, then waking up for real where the QR code sends. */
   private sleep() {
@@ -455,6 +296,4 @@ export class DemoRun {
       });
     });
   }
-
-
 }

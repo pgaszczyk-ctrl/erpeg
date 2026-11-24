@@ -2,9 +2,7 @@
 //  ŁOWISKA — test pilota „walka i gęste łowiska” (brief właściciela, 25.10.2026).
 //  Odrębny, w pełni odwracalny eksperyment: watahy wilków żyją w prawdziwych
 //  lasach (OSM natural=wood/landuse=forest, CityMap.areaKindsAt), zawsze w
-//  czasie rzeczywistym (Slime.spokojny = false) – niezależnie od globalnego
-//  przełącznika walki turowej `tury()` (src/walka/tryb.ts). Nic z istniejącej
-//  walki turowej, Areny Cechu czy innych gangów nie jest tym ruszane.
+//  czasie rzeczywistym. Areny Cechu ani innych gangów to nie rusza.
 //
 //  Włączane tylko świadomie: `?lowiska=1` (zapamiętane na urządzeniu jako
 //  localStorage „exp-lowiska”), domyślnie wyłączone nawet na serwerze

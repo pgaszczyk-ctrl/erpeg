@@ -126,19 +126,6 @@ export const hold = {
 };
 export const mouse = { x: 0, y: 0 };
 
-/**
- * The turn fight (walka/TuryWalki.ts): while set, a short tap or click on the map is a pick (target or spot)
- * – no joystick, no swing. A drag doesn't count (it isn't a tap).
- */
-export const mapaWalki: {
-  fn: ((x: number, y: number) => void) | null;
-  /** A drag on the map (from where it began to where the finger is; `koniec` on release). */
-  drag: ((x0: number, y0: number, x: number, y: number, koniec: boolean) => void) | null;
-} = { fn: null, drag: null };
-const pickDragged = new Set<number>();
-const pickStarts = new Map<number, { x: number; y: number; t: number }>();
-const PICK_DRAG = 12;
-const PICK_MS = 700;
 
 /**
  * A dialog too tall for the screen (UIScene.showDialog): its brass rail can be dragged or tapped to scroll,
@@ -319,12 +306,6 @@ export function installTouchControls(el: HTMLElement) {
         dialogRail.set?.(p.y);
         continue;
       }
-      if (mapaWalki.fn) {
-        // Turn fight: remember the touch, it becomes a pick on release.
-        if (!onMenuButton(p.x, p.y)) pickStarts.set(t.identifier, { x: p.x, y: p.y, t: performance.now() });
-        tapListeners.forEach((fn) => fn(p.x, p.y));
-        continue;
-      }
       if (live()) {
         // Fixed joystick bottom-left: a thumb anywhere near it steers from its centre.
         if (joyId === null && p.y > 70 && Math.hypot(p.x - joyHome.x, p.y - joyHome.y) < JOY_RADIUS * 2.4) {
@@ -369,16 +350,6 @@ export function installTouchControls(el: HTMLElement) {
   const move = (e: TouchEvent) => {
     e.preventDefault();
     sync(e);
-    // Turn fight: dragging (the hero onto a spot) previews a move.
-    for (const t of Array.from(e.changedTouches)) {
-      const s = pickStarts.get(t.identifier);
-      if (!s || !mapaWalki.drag) continue;
-      const p = local(t);
-      if (pickDragged.has(t.identifier) || Math.hypot(p.x - s.x, p.y - s.y) >= PICK_DRAG) {
-        pickDragged.add(t.identifier);
-        mapaWalki.drag(s.x, s.y, p.x, p.y, false);
-      }
-    }
     for (const t of Array.from(e.touches)) {
       if (t.identifier === railTouchId) {
         dialogRail.set?.(local(t).y);
@@ -407,15 +378,6 @@ export function installTouchControls(el: HTMLElement) {
           if(target)target.run();else tapped(p.x,p.y);
         }
       }
-      const s = pickStarts.get(t.identifier);
-      if (!s) continue;
-      pickStarts.delete(t.identifier);
-      const p = local(t);
-      if (pickDragged.delete(t.identifier)) {
-        if (e.type === 'touchend') mapaWalki.drag?.(s.x, s.y, p.x, p.y, true);
-        continue;
-      }
-      if (e.type === 'touchend' && mapaWalki.fn && Math.hypot(p.x - s.x, p.y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(p.x, p.y);
     }
     sync(e);
   };
@@ -483,23 +445,10 @@ export function installTouchControls(el: HTMLElement) {
       dialogRail.set?.(e.offsetY);
       return;
     }
-    const s = pickStarts.get(-2);
-    if (s && mapaWalki.drag && (pickDragged.has(-2) || Math.hypot(e.offsetX - s.x, e.offsetY - s.y) >= PICK_DRAG)) {
-      pickDragged.add(-2);
-      mapaWalki.drag(s.x, s.y, e.offsetX, e.offsetY, false);
-    }
   });
   window.addEventListener('mouseup', (e) => {
     if (e.button === 0) railMouseDown = false;
     if (e.button === 0 && hold.active && hold.mode === 'mouse') endHold();
-    const s = pickStarts.get(-2);
-    if (e.button === 0 && s) {
-      pickStarts.delete(-2);
-      const p = naEkranie(e.clientX, e.clientY);
-      const x = p.x - el.offsetLeft, y = p.y - el.offsetTop;
-      if (pickDragged.delete(-2)) mapaWalki.drag?.(s.x, s.y, x, y, true);
-      else if (mapaWalki.fn && Math.hypot(x - s.x, y - s.y) < PICK_DRAG && performance.now() - s.t < PICK_MS) mapaWalki.fn(x, y);
-    }
   });
   el.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
@@ -508,11 +457,6 @@ export function installTouchControls(el: HTMLElement) {
     if (dialogRail.hit?.(e.offsetX, e.offsetY)) {
       railMouseDown = true;
       dialogRail.set?.(e.offsetY);
-      return;
-    }
-    if (mapaWalki.fn) {
-      if (!onMenuButton(e.offsetX, e.offsetY)) pickStarts.set(-2, { x: e.offsetX, y: e.offsetY, t: performance.now() });
-      tapListeners.forEach((fn) => fn(e.offsetX, e.offsetY));
       return;
     }
     if (onHeal(e.offsetX, e.offsetY)) {

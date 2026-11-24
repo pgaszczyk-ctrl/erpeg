@@ -30,3 +30,6 @@ export const SKALA_POSTACI = (() => {
 /** 3D characters (hero, townsfolk, creatures) drawn this much bigger than the old sheets (report 19 Nov 2026: too small
  *  to read on a phone). Reach, collisions and vision stay as they were. */
 export const POWIEKSZENIE_3D = 1.2;
+
+/** The hero's height on the map (px): a unit for fight distances (Arena, dragons). */
+export const W = 56 * 0.36 * SKALA_POSTACI;

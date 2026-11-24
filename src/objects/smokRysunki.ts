@@ -134,7 +134,7 @@ export function zaladujEfektyAtakow(scene: Phaser.Scene): Promise<boolean> {
 }
 
 /**
- * A dragon waiting on the map for a turn fight (no live SmokAI): the artist's sheet and stance once it has loaded,
+ * A dragon waiting before its fight (no SmokAI yet, e.g. the demo's): the artist's sheet and stance once it has loaded,
  * else the code-drawn dragon tinted by its species (content/smoki.ts).
  */
 export function ubierzSmoka(scene: Phaser.Scene, d: Phaser.GameObjects.Sprite & { ownLook?: boolean; sizeOverride?: number; depthOff?: number }, g: GatunekId, kolor: number, skala: number) {

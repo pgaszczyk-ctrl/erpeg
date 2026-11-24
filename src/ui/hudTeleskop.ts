@@ -1,13 +1,13 @@
 import { comicHud } from './comicHud';
 
-// The telescopic HUD with the glass EXP reservoir (artist 39-G004/39-G005 „zbiornik_v3.1”, owner 18 Oct 2026; test
-// server with turn fights). Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait
+// The telescopic HUD with the glass EXP reservoir (artist 39-G004/39-G005 „zbiornik_v3.1”, owner 18 Oct 2026; live
+// mode). Everything at the top left, nothing in the thumb's zone at the bottom: the hero's portrait
 // inside a brass ring whose glass chamber holds the EXP liquid (its share of the chamber's area = the share of EXP to
 // the next level), the level plate under it. On a phone the liquid's surface stays level with the ground while the
 // phone tilts (device orientation, a little inertia). A tap on the portrait slides four round buttons out downwards,
 // one from under the other like the segments of a telescope (Menu → Plecak/Kufer → Aparat → Pojazd). A tap only
 // opens; a button acts on the next tap, once the column has stopped. It folds back in reverse order after 4 s idle or
-// after a choice. Life is not shown: healing happens only in turn fights, which have their own panel.
+// after a choice. Life shows in the tubes beside the portrait (live mode).
 // Plain HTML outside #game, so no tap on it ever reaches the joystick or the map.
 
 const BASE = (import.meta.env.BASE_URL || '/') + 'hud/zbiornik/';
@@ -79,7 +79,6 @@ const CSS = `
   background: radial-gradient(120% 140% at 50% -20%, rgba(255,226,160,0.12), transparent 60%), linear-gradient(180deg, #2e2622, #161211);
   box-shadow: 0 0 0 0.5px #2a1a0c, 0 0 0 1.5px #c9953f, 0 0 0 2px #7a5220, 0 0 0 2.5px rgba(20,12,6,0.85),
     inset 0 0.5px 0 rgba(255,236,190,0.2), inset 0 -3px 4px rgba(0,0,0,0.35), 0 1.5px 3px rgba(0,0,0,0.4); box-sizing: border-box; pointer-events: none; z-index: 21; }
-body.walka-tur #hud-tel { display: none; }
 
 /* New-controls test (walka/live.ts, owner 26 Oct 2026: „użyj tego HUD-u, tylko dodaj 2 rurki”): two thin glass tubes right
    of the portrait – life (red, a potion's bonus blue on top) and stamina (gold; mana blue with a magic weapon) – fed by a

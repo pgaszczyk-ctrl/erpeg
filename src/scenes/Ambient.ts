@@ -15,14 +15,10 @@ import { GANGI, GANG_OD_MIEJSC_M, GANG_CZLONEK_OD_DRZWI_M, GANG_POWROT_S, GANG_M
 /** Green land where the weakest groups are wolves instead of imps (new controls test). */
 const ZIELONE = new Set(['forest', 'park', 'grass', 'meadow', 'farmland', 'scrub', 'heath', 'orchard', 'allotments']);
 import { rng } from '../rng';
-import { arenaOn } from '../walka/tryb';
 import { hdOn, ensureHd, fitHd } from '../sprites';
-import { GRUPKI_GANGU, GRUPKA } from '../content/walkaTurowa';
 import { choragiewKraju, wczytajChoragiew } from '../arenaChoragiew';
 import { krajMapy } from '../kraj';
 
-/** The hero's height on the map (px): turn-fight groups are sized by it. */
-const W_BOH = 56 * 0.36 * SKALA_POSTACI;
 import { drzewoZ } from '../map/drzewa09';
 import { GEN_DOTS } from '../map/ziemia09';
 import { doCanvas, nowy, type Obraz } from '../gen';
@@ -419,8 +415,6 @@ export interface Gang {
   fog?: { inside: Phaser.GameObjects.Image; puffs: Phaser.GameObjects.Image[] };
   /** The last descriptive counter shown (content/gangi.ts stanGangu). */
   said?: string;
-  /** Turn fight: broken up by paying the members off (no reward). */
-  paid?: boolean;
 }
 
 function hashStr2(s: string) {
@@ -460,8 +454,6 @@ export function mgielkaTekstury(scene: Phaser.Scene) {
 
 
 export class StreetEnemies {
-  /** Turn fight (test server): members sit in tight groups, the boss with the last one, nobody comes out later. */
-  tury = false;
   /**
    * New controls test (walka/live.ts, owner 26 Oct 2026): only the WEAKEST small groups (GRUPKA_SLABA: 3 imps or 3
    * wolves) at random spots, in red-mist areas 3× smaller; no boss, no berserker, no night/rain swaps.
@@ -501,7 +493,7 @@ export class StreetEnemies {
     const places = this.city.places.filter((p) => p.door.x >= box.x0 && p.door.x < box.x1 && p.door.y >= box.y0 && p.door.y < box.y1).length;
     const extra = places < GANG_WIES.miejscMniejNiz ? GANG_WIES.mnoznik : 1;
     (this.slabe ? [GRUPKA_SLABA] : GANGI).forEach((kind, ki) => {
-      const want = kind.naKm2 * this.density * extra * (this.tury ? GRUPKA.gestosc : 1);
+      const want = kind.naKm2 * this.density * extra;
       const n = Math.floor(want) + (r() < want % 1 ? 1 : 0);
       for (let i = 0; i < n; i++) {
         for (let t = 0; t < 12; t++) {
@@ -535,7 +527,6 @@ export class StreetEnemies {
 
   /** Where the members stand, once the territory is loaded. */
   private makeSpots(g: Gang) {
-    if (this.tury) return this.makeGroups(g);
     if (this.slabe) {
       const r = rng(hashStr2(`${g.id}:${this.seed}:slabe`));
       const [lo, hi] = g.kind.czlonkow;
@@ -573,46 +564,6 @@ export class StreetEnemies {
     // Some gangs have one berserker.
     if (spots.length && r() < BERSERKER.szansa) spots[Math.floor(r() * spots.length)].berserk = true;
     g.spots = spots;
-    spots.forEach((_, i) => g.alive.add(i));
-  }
-
-  /** Turn fight: one to three tight groups in small spots of the territory (content/walkaTurowa.ts GRUPKI_GANGU). */
-  private makeGroups(g: Gang) {
-    const r = rng(hashStr2(`${g.id}:${this.seed}:grupki`));
-    const plan = GRUPKI_GANGU[g.kind.nazwa] ?? { grupek: 1, czlonkow: [3, 4] as [number, number], herszt: false };
-    const spots: StreetSpawn[] = [];
-    const centra: { x: number; y: number }[] = [];
-    const zbita = GRUPKA.zbitaW * W_BOH;
-    for (let k = 0; k < plan.grupek; k++) {
-      let c: { x: number; y: number } | null = null;
-      for (let t = 0; t < 80 && !c; t++) {
-        const a = r() * Math.PI * 2;
-        const d = Math.sqrt(r()) * g.r * (k === 0 ? 0.3 : GRUPKA.odSrodka);
-        const x = g.x + Math.cos(a) * d, y = g.y + Math.sin(a) * d;
-        if (!this.city.isFree(x, y, 6, 6) || this.nearAvoid(x, y, GANG_CZLONEK_OD_DRZWI_M)) continue;
-        if (centra.some((o) => Math.hypot(o.x - x, o.y - y) < GRUPKA.odstepW * W_BOH)) continue;
-        c = { x, y };
-      }
-      if (!c) continue;
-      centra.push(c);
-      const [lo, hi] = plan.czlonkow;
-      const n = lo + Math.floor(r() * (hi - lo + 1));
-      const boss = plan.herszt && k === plan.grupek - 1;
-      if (boss) spots.push({ x: c.x, y: c.y, kind: g.kind.herszt });
-      for (let i = 0, t = 0; i < n && t < n * 30; t++) {
-        const a = r() * Math.PI * 2, d = (0.45 + r() * 0.55) * zbita;
-        const x = c.x + Math.cos(a) * d, y = c.y + Math.sin(a) * d * 0.8;
-        if (!this.city.isFree(x, y, 4, 4) || spots.some((s) => Math.hypot(s.x - x, s.y - y) < 0.45 * W_BOH)) continue;
-        spots.push({ x, y, kind: this.kindAt(x, y) });
-        i++;
-      }
-    }
-    if (spots.length && r() < BERSERKER.szansa) {
-      const zwykli = spots.map((s, i) => (s.kind === g.kind.herszt ? -1 : i)).filter((i) => i >= 0);
-      if (zwykli.length) spots[zwykli[Math.floor(r() * zwykli.length)]].berserk = true;
-    }
-    g.spots = spots;
-    g.boss = 'out'; // the boss (if any) sits with his group from the start
     spots.forEach((_, i) => g.alive.add(i));
   }
 
@@ -675,26 +626,6 @@ export class StreetEnemies {
     return this.gangs.find((g) => !g.clearedAt && Math.hypot(g.x - x, g.y - y) < g.r) ?? null;
   }
 
-  /** Turn fight: members paid off and gone (no loot, no reward); the last ones leaving break the gang up quietly. */
-  paidOff(list: unknown[]) {
-    for (const g of this.gangs) {
-      let hit = false;
-      for (const [i, m] of g.members) {
-        if (!list.includes(m)) continue;
-        g.members.delete(i);
-        g.alive.delete(i);
-        hit = true;
-      }
-      if (hit && !g.alive.size && !g.clearedAt) {
-        g.boss = 'dead';
-        g.clearedAt = this.scene.time.now;
-        g.paid = true;
-        this.dropMist(g);
-        this.events.cleared(g);
-      }
-    }
-  }
-
   /** A gang member or boss was killed. */
   killed(e: unknown) {
     for (const g of this.gangs) {
@@ -710,7 +641,7 @@ export class StreetEnemies {
         if (m !== e) continue;
         g.members.delete(i);
         g.alive.delete(i);
-        if (this.tury || this.slabe) {
+        if (this.slabe) {
           // Every group (the boss's too) beaten: the gang is broken up.
           if (!g.alive.size) {
             g.boss = 'dead';
@@ -985,8 +916,8 @@ export class Training {
 
   /** Dummies on a pitch from `kuklyOdM2`, but of neighbouring pitches only on the biggest one. */
   private hasStations(a: Area) {
-    // A stadium's bowl is the Arena's sand (owner 18 Oct 2026; arenaOn() – kept even with real-time combat).
-    if (a.arena && arenaOn()) return false;
+    // A stadium's bowl is the Arena's sand (owner 18 Oct 2026).
+    if (a.arena) return false;
     const m2 = Training.sizeM2(a);
     if (m2 < SPORT.kuklyOdM2) return false;
     const r = SPORT.sasiedziM * PX_PER_M;
@@ -1092,9 +1023,8 @@ export class Training {
     return npc;
   }
 
-  /** Arena Cechu (its own turn fight, independent of exploration combat): the judge by the dummies of every big pitch / stadium. */
+  /** Arena Cechu (a live duel): the judge by the dummies of every big pitch / stadium. */
   private judgeOf(a: Area): SportNpc | null {
-    if (!arenaOn()) return null;
     if (this.people.has(a)) return this.people.get(a)!;
     let npc: SportNpc | null = null;
     const id = `arena:${this.city.id}:${Math.round(a.x0)}:${Math.round(a.y0)}`;
