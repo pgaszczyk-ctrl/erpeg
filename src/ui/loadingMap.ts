@@ -1,6 +1,7 @@
 import { punktNaMapieWczytywania } from '../content/mapaWczytywania';
 import { tx } from '../i18n';
 import { resetTouch, resetKeys } from '../controls';
+import { przygotujOkolice, zamknijOkolice } from './loadingOkolica';
 
 // Ekran pozostaje nad grą aż do narysowania pierwszego widoku. Oglądanie
 // animacji i przygotowanie terenu biegną równolegle.
@@ -36,6 +37,7 @@ function stopMedia() {
   drift = null;
   poster?.remove();
   poster = null;
+  zamknijOkolice();
 }
 
 export function showLoginMap() {
@@ -57,7 +59,7 @@ export function showLoginMap() {
   plate.style.opacity = '';
   resize = () => {
     if (flight) (flight.effect as KeyframeEffect).setKeyframes(flightFrames(r));
-    else plate.style.transform = point ? frame(r, point, finalScale(r), true) : initialFrame(r);
+    else plate.style.transform = point ? frame(r, point, posterScale(r), true) : initialFrame(r);
   };
   window.addEventListener('resize', resize);
   preparePoster(r);
@@ -94,7 +96,23 @@ const portrait = (r: HTMLElement) => r.clientHeight > r.clientWidth;
 const initialScale = (r: HTMLElement) => portrait(r)
   ? Math.max(r.clientWidth / 1280, r.clientHeight / 720) * 1.8
   : Math.max(r.clientWidth / 1280, r.clientHeight / 720);
-const finalScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 3.2 : 14);
+/**
+ * How far the painted poster is enlarged before the drawn map takes over (owner, 24 Nov 2026: big pixels
+ * looked ugly). Beyond this the close-up layers of loadingOkolica.ts carry on, sharp at any zoom.
+ */
+const posterScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 1.6 : 3);
+/** Kilometres across the screen when the poster is at `scale` (the poster: 360° of longitude = 1152 px). */
+const kmNaEkranie = (r: HTMLElement, scale: number, lat: number) => (r.clientWidth / scale) * (360 / 1152) * 111.32 * Math.cos((lat * Math.PI) / 180);
+
+/** When the poster's zoom ends and the drawn map is in, cross-fade to it and keep zooming there. */
+function przejdzDoOkolicy(r: HTMLElement, lat: number, lon: number, lot: Promise<unknown>, scale: number) {
+  const ok = przygotujOkolice(r, lat, lon);
+  void Promise.all([ok.gotowa, lot.catch(() => {})]).then(([jest]) => {
+    if (!jest || finished || r.hidden || r.dataset.phase === 'error') return;
+    ok.start(Math.max(800, kmNaEkranie(r, scale, lat)));
+    requestAnimationFrame(() => ok.canvas.classList.add('on'));
+  });
+}
 
 /** Place a point on the actual image at the viewport's centre. */
 function frame(r: HTMLElement, p: { x: number; y: number }, scale: number, crop = false) {
@@ -118,7 +136,7 @@ function initialFrame(r: HTMLElement) {
  */
 function flightFrames(r: HTMLElement) {
   const from = portrait(r) ? EUROPE : { x: 0.5, y: 0.5 };
-  const s0 = initialScale(r), s1 = finalScale(r);
+  const s0 = initialScale(r), s1 = posterScale(r);
   const frames: Keyframe[] = [];
   const N = 40;
   for (let k = 0; k <= N; k++) {
@@ -141,14 +159,16 @@ export function flyToGameLocation(lat: number, lon: number) {
   r.style.setProperty('--target-y', String(point.y));
   const plate = r.querySelector<HTMLElement>('.lm-plate')!;
   if (reduced()) {
-    plate.style.transform = frame(r, point, finalScale(r), true);
+    plate.style.transform = frame(r, point, posterScale(r), true);
     r.dataset.phase = 'waiting';
+    przejdzDoOkolicy(r, lat, lon, Promise.resolve(), posterScale(r));
     return;
   }
   r.dataset.phase = 'pan';
   // Let the map move while the real world is being prepared. Reveal never waits for the zoom.
   const current = plate.animate(flightFrames(r), { duration: 1600, easing: 'linear', fill: 'forwards' });
   flight = current;
+  przejdzDoOkolicy(r, lat, lon, current.finished, posterScale(r));
   void current.finished.then(() => {
     if (flight === current && r.dataset.phase === 'pan') r.dataset.phase = 'waiting';
   }, () => {});
@@ -237,7 +257,8 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   if (reduced()) {
     logoImg?.remove();
     drift?.anim.cancel();
-    plate.style.transform = frame(r, point, finalScale(r) / 2, true);
+    plate.style.transform = frame(r, point, posterScale(r), true);
+    przejdzDoOkolicy(r, lat, lon, Promise.resolve(), posterScale(r));
     await mapReady;
     return;
   }
@@ -260,7 +281,7 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
   const now = driftNow();
   drift?.anim.cancel();
   drift = null;
-  const p0 = now?.p ?? { x: 0.5, y: 0.5 }, s0 = now?.scale ?? initialScale(r), s1 = Math.max(s0 * 2, finalScale(r) / 2);
+  const p0 = now?.p ?? { x: 0.5, y: 0.5 }, s0 = now?.scale ?? initialScale(r), s1 = Math.max(s0 * 1.5, posterScale(r));
   const frames: Keyframe[] = [];
   const N = 30;
   for (let k = 0; k <= N; k++) {
@@ -268,6 +289,7 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
     frames.push({ offset: t, transform: frame(r, { x: p0.x + (point.x - p0.x) * f, y: p0.y + (point.y - p0.y) * f }, scale, true) });
   }
   flight = plate.animate(frames, { duration: 1700, easing: 'ease-in-out', fill: 'forwards' });
+  przejdzDoOkolicy(r, lat, lon, flight.finished, s1);
   await flight.finished.catch(() => {});
   let ready = false;
   void mapReady.then(() => { ready = true; });
