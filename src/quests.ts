@@ -24,6 +24,7 @@ import { zyciePostaci, poziomPostaci } from './content/historia';
 import type { StanDoOsiagniec } from './content/osiagniecia';
 import { loadSettings } from './settings';
 import { ustawStwory, type WierszLupu } from './content/stwory';
+import { ustawWlasne, type WpisPrzedmiotu } from './content/przedmiotyWlasne';
 import { WSKRZESZENIE } from './content/sklepy';
 import { odrostDrzew } from './map/drzewa09';
 import { TEST } from './version';
@@ -220,6 +221,8 @@ function ustawTresc(list: Awaited<ReturnType<typeof api.content>>) {
 export async function loadContent() {
   // The admin panel's knobs (prices, speed…), in parallel with the missions.
   const settings = loadSettings();
+  // Custom items from the admin panel (tab „🎒 Przedmioty”): awaited with the knobs, so a save holding one finds it.
+  const wlasne = wczytajWlasne();
   // Creatures' loot/EXP from the admin panel (tab „🐺 Stworki”): only the new-fight test uses them; no waiting.
   Promise.race([rpc<Record<string, { exp?: number | null; lup?: WierszLupu[] }>>('game_stwory', {}), new Promise<never>((_, no) => setTimeout(() => no(new Error('timeout')), 8000))])
     .then(ustawStwory)
@@ -242,6 +245,14 @@ export async function loadContent() {
     }).catch(() => {});
   }
   await settings;
+  await wlasne;
+}
+
+let wlasneGotowe: Promise<void> | null = null;
+/** Custom items, once per page (at most 5 s of waiting; a later answer still arrives for the next login). */
+function wczytajWlasne() {
+  wlasneGotowe ??= rpc<WpisPrzedmiotu[]>('game_przedmioty', { p_test: TEST }).then(ustawWlasne).catch(() => { wlasneGotowe = null; });
+  return Promise.race([wlasneGotowe, new Promise<void>((ok) => setTimeout(ok, 5000))]);
 }
 
 /** Where this play session started: the hunt analyser in the Kufer counts from here (report: „analizator huntu”). */

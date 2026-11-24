@@ -7,6 +7,7 @@
 import { PRZEDMIOTY } from './przedmioty';
 import { OWOCE, type Owoc } from './sklepy';
 import { AMUNICJA, type Amunicja } from './zuzycie';
+import { WYLACZONE } from './przedmiotyWlasne';
 
 /** Quality order: poor, ordinary, solid, excellent, masterwork. */
 export const SZANSE_JAKOSCI = [21, 22, 25, 22, 10] as const;
@@ -43,6 +44,22 @@ export const STWORY: { id: string; nazwa: string; exp: number; gdzie: string }[]
   { id: 'szkielet', nazwa: 'Szkielet', exp: 10, gdzie: 'misje przy cmentarzu' },
   { id: 'herszt', nazwa: 'Herszt', exp: 60, gdzie: 'misje' },
   { id: 'upior', nazwa: 'Upiór krypty (boss lochu)', exp: 90, gdzie: 'lochy pod cmentarzami' },
+  { id: 'wielki_herszt', nazwa: 'Wielki herszt (boss)', exp: 100, gdzie: 'szef dużych obozów (twierdze, warownie), wielkie bandy' },
+  { id: 'wodnik', nazwa: 'Wodnik', exp: 25, gdzie: 'bandy w deszczu (przywołuje bloby)' },
+  { id: 'blob', nazwa: 'Wodny blob', exp: 3, gdzie: 'bandy w deszczu, przywołańce wodnika' },
+];
+
+/**
+ * Miejsca z łupem do ustawienia w panelu (właściciel, 24.11.2026: „generyczne miejsca lub potwory i ustalać im loot”).
+ * Ten sam zapis co stworki (tabela stwory_lup, rodzaj = id poniżej). Inaczej niż u stworków: wiersze z panelu są
+ * DODATKIEM do tego, co miejsce daje z kodu (złoto i EXP skrzyni rosną z poziomem lochu – tego panel nie psuje).
+ */
+export const MIEJSCA_LUPU: { id: string; nazwa: string; gdzie: string }[] = [
+  { id: 'miejsce_skrzynia_lochu', nazwa: 'Skrzynia lochu (krypty, katakumby)', gdzie: 'na dnie każdego zwykłego lochu, po pokonaniu strażnika' },
+  { id: 'miejsce_skrzynia_jaskini', nazwa: 'Skrzynia jaskini', gdzie: 'jaskinie przy obozach (siedliskach)' },
+  { id: 'miejsce_skrzynia_ukryta', nazwa: 'Ukryta skrzynia (6. poziom)', gdzie: 'za kruszącą się ścianą na 5. poziomie lochu – zamiast zwykłej' },
+  { id: 'miejsce_banda', nazwa: 'Rozbita banda', gdzie: 'po pokonaniu herszta bandy w mieście (czerwona mgła)' },
+  { id: 'miejsce_oboz', nazwa: 'Szef obozu', gdzie: 'po pokonaniu szefa siedliska (obozu bandytów, rumowiska, bagna)' },
 ];
 
 /** Wszystko, co może wypaść (lista do wyboru w panelu). */
@@ -55,7 +72,8 @@ export function lupOpcje(): { id: string; nazwa: string; grupa: string }[] {
     ...(Object.keys(OWOCE) as Owoc[]).map((k) => ({ id: k, nazwa: OWOCE[k].nazwa, grupa: 'Towary' })),
     ...(Object.keys(AMUNICJA) as Amunicja[]).map((k) => ({ id: k, nazwa: AMUNICJA[k].nazwa, grupa: 'Amunicja' })),
     ...PRZEDMIOTY.filter(p => p.baza === p.id).map(p => ({ id: `los_${p.id}`, nazwa: `${p.nazwa.split(' — ')[0]} — losowa jakość (21/22/25/22/10%)`, grupa: p.miejsce === 'bron' ? 'Broń — losowa jakość' : 'Pancerze — losowa jakość' })),
-    ...PRZEDMIOTY.map((p) => ({ id: p.id, nazwa: `${p.nazwa}${p.obrazenia ? ` (${p.obrazenia.join('–')})` : ''}`, grupa: p.miejsce === 'bron' ? 'Broń — rodzaj i jakość' : ['zbroja', 'helm', 'buty'].includes(p.miejsce) ? 'Pancerze — rodzaj i jakość' : 'Przedmioty' })),
+    ...PRZEDMIOTY.filter((p) => p.wlasny).map((p) => ({ id: p.id, nazwa: `${p.nazwa}${WYLACZONE.has(p.id) ? ' (wyłączony)' : ''}`, grupa: 'Własne przedmioty (zakładka Przedmioty)' })),
+    ...PRZEDMIOTY.filter((p) => !p.wlasny).map((p) => ({ id: p.id, nazwa: `${p.nazwa}${p.obrazenia ? ` (${p.obrazenia.join('–')})` : ''}`, grupa: p.miejsce === 'bron' ? 'Broń — rodzaj i jakość' : ['zbroja', 'helm', 'buty'].includes(p.miejsce) ? 'Pancerze — rodzaj i jakość' : 'Przedmioty' })),
   ];
 }
 
@@ -106,7 +124,7 @@ export function wolnoUpuscic(rodzaj: string, co: string) {
 
 export function losujLup(rodzaj: string, los: () => number = Math.random): { co: string; ile: number }[] | null {
   const s = stwory[rodzaj];
-  const lista = (s && s.lup.length ? s.lup : DOMYSLNY_LUP[rodzaj])?.filter((w) => wolnoUpuscic(rodzaj, w.co));
+  const lista = (s && s.lup.length ? s.lup : DOMYSLNY_LUP[rodzaj])?.filter((w) => wolnoUpuscic(rodzaj, w.co) && !WYLACZONE.has(w.co));
   if (!lista?.length) return null;
   const out: { co: string; ile: number }[] = [];
   for (const w of lista) if (los() * 100 < w.szansa) {

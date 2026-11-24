@@ -1,7 +1,7 @@
 import { PRZEDMIOTY, type Przedmiot } from './przedmioty';
 
 export const jestPancerzem = (p: Przedmiot) => ['zbroja', 'helm', 'buty'].includes(p.miejsce);
-export const pancerze = () => PRZEDMIOTY.filter(jestPancerzem).sort((a, b) =>
+export const pancerze = () => PRZEDMIOTY.filter(p => jestPancerzem(p) && !p.wlasny).sort((a, b) =>
   (a.baza ?? a.id).localeCompare(b.baza ?? b.id) || (a.jakosc ?? 0) - (b.jakosc ?? 0));
 export const kluczPancerza = (id: string) => `pancerz_${id}`;
 const domyslne = new Map(pancerze().map(p => [p.id, p.moc]));

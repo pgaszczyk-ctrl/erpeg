@@ -14,7 +14,9 @@ import { POKRETLA } from '../content/ustawienia';
 import { etapyEditor } from './etapyEditor';
 import { lamiglowkaDnia, rodzajDnia, dzienLamiglowki, POZIOMY_LAMIGLOWEK, type Lamiglowka } from '../lamiglowki';
 import { LAMIGLOWKA } from '../content/gazeta';
-import { STWORY, lupOpcje, type WierszLupu } from '../content/stwory';
+import { STWORY, MIEJSCA_LUPU, lupOpcje, type WierszLupu } from '../content/stwory';
+import { przedmiotyTab, umiejetnosciTab } from './lupPrzedmioty';
+import { ustawWlasne, type WpisPrzedmiotu } from '../content/przedmiotyWlasne';
 
 // The admin panel (admin.html): characters and their statistics, missions
 // (with a preview on the map) and secret codes for real places. Every call
@@ -38,6 +40,8 @@ interface Overview { players: Player[]; missions: DbMission[]; codes: Code[]; de
 const WROGOWIE: Record<RodzajWroga, string> = { glut: 'Chochlik (10 życia)', wielki_glut: 'Wielki chochlik (60 życia)', bandyta: 'Bandyta (20 życia, szybki)', driada: 'Driada (10 życia)', zombie: 'Zombiak (13 życia)', szkielet: 'Szkielet (10 życia)', smok: 'Smok', wojownik: 'Wojownik (pojedynek)', herszt: 'Herszt gangu (45 życia)', wielki_herszt: 'Wielki herszt (120 życia)', blob: 'Wodny blob (5 życia)', wodnik: 'Wodnik (30 życia, przywołuje bloby)', koziol: 'Mosiężny Kozioł – boss (240 życia)', wilk: 'Wilk (10 życia, test łowisk)', warg: 'Warg (32 życia, test łowisk)', upior: 'Upiór krypty – boss lochu (90 życia)', elzet: 'Elzet 10 (robot z questa, życie wg bohatera)' };
 const TYPY = { pokonaj: 'Pokonaj wrogów', idz: 'Dojdź do miejsca', zagadka: 'Zagadka (pytanie na miejscu)', brak: 'Samo miejsce (np. partner z tajnym hasłem)' } as const;
 
+import { wymusJezyk } from '../i18n';
+wymusJezyk('pl');
 let key = '';
 try {
   // Do not leave the administrator's master password in script-readable storage.
@@ -105,6 +109,8 @@ async function call<T>(fn: string, args: Record<string, unknown>) {
 
 async function reload() {
   data = await call<Overview>('admin_overview', {});
+  // Custom items (tab „🎒 Przedmioty”) join PRZEDMIOTY, so loot rows, mission rewards and codes can pick them.
+  try { ustawWlasne(await rpc<WpisPrzedmiotu[]>('game_przedmioty', { p_test: true })); } catch { /* the panel works without them */ }
 }
 
 // ------------------------------------------------------------------ screens
@@ -135,7 +141,7 @@ function loginScreen(error = '') {
 }
 
 function render() {
-  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['ideas', '✎ Pomysły'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['pancerze', '🛡 Repozytorium pancerzy'], ['stwory', '🐺 Stworki'], ['settings', '⚙ Ustawienia']];
+  const tabs: [string, string][] = [['summary', '📊 Podsumowanie'], ['players', '🧍 Postacie'], ['missions', '📜 Misje'], ['codes', '🤫 Tajne hasła'], ['bugs', '🪲 Zgłoszenia'], ['kurier', '📰 Gazeta'], ['letters', '✉ Listy'], ['ideas', '✎ Pomysły'], ['porty', '⚓ Porty'], ['errors', '🐞 Błędy'], ['quizzes', '🧠 Quizy'], ['puzzles', '🧩 Łamigłówki'], ['bron', '⚔ Repozytorium broni'], ['pancerze', '🛡 Repozytorium pancerzy'], ['stwory', '💰 Łup'], ['przedmioty', '🎒 Przedmioty'], ['umiejetnosci', '✨ Umiejętności'], ['settings', '⚙ Ustawienia']];
   const header = el('header', {}, [
     el('h1', {}, ['EXP-LORE admin']),
     ...tabs.map(([id, label]) => btn(label, () => {
@@ -165,6 +171,8 @@ function render() {
   else if (tab === 'bron') void bronTab(main);
   else if (tab === 'pancerze') void pancerzTab(main);
   else if (tab === 'stwory') void stworyTab(main);
+  else if (tab === 'przedmioty') void przedmiotyTab(main, { el, btn, call });
+  else if (tab === 'umiejetnosci') void umiejetnosciTab(main, { el, btn, call });
   else settings(main);
 }
 
@@ -1023,7 +1031,9 @@ async function portyTab(main: HTMLElement) {
  */
 async function stworyTab(main: HTMLElement) {
   type U = { exp: number | null; lup: WierszLupu[] };
-  main.append(el('h2', {}, ['🐺 Stworki – łup i EXP']), el('p', { className: 'muted' }, [
+  main.append(el('h2', {}, ['💰 Łup – stworki i miejsca']), el('p', { className: 'muted' }, [
+    'Własne przedmioty (zakładka 🎒 Przedmioty) są na liście w grupie „Własne przedmioty”. Zwierzęta (wilk, warg, kozioł) nie upuszczają złota ani ekwipunku. ',
+  ]), el('p', { className: 'muted' }, [
     'Każdy wiersz łupu losowany osobno: „Złoto 2 – 50 %” i „Złoto 1 – 30 %” razem dają 0, 1, 2 albo 3 złota. Szansa w procentach, można ułamki (0,05 = raz na 2000). ',
     'Puste EXP = domyślne z gry. Bez wierszy łupu stworek daje to, co dawał dotąd. Działa w nowej walce (serwer testowy) od następnego wejścia gracza do gry.',
   ]));
@@ -1050,7 +1060,16 @@ async function stworyTab(main: HTMLElement) {
     }
     return sel;
   };
-  for (const st of STWORY) {
+  const nav = el('div', { className: 'row', style: 'margin: 8px 0' }, [
+    btn('🐺 Stworki', () => box.querySelector('#lup-stworki')?.scrollIntoView({ behavior: 'smooth' })),
+    btn('🧰 Miejsca', () => box.querySelector('#lup-miejsca')?.scrollIntoView({ behavior: 'smooth' })),
+  ]);
+  box.append(nav, el('h3', { id: 'lup-stworki' }, ['🐺 Stworki']), el('p', { className: 'muted' }, ['Wiersze z panelu ZASTĘPUJĄ łup domyślny stworka.']));
+  const wpisy = [...STWORY.map((st) => ({ ...st, miejsce: false })), ...MIEJSCA_LUPU.map((m) => ({ ...m, exp: 0, miejsce: true }))];
+  for (const st of wpisy) {
+    if (st.id === MIEJSCA_LUPU[0].id) box.append(el('h3', { id: 'lup-miejsca' }, ['🧰 Miejsca']), el('p', { className: 'muted' }, [
+      'Wiersze z panelu są DODATKIEM do tego, co miejsce daje samo (złoto, EXP i zwykły przedmiot skrzyni rosną z poziomem lochu). Przykład: unikat 0,5 % w ukrytej skrzyni.',
+    ]));
     const u: U = dane[st.id] ?? { exp: null, lup: [] };
     const exp = el('input', { type: 'number', min: '0', max: '100000', step: '1', value: u.exp === null ? '' : String(u.exp), placeholder: String(st.exp), style: 'width: 90px' });
     const wiersze = el('div');
@@ -1071,7 +1090,7 @@ async function stworyTab(main: HTMLElement) {
       const lup = [...wiersze.children].map((r) => (r as HTMLElement & { odczyt: () => WierszLupu }).odczyt());
       const zle = lup.find((w) => !(w.ile >= 1 && w.ile <= 100000) || !(w.szansa >= 0 && w.szansa <= 100));
       if (zle) return void ((msg.className = 'msg bad'), (msg.textContent = 'Ilość od 1, szansa od 0 do 100 %.'));
-      const e = exp.value.trim() === '' ? null : Math.round(Number(exp.value));
+      const e = st.miejsce || exp.value.trim() === '' ? null : Math.round(Number(exp.value));
       try {
         await call('admin_stwory_zapisz', { p_rodzaj: st.id, p_exp: e, p_lup: lup });
         msg.className = 'msg ok';
@@ -1084,8 +1103,8 @@ async function stworyTab(main: HTMLElement) {
     box.append(el('div', { className: 'card', style: 'max-width: 720px' }, [
       el('h3', { style: 'margin: 0 0 4px' }, [st.nazwa, el('small', { className: 'muted' }, [`  (${st.id})`])]),
       el('p', { className: 'muted', style: 'margin: 0 0 8px' }, [st.gdzie]),
-      el('label', { style: 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px' }, [el('span', {}, ['EXP za pokonanie']), exp, el('small', { className: 'muted' }, [`domyślnie ${st.exp}`])]),
-      el('b', {}, ['Łup']),
+      !st.miejsce && el('label', { style: 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px' }, [el('span', {}, ['EXP za pokonanie']), exp, el('small', { className: 'muted' }, [`domyślnie ${st.exp}`])]),
+      el('b', {}, [st.miejsce ? 'Dodatkowy łup' : 'Łup']),
       wiersze,
       el('div', { style: 'display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap' }, [
         btn('＋ Dodaj przedmiot', () => dodaj({ co: 'zloto', ile: 1, szansa: 50 })),

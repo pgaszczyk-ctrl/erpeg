@@ -134,6 +134,7 @@ import { StworAI, type StworHost } from '../objects/StworAI';
 import { poPancerzu, losujPancerz } from '../content/pancerz';
 import { defense } from '../inventory';
 import { stwory, losujLup, losujJakosc, ZWIERZETA } from '../content/stwory';
+import { OBRAZKI_WLASNE } from '../content/przedmiotyWlasne';
 import { SPORT } from '../content/sport';
 import type { Place as CityPlace, Building } from '../map/CityMap';
 import {
@@ -583,6 +584,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.teksturyWlasne();
     this.combatAudio?.destroy();
     this.combatAudio = new CombatAudio(this);
     // Include create() itself: preparing the first chunks can occupy several seconds.
@@ -999,6 +1001,7 @@ export class GameScene extends Phaser.Scene {
           session.exp += g.kind.nagroda.exp;
           session.stats.gangs = (session.stats.gangs ?? 0) + 1;
           this.emitHud();
+          this.lupMiejsca('miejsce_banda', this.player.x, this.player.y);
           this.toast(`🏆 ${g.kind.nazwa} ${g.kind.zenska ? 'rozbita' : 'rozbity'}! +${coins} monet, +${g.kind.nagroda.exp} EXP. Mieszkańcy wrócą za minutę.`, 4000);
         },
       },
@@ -2116,9 +2119,9 @@ export class GameScene extends Phaser.Scene {
       s: zasoby.s, sMax: maxStaminy(lvl), m: zasoby.m, mMax: maxMany(lvl),
       magia: this.handSkill() === 'magia', wyczerpany: wyczerpany(lvl), bezpiecznie: this.bezpiecznie,
       umiej: u, aktywna: u.id,
-      wybor: comicHud ? SPECJALNE.filter(v => v.bron === u.bron && skillLevel(v.bron) >= v.poziom) : undefined,
+      wybor: comicHud ? SPECJALNE.filter(v => v.bron === u.bron && this.umiejDostepna(v)) : undefined,
       wybierz: comicHud ? (id) => {
-        const next = SPECJALNE.find(v => v.id === id && v.bron === this.handSkill() && skillLevel(v.bron) >= v.poziom);
+        const next = SPECJALNE.find(v => v.id === id && v.bron === this.handSkill() && this.umiejDostepna(v));
         const hidden = document.querySelector('#hud-ster.off, #hud-ster.dim');
         if (!next || this.player.isDead || this.witam || hidden || !this.scene.isActive()) return;
         if (this.umiejetnosc().id === next.id) return;
@@ -2807,7 +2810,7 @@ export class GameScene extends Phaser.Scene {
     session.stats.kills[s.kindId] = (session.stats.kills[s.kindId] ?? 0) + 1;
     this.emitHud();
     if (s.ambient) this.streets.killed(s);
-    if (s.lowisko) this.lowiska?.killed(s);
+    if (s.lowisko && this.lowiska?.killed(s)) this.lupMiejsca('miejsce_oboz', s.x, s.y);
     if (this.elzet?.zabity(s)) return;
     if (this.prolog?.killed(s)) return;
     if (this.loch?.zabity(s)) { this.prolog?.dungeonChanged(); return; } // dungeon state is recorded before another interaction
@@ -3204,6 +3207,22 @@ export class GameScene extends Phaser.Scene {
    * gold, only hearts and fruit; skeletons no hearts but 2–3 coins.
    */
   /** Loot rolled from the admin panel's table (each row on its own): gold and goods fall on the ground, the rest goes to the bag. */
+  /** Custom items' pictures (admin tab „🎒 Przedmioty”) as Phaser textures `item-<id>`: ground loot, dialog icons. */
+  private teksturyWlasne() {
+    for (const [id, o] of OBRAZKI_WLASNE) {
+      const k = `item-${id}`;
+      if (!o.maly || this.textures.exists(k)) continue;
+      try { this.textures.addBase64(k, o.maly); } catch { /* a bad picture never stops the scene */ }
+    }
+  }
+
+  /** A place's extra loot from the admin panel (content/stwory.ts MIEJSCA_LUPU); nothing when the panel set none. */
+  private lupMiejsca(id: string, x: number, y: number) {
+    if (!live()) return;
+    const l = losujLup(id);
+    if (l?.length) this.lupZPanelu(x, y, l);
+  }
+
   private lupZPanelu(x: number, y: number, lup: { co: string; ile: number }[]) {
     const notki: string[] = [];
     const od = { x, y: y - 4 };
@@ -4589,6 +4608,8 @@ export class GameScene extends Phaser.Scene {
     if (Math.random() < LUP.przedmiot) przedmiot();
     if (Math.random() < LUP.drugi) przedmiot();
     this.lupZwloka = 0;
+    // Extra loot set in the admin panel for this kind of chest (tab „💰 Łup”, section Miejsca).
+    this.time.delayedCall(opozn() + 200, () => this.lupMiejsca(U ? 'miejsce_skrzynia_ukryta' : pl.rodzaj === 'jaskinia' ? 'miejsce_skrzynia_jaskini' : 'miejsce_skrzynia_lochu', k.x, k.y + 10));
     this.time.delayedCall(700, () => this.floatText(od.x, od.y - 6, `+${N.exp} EXP`, '#ffe08a', 1800));
     this.emitHud();
     // A mission stage's dungeon: what the stage gives lies in the chest; the stage itself is done back on the surface.
@@ -6942,7 +6963,13 @@ export class GameScene extends Phaser.Scene {
   umiejetnosc(): Umiej {
     const b = this.handSkill();
     const id = session.umiej[b];
-    return SPECJALNE.find((u) => u.id === id && u.bron === b) ?? domyslnaUmiejetnosc(b);
+    // A skill chosen thanks to an item that is no longer worn falls back to the weapon's default.
+    return SPECJALNE.find((u) => u.id === id && u.bron === b && this.umiejDostepna(u)) ?? domyslnaUmiejetnosc(b);
+  }
+
+  /** Skill unlocked by its weapon skill level, or given by a worn item (custom items: `umiejetnosc`). */
+  umiejDostepna(u: Umiej) {
+    return skillLevel(u.bron) >= u.poziom || Object.values(gear.equip).some((id) => !!id && item(id)?.umiejetnosc === u.id);
   }
 
   /** The special button / Q (new controls): the weapon's chosen skill, paid in stamina or mana. */
@@ -6978,7 +7005,7 @@ export class GameScene extends Phaser.Scene {
     const aktywna = (u: Umiej) => (session.umiej[u.bron] ?? domyslnaUmiejetnosc(u.bron).id) === u.id;
     const buttons = lista.map((u) => {
       const lvl = skillLevel(u.bron);
-      if (lvl < u.poziom) return `🔒 ${u.nazwa} (${nazwyBroni[u.bron]} – poziom ${u.poziom}, masz ${lvl})`;
+      if (!this.umiejDostepna(u)) return `🔒 ${u.nazwa} (${nazwyBroni[u.bron]} – poziom ${u.poziom}, masz ${lvl})`;
       return `${aktywna(u) ? '✅' : u.ikona} ${u.nazwa} (${nazwyBroni[u.bron]})`;
     });
     this.dialog({
@@ -6988,7 +7015,7 @@ export class GameScene extends Phaser.Scene {
       onChoose: (i) => {
         const u = lista[i];
         if (!u) return;
-        if (skillLevel(u.bron) < u.poziom) return this.toast(`🔒 ${u.nazwa}: potrzebny poziom ${u.poziom} (${nazwyBroni[u.bron]}).`, 2200);
+        if (!this.umiejDostepna(u)) return this.toast(`🔒 ${u.nazwa}: potrzebny poziom ${u.poziom} (${nazwyBroni[u.bron]}).`, 2200);
         session.umiej[u.bron] = u.id;
         this.toast(`🎯 ${u.nazwa} – gotowa pod złotym przyciskiem.`, 2200);
         this.emitZasoby();
@@ -7306,7 +7333,7 @@ export class GameScene extends Phaser.Scene {
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
       where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
-      const all = PRZEDMIOTY.filter((p) => (!p.baza || p.baza === p.id) && p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie);
+      const all = PRZEDMIOTY.filter((p) => (!p.baza || p.baza === p.id) && p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie && !p.wlasny);
       if (miejsce === 'helm') {
         // Headwear is also about looks: every one not owned yet is on offer.
         out.push(...all.filter((p) => !owns(p.id)));

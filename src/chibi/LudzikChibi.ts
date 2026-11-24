@@ -200,6 +200,7 @@ export class LudzikChibi {
     if (gear.equip.dystans && /tarcza/.test(gear.equip.dystans)) o.tarcza = 1;
     if (bron?.rodzaj === 'luk') { o.bron = 'luk'; o.pas = 1; }
     else if (bron?.rodzaj === 'magia') { o.bron = 'kostur'; o.peleryna = 'niebieska'; }
+    else if (bron?.wyglad) o.bron = bron.wyglad;
     else if (gear.equip.bron === 'kijek' || !gear.equip.bron) o.bron = 'galaz';
     else if (/szabla|karabela/.test(gear.equip.bron)) o.bron = 'szabla';
     else o.bron = 'miecz';

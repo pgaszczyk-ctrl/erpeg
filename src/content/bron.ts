@@ -3,7 +3,7 @@ import { PRZEDMIOTY, type Przedmiot } from './przedmioty';
 /** Persistent numeric settings use the existing authenticated admin RPC.
  * A range is one integer, so saving can never publish half of a min/max pair. */
 export const BRON_BONUS = { poziom: .02, wyszkolenie: .06 };
-export const bronie = () => PRZEDMIOTY.filter(p => p.miejsce === 'bron').sort((a, b) =>
+export const bronie = () => PRZEDMIOTY.filter(p => p.miejsce === 'bron' && !p.wlasny).sort((a, b) =>
   (a.baza ?? a.id).localeCompare(b.baza ?? b.id) || (a.jakosc ?? 0) - (b.jakosc ?? 0));
 export const kluczTrwalosci = (id: string) => `bron_${id}_trwalosc`;
 export const kluczBroni = (id: string) => `bron_${id}_zakres`;

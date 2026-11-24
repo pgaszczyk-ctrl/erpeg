@@ -17,6 +17,8 @@ function detect(): Lang {
 }
 
 export let lang: Lang = detect();
+/** The admin panel is always Polish (names of skills/items read through tx). */
+export function wymusJezyk(l: Lang) { lang = l; }
 /** Explicit device choice takes precedence over a profile loaded later. */
 export function setLanguage(saved?: Lang) {
   try {

@@ -1,5 +1,6 @@
 import { PRZEDMIOTY } from '../content/przedmioty';
 import { condition } from '../inventory';
+import { OBRAZKI_WLASNE } from '../content/przedmiotyWlasne';
 import type { Owoc, Grupa } from '../content/sklepy';
 
 // Pixel-art pictures of items (public/items/<id>.png: the old 16×16 ones, and the artist's 64×64 – a 32×32
@@ -22,7 +23,9 @@ export const ITEM_PICTURES = [
 // (Order 45 D gave the recruit kit its own pictures; no stand-ins left.)
 const QUEST_PICTURES: Record<string, string> = {};
 const pictureBase = (id: string) => QUEST_PICTURES[id] ?? PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
-const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa', 'kilof']);
+const STALE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa', 'kilof']);
+/** Pictures that exist: the artist's files plus custom items from the admin panel (data URLs, content/przedmiotyWlasne.ts). */
+const HAVE = { has: (id: string) => STALE.has(id) || !!OBRAZKI_WLASNE.get(id)?.maly };
 
 /**
  * Order 45 (A+B): the artist's 64 px exports are machine reductions of smooth 1254 px drawings, so their diagonal
@@ -50,11 +53,15 @@ const HD = new Set([
 
 /** The file Phaser loads as `item-<id>` (small textures: the pixel export, not the smooth HD picture). */
 export function phaserItemUrl(id: string) {
+  const w = OBRAZKI_WLASNE.get(id);
+  if (w?.maly) return w.maly;
   return HD.has(id) ? `items/${id}.png` : itemAssetUrl(id);
 }
 
 /** Detailed illustrations released in 1.015, without resampling the original files. */
 export function itemAssetUrl(id: string) {
+  const w = OBRAZKI_WLASNE.get(id);
+  if (w) return w.duzy ?? w.maly ?? `items/${id}.png`;
   if (HD.has(id)) return `items_hd/${id}.png`;
   if (id === 'skorzana_zbroja') return 'proby31/skorzana_zbroja.png';
   return id === 'skorzany_helm' ? 'sklepy/skorzany_helm.png' : `items/${id}.png`;
@@ -137,6 +144,8 @@ export function itemIcon(id: string, className = 'item-ico'): HTMLImageElement |
   const img = document.createElement('img');
   img.src = itemAssetUrl(pictureOf(id)); // relative: the game is built with base ./
   img.className = className;
+  // Custom items carry a smooth 256 px picture: shrink it smoothly (nearest-neighbour shrinking chews the drawing).
+  if (OBRAZKI_WLASNE.has(id)) img.style.imageRendering = 'auto';
   img.alt = '';
   img.draggable = false;
   return img;

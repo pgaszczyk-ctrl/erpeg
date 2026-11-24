@@ -33,6 +33,7 @@ const UNIKATY = new Set(['korona']);
 export function rzadkoscPrzedmiotu(id: string): Rzadkosc {
   const p = PRZEDMIOTY.find((x) => x.id === id);
   if (!p) return 'zwykly';
+  if (p.rzadkosc) return p.rzadkosc;
   if (UNIKATY.has(p.id) || (p.efekt && !p.fabularny)) return 'unikat';
   switch (p.jakosc) {
     case 0: return 'kiepski';

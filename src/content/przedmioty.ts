@@ -66,6 +66,14 @@ export interface Przedmiot {
   pojazd?: 'rower' | 'hulajnoga';
   /** Worn (any place): walking faster by this share (Buty biegacza 0.1 = +10%). */
   bieg?: number;
+  /** Made in the admin panel (content/przedmiotyWlasne.ts, id 'w_…'). */
+  wlasny?: boolean;
+  /** Rarity set by hand (custom items); otherwise computed from quality/effect (content/rzadkosc.ts). */
+  rzadkosc?: import('./rzadkosc').Rzadkosc;
+  /** A special skill (content/umiejetnosci.ts id) this item gives while worn, regardless of the skill level. */
+  umiejetnosc?: string;
+  /** How the code-drawn hero holds it (melee): miecz / szabla / galaz. */
+  wyglad?: 'miecz' | 'szabla' | 'galaz';
 }
 
 // Ceny są wysokie celowo: tanie rzeczy ok. 20× więcej niż na początku, najlepsze

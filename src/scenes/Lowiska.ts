@@ -423,17 +423,20 @@ export class Lowiska {
     p.members = new Map();
   }
 
-  killed(e: unknown) {
+  /** True when it was a settlement's leader (GameScene drops the camp's extra loot from the admin panel). */
+  killed(e: unknown): boolean {
     for (const p of this.pakiety) {
       for (const [i, m] of p.members) {
         if (m !== e) continue;
         p.members.delete(i);
         p.alive.delete(i);
-        if (p.szef && i === 0) session.daily[p.szef] = { d: 'szef', n: Math.floor(Date.now() / 60000), a: 0 };
+        const szef = !!p.szef && i === 0;
+        if (szef) session.daily[p.szef!] = { d: 'szef', n: Math.floor(Date.now() / 60000), a: 0 };
         if (!p.alive.size) p.clearedAtS = this.czasAktywny();
-        return;
+        return szef;
       }
     }
+    return false;
   }
 
   private spawnAll(p: Pakiet) {
