@@ -125,8 +125,10 @@ import type { Siedlisko } from '../siedliska/typy';
 import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
 import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
-import { idLochu, nazwyLochow, czytajIdLochu } from '../loch/mapa';
-import { LOCH, LOCHY, LOCH_TEKSTY, SKRZYNIA_LUP } from '../content/lochy';
+import { idLochu, idPoziomu, nazwyLochow, czytajIdLochu } from '../loch/mapa';
+import { podloga } from '../loch/plan';
+import { animacjaUcieczki } from '../ui/ucieczkaZLochu';
+import { LOCH, LOCHY, LOCH_TEKSTY, POZIOMY_LOCHU, SKRZYNIA_LUP, SKRZYNIA_UKRYTA } from '../content/lochy';
 import { lowiska, LOWISKA, profilStwora } from '../content/lowiska';
 import { StworAI, type StworHost } from '../objects/StworAI';
 import { poPancerzu, losujPancerz } from '../content/pancerz';
@@ -1086,6 +1088,7 @@ export class GameScene extends Phaser.Scene {
           wyjdz: () => {
             if (this.loch?.zostalo === 0 && !this.player.isDead && this.scene.isActive()) this.wyjdzZLochu();
           },
+          uciekaj: () => this.uciekajZLochu(),
           nonce: session.nonce,
           progress: session.story.prolog?.dungeon?.id === this.city.id ? session.story.prolog.dungeon
             : this.lochMisji() ? { killed: [], chest: this.lochMisjiOtwarty() } : undefined,
@@ -1118,7 +1121,7 @@ export class GameScene extends Phaser.Scene {
     }
     const prolog = this.prolog;
     this.events.once('shutdown', () => prolog?.destroy());
-    if (this.loch) this.toast(LOCH_TEKSTY.zszedl(this.loch.opis.nazwa), 4500);
+    if (this.loch) this.toast(LOCH_TEKSTY.zszedl(this.loch.nazwaPoziomu), 4500);
 
     if(session.artilleryHero){restoreHero(this.player,session.artilleryHero);session.artilleryHero=null;}
     this.artillery = new Artillery(this,this.city,this.player,{
@@ -1947,8 +1950,9 @@ export class GameScene extends Phaser.Scene {
     for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??(w.rodzaj==='jaskinia'?tx('Jaskinia','Cave'):tx('Piwnica','Cellar')),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
     if(this.loch) {
       const l=this.loch;
-      add('dungeon:stairs',l.schody,'enter',tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
-      if(!out.some(t=>t.id==='prolog:chest')&&(this.city.loch?.tutorial||l.skrzyniaPowod()!=='pusta'))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
+      add('dungeon:stairs',l.schody,'enter',l.plan.poziom>1?tx('Schody w górę','Stairs up'):tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
+      const zej=l.zejscie;if(zej)add('dungeon:down',zej,'enter',LOCH_TEKSTY.zejscieNizej,()=>this.lochDotyk(new Phaser.Math.Vector2(zej.x,zej.y)));
+      if(!out.some(t=>t.id==='prolog:chest')&&(this.city.loch?.tutorial||(l.skrzyniaPowod()!=='pusta'&&l.skrzyniaPowod()!=='brak')))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
     }
     for(const p of this.city.places) if(Math.abs(p.door.x-this.player.x)<74&&Math.abs(p.door.y-this.player.y)<74) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
     for(const r of this.missions) if(!r.m.postac&&missionAvailable(r.m))add(`mission:${r.m.id}`,r.door,'use',r.m.tytul,()=>this.openMissionDialog(r));
@@ -2278,6 +2282,8 @@ export class GameScene extends Phaser.Scene {
         if (strong && s.kindId !== 'smok') s.daze(now, WALKA.miecz.ogluszenieMs);
       }
     }
+    // A dungeon's loose wall (hidden way down): a few blows bring it down – no name, no life bar.
+    if (!hits && this.loch?.uderzSciane(hit.x, hit.y, this.player.x, this.player.y)) return;
     // A blow that landed wears the sword (content/zuzycie.ts).
     if (landed) this.wearWeapon(gear.equip.bron);
     // New controls test: a swing at an enemy tires (a swing at nothing is free; a strong one was paid before).
@@ -4356,17 +4362,37 @@ export class GameScene extends Phaser.Scene {
     const loch = this.loch;
     if (!loch) return false;
     const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
-    if (co === 'schody') {
+    if (co === 'schody' || co === 'zejscie') {
       if (this.inCombat()) {
         this.toast(LOCH_TEKSTY.wWalce, 1800);
         return true;
       }
-      this.dialog({
-        title: LOCH_TEKSTY.wyjsc,
-        text: LOCH_TEKSTY.wyjscPytanie(loch.zostalo),
-        buttons: [LOCH_TEKSTY.wychodze, LOCH_TEKSTY.zostaje],
-        onChoose: (i) => { if (i === 0) this.wyjdzZLochu(); },
-      });
+      const pz = loch.plan.poziom;
+      if (co === 'zejscie') {
+        const ukryty = pz + 1 > loch.plan.normalne;
+        this.dialog({
+          title: LOCH_TEKSTY.zejdzNizej,
+          text: LOCH_TEKSTY.zejdzPytanie(pz + 1, ukryty),
+          buttons: [LOCH_TEKSTY.schodzeNizej, LOCH_TEKSTY.zostaje],
+          zamknij: 1,
+          onChoose: (i) => { if (i === 0) this.przejdzPoziom(pz + 1); },
+        });
+      } else if (pz > 1) {
+        this.dialog({
+          title: LOCH_TEKSTY.wyzej,
+          text: LOCH_TEKSTY.wyzejPytanie(pz - 1),
+          buttons: [LOCH_TEKSTY.wychodze, LOCH_TEKSTY.zostaje],
+          zamknij: 1,
+          onChoose: (i) => { if (i === 0) this.przejdzPoziom(pz - 1); },
+        });
+      } else {
+        this.dialog({
+          title: LOCH_TEKSTY.wyjsc,
+          text: LOCH_TEKSTY.wyjscPytanie(loch.zostalo),
+          buttons: [LOCH_TEKSTY.wychodze, LOCH_TEKSTY.zostaje],
+          onChoose: (i) => { if (i === 0) this.wyjdzZLochu(); },
+        });
+      }
       return true;
     }
     if (co === 'skrzynia') {
@@ -4423,17 +4449,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Up the stairs, back where the hero went down (after a defeat: `porazka` = what was lost, for the hospital). */
-  private wyjdzZLochu(porazka: string | null = null) {
+  private wyjdzZLochu(porazka: string | null = null, ucieczka = false) {
     if (this.travelling && !porazka) return;
     this.travelling = true;
     const p = lochSesja.powrot ?? { ...(session.at ?? { m: 'lublin', x: session.startX, y: session.startY }), nazwa: '' };
     const cam = this.cameras.main;
-    if (!porazka) cam.fadeOut(500, 0, 0, 0);
+    // Escape (the button): a running figure for POZIOMY_LOCHU.ucieczkaMs while the surface loads underneath.
+    const zaslona = ucieczka ? animacjaUcieczki(POZIOMY_LOCHU.ucieczkaMs) : null;
+    const czekaj = ucieczka ? new Promise<void>((r) => setTimeout(r, POZIOMY_LOCHU.ucieczkaMs)) : Promise.resolve();
+    if (ucieczka) this.player.vel.set(0, 0);
+    if (!porazka && !ucieczka) cam.fadeOut(500, 0, 0, 0);
     surfacePosition(p)
       .then(async ({ city, at }) => {
         await city.ensure(at.x, at.y, LOAD_RADIUS);
         session.arrive = city.isBlocked(at.x, at.y) ? city.reachableNear(at.x, at.y) : { x: at.x, y: at.y };
         await prepareMap(city);
+        await czekaj;
+        if (zaslona) setTimeout(() => zaslona.zamknij(), 700);
         session.hp = porazka ? PLAYER.maxHp : this.player.hp;
         lochSesja.powrot = null;
         lochSesja.porazka = porazka;
@@ -4444,9 +4476,56 @@ export class GameScene extends Phaser.Scene {
       })
       .catch((e: Error) => {
         this.travelling = false;
+        zaslona?.zamknij();
         cam.fadeIn(300);
         this.toast(`Nie da się wyjść: ${e.message}`);
       });
+  }
+
+  /** The escape button (shown a few seconds after arriving on a level): asks, then runs up to the surface. */
+  private uciekajZLochu() {
+    if (!this.loch || this.travelling || this.player.isDead || !this.scene.isActive()) return;
+    this.dialog({
+      title: LOCH_TEKSTY.uciekajTytul,
+      text: LOCH_TEKSTY.uciekajPytanie,
+      buttons: [LOCH_TEKSTY.uciekam, LOCH_TEKSTY.zostaje],
+      zamknij: 1,
+      onChoose: (i) => { if (i === 0 && this.loch && !this.player.isDead) this.wyjdzZLochu(null, true); },
+    });
+  }
+
+  /** Down or up a level of the same dungeon (another small map: `…:p<n>`); up = arrive by that level's way down. */
+  private przejdzPoziom(n: number) {
+    const loch = this.loch;
+    if (!loch || this.travelling) return;
+    this.travelling = true;
+    const gora = n < loch.plan.poziom;
+    const zUkrytego = loch.plan.ukrytyPoziom;
+    const cam = this.cameras.main;
+    cam.fadeOut(420, 0, 0, 0);
+    const id = idPoziomu(this.city.id, n);
+    this.time.delayedCall(440, () => {
+      getMap(id).then((city) => {
+        const p = city.loch!;
+        let at = p.start;
+        if (gora) {
+          const s = zUkrytego && p.ukryte ? p.ukryte : p.zejscie ?? p.ukryte;
+          if (s) {
+            const pod = s === p.ukryte ? 2 : 3;
+            for (let dy = pod; dy >= 1; dy--) if (podloga(p, s.x, s.y + dy)) { at = { x: s.x, y: s.y + dy }; break; }
+          }
+        }
+        session.arrive = { x: (at.x + 0.5) * p.T, y: (at.y + 0.5) * p.T };
+        session.hp = this.player.hp;
+        this.game.registry.set('city', city);
+        this.scene.stop('ui');
+        this.scene.restart();
+      }).catch((e: Error) => {
+        this.travelling = false;
+        cam.fadeIn(300);
+        this.toast(`Nie da się przejść: ${e.message}`);
+      });
+    });
   }
 
   /** Back on the surface after a defeat underground: the nearest hospital (or here), as after any defeat. */
@@ -4470,8 +4549,13 @@ export class GameScene extends Phaser.Scene {
     // No dialog any more (owner, 22 Nov 2026): the chest shakes, bursts open with a sound and its treasure pops out
     // onto the floor in front of it; the hero walks over it (the magnet helps).
     przygotujLup(this);
-    const N = loch.opis.nagroda;
-    const monety = luckyCoins(N.monety[0] + Math.floor(Math.random() * (N.monety[1] - N.monety[0] + 1)));
+    // Deeper levels pay more; the hidden level's chest is better still (SKRZYNIA_UKRYTA).
+    const pl = loch.plan, U = pl.ukrytyPoziom ? SKRZYNIA_UKRYTA : null;
+    const fp = 1 + POZIOMY_LOCHU.nagrodaNaPoziom * (pl.poziom - 1);
+    const N0 = loch.opis.nagroda;
+    const N = { ...N0, exp: Math.round(N0.exp * fp * (U?.exp ?? 1)), diament: N0.diament * (U?.diament ?? 1) };
+    const monety = luckyCoins(Math.round((N0.monety[0] + Math.floor(Math.random() * (N0.monety[1] - N0.monety[0] + 1))) * fp * (U?.monety ?? 1)));
+    const LUP = U ?? SKRZYNIA_LUP;
     session.exp += N.exp;
     session.stats.lochy = (session.stats.lochy ?? 0) + 1;
     loch.otworzSkrzynie(true);
@@ -4489,7 +4573,7 @@ export class GameScene extends Phaser.Scene {
     if (Math.random() < N.diament) { const at = obok(); this.upuscRzecz(at.x, at.y, 'diament', od, opozn()); }
     const rodziny = PRZEDMIOTY.filter((p) => p.baza === p.id && ['bron', 'zbroja', 'helm', 'buty'].includes(p.miejsce));
     const jakosc = () => {
-      const tab = SKRZYNIA_LUP.jakosci, n = Math.random() * tab.reduce((a, b) => a + b, 0);
+      const tab: readonly number[] = LUP.jakosci, n = Math.random() * tab.reduce((a, b) => a + b, 0);
       let sum = 0;
       for (let q = 0; q < tab.length; q++) { sum += tab[q]; if (n < sum) return q; }
       return 4;
@@ -4502,8 +4586,8 @@ export class GameScene extends Phaser.Scene {
       const at = obok();
       this.upuscPrzedmiot(at.x, at.y, id, od, opozn() + 150);
     };
-    if (Math.random() < SKRZYNIA_LUP.przedmiot) przedmiot();
-    if (Math.random() < SKRZYNIA_LUP.drugi) przedmiot();
+    if (Math.random() < LUP.przedmiot) przedmiot();
+    if (Math.random() < LUP.drugi) przedmiot();
     this.lupZwloka = 0;
     this.time.delayedCall(700, () => this.floatText(od.x, od.y - 6, `+${N.exp} EXP`, '#ffe08a', 1800));
     this.emitHud();
@@ -7087,6 +7171,7 @@ export class GameScene extends Phaser.Scene {
           done = true;
           this.practiced(shot.skill);
         } else if (this.training.anyAt(shot.x, shot.y, 6)) done = true;
+        else if (this.loch?.uderzSciane(shot.x, shot.y)) done = true;
       }
       const u = 1 - shot.left / shot.range;
       sp.setPosition(shot.x, shot.y - Math.sin(Math.PI * u) * shot.arc);
@@ -8030,8 +8115,9 @@ export class GameScene extends Phaser.Scene {
     if (this.loch) {
       const n = this.loch.zostalo;
       const skrzynia = this.loch.skrzyniaPowod();
-      const text = skrzynia === 'pusta' ? '🕯 Skrzynia otwarta – schody na górę czekają przy wejściu.' : n ? `🕯 ${this.loch.opis.nazwa}: ${n === 1 ? 'został 1 potwór' : `zostało ${n} potworów`}, skrzynia w najdalszej komnacie` : '🕯 Loch czysty – skrzynia czeka w najdalszej komnacie';
-      return [{ id: 'loch', main: false, title: `🕯 ${this.loch.opis.nazwa}`, text, pos: null, color: '#ffb35c' }, ...out.map((q) => ({ ...q, pos: null }))];
+      const gdzie = skrzynia === 'brak' ? tx('zejście w głąb w najdalszej komnacie', 'the way down in the farthest chamber') : tx('skrzynia w najdalszej komnacie', 'the chest in the farthest chamber');
+      const text = skrzynia === 'pusta' ? tx('🕯 Skrzynia otwarta – schody na górę czekają przy wejściu.', '🕯 Chest opened – the stairs up wait by the entrance.') : n ? `🕯 ${this.loch.nazwaPoziomu}: ${tx(n === 1 ? 'został 1 potwór' : `zostało ${n} potworów`, n === 1 ? '1 monster left' : `${n} monsters left`)}, ${gdzie}` : `🕯 ${tx('Czysto', 'Clear')} – ${gdzie}`;
+      return [{ id: 'loch', main: false, title: `🕯 ${this.loch.nazwaPoziomu}`, text, pos: null, color: '#ffb35c' }, ...out.map((q) => ({ ...q, pos: null }))];
     }
     return out;
   }
@@ -8240,7 +8326,7 @@ export class GameScene extends Phaser.Scene {
    * near it, else "w mieście / za miastem · gdzieś na północy" counted from the town's centre.
    */
   private placeInfo(): { town: string; detail: string } {
-    if (this.loch) return { town: this.loch.opis.nazwa, detail: lochSesja.powrot ? 'pod ziemią' : '' };
+    if (this.loch) return { town: this.loch.nazwaPoziomu, detail: lochSesja.powrot ? 'pod ziemią' : '' };
     const x = this.player.x;
     const y = this.player.y;
     const t = this.townAt(x, y);

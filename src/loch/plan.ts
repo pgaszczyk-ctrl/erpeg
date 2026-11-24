@@ -2,7 +2,7 @@
 // pętli), w węzłach komnaty albo skrzyżowania, wejście w losowym węźle, skarb w najdalszym. Wszystko z ziarna –
 // ten sam loch dla każdego i po każdym wejściu. Bez Phasera i DOM-u (scripts/test-lochy.mjs liczy to w Node).
 import { rng } from '../rng';
-import { LOCH, LOCHY, type RodzajLochu } from '../content/lochy';
+import { LOCH, LOCHY, POZIOMY_LOCHU, type RodzajLochu } from '../content/lochy';
 
 export interface Komnata {
   x0: number; y0: number; x1: number; y1: number;
@@ -29,8 +29,19 @@ export interface PlanLochu {
   /** Schody w górę (kratka środka) i miejsce, gdzie staje bohater po zejściu. */
   schody: { x: number; y: number };
   start: { x: number; y: number };
-  /** Skrzynia (kratka). */
+  /** Skrzynia (kratka) – stoi tylko, gdy `maSkrzynie` (ostatni zwykły albo ukryty poziom). */
   skrzynia: { x: number; y: number };
+  /** Poziom (1 = tuż pod powierzchnią), ilu zwykłych poziomów ma loch i czy ma ukryty pod ostatnim. */
+  poziom: number;
+  normalne: number;
+  ukryty: boolean;
+  /** Ten poziom to ukryty (za luźną ścianą). */
+  ukrytyPoziom: boolean;
+  maSkrzynie: boolean;
+  /** Schody w dół (w najdalszej komnacie) – na poziomach nad ostatnim zwykłym. */
+  zejscie: { x: number; y: number } | null;
+  /** Ukryte zejście za luźną ścianą (przy północnej ścianie losowej komnaty) – na ostatnim zwykłym poziomie lochu z ukrytym. */
+  ukryte: { x: number; y: number } | null;
   /** Ściany jako prostokąty kratek [x0, y0, x1, y1) – kolizje i wzrok. */
   sciany: [number, number, number, number][];
   /** Pochodnie na licu ściany (kratka ściany, nad którą jest podłoga od południa). */
@@ -45,8 +56,18 @@ export function hashLochu(s: string) {
   return h >>> 0;
 }
 
-export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): PlanLochu {
-  const r = rng(seed);
+/** Ile poziomów ma loch (z jego numeru): 75 % – 1…5 zwykłych, 25 % – 5 zwykłych + ukryty szósty. */
+export function poziomyLochu(rodzaj: RodzajLochu, seed: number): { normalne: number; ukryty: boolean } {
+  const r = rng(hashLochu(`poziomy:${rodzaj}:${seed}`));
+  if (r() < POZIOMY_LOCHU.szansaUkrytego) return { normalne: POZIOMY_LOCHU.maks, ukryty: true };
+  return { normalne: 1 + Math.floor(r() * POZIOMY_LOCHU.maks), ukryty: false };
+}
+
+export interface PoziomPlanu { poziom: number; normalne: number; ukryty: boolean }
+
+export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false, lv: PoziomPlanu = { poziom: 1, normalne: 1, ukryty: false }): PlanLochu {
+  // Pierwszy poziom ma dawny układ (to samo ziarno); niższe – własne.
+  const r = rng(lv.poziom > 1 ? hashLochu(`${seed}:poziom:${lv.poziom}`) : seed);
   const O = LOCHY[rodzaj];
   const L = LOCH;
   const losuj = (a: number, b: number) => a + Math.floor(r() * (b - a + 1));
@@ -241,7 +262,40 @@ export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false): 
     }
   }
 
-  return { rodzaj, seed, tutorial, w, h, T: L.kratka, siatka: g, komnaty, schody, start, skrzynia, sciany, pochodnie, ozdoby };
+  // Poziomy: zejście w głąb w najdalszej komnacie (zamiast skrzyni), na ostatnim zwykłym – skrzynia, a w lochu
+  // z ukrytym poziomem także luźna ściana przy północnej ścianie losowej komnaty (osobne ziarno – układ się nie zmienia).
+  const ukrytyPoziom = lv.poziom > lv.normalne;
+  const maSkrzynie = lv.poziom >= lv.normalne;
+  const zejscie = maSkrzynie ? null : { ...skrzynia };
+  let ukryte: { x: number; y: number } | null = null;
+  if (lv.ukryty && lv.poziom === lv.normalne) {
+    const r2 = rng(hashLochu(`${seed}:ukryte:${lv.poziom}`));
+    const kandydaci: { x: number; y: number; zly: number }[] = [];
+    komnaty.forEach((k, i) => {
+      if (!k.duza) return;
+      const zly = i === wej || i === skarb ? 1 : 0;
+      for (let x = k.x0 + 1; x < k.x1 - 1; x++) {
+        const y = k.y0;
+        let ok = !!at(x, y + 1) && !!at(x, y + 2);
+        for (let dx = -1; dx <= 1 && ok; dx++) ok = !!at(x + dx, y) && !at(x + dx, y - 1);
+        if (!ok) continue;
+        if (Math.abs(x - schody.x) <= 3 && Math.abs(y - schody.y) <= 3) continue;
+        if (Math.abs(x - skrzynia.x) <= 3 && Math.abs(y - skrzynia.y) <= 3) continue;
+        kandydaci.push({ x, y, zly });
+      }
+    });
+    const dobre = kandydaci.filter((q) => !q.zly);
+    const z = dobre.length ? dobre : kandydaci;
+    if (z.length) {
+      const q = z[Math.floor(r2() * z.length)];
+      ukryte = { x: q.x, y: q.y };
+      for (let i = pochodnie.length - 1; i >= 0; i--) if (Math.abs(pochodnie[i].x - q.x) <= 2 && Math.abs(pochodnie[i].y - (q.y - 1)) <= 1) pochodnie.splice(i, 1);
+      for (let i = ozdoby.length - 1; i >= 0; i--) if (Math.abs(ozdoby[i].x - q.x) <= 2 && Math.abs(ozdoby[i].y - q.y) <= 2) ozdoby.splice(i, 1);
+    }
+  }
+
+  return { rodzaj, seed, tutorial, w, h, T: L.kratka, siatka: g, komnaty, schody, start, skrzynia, sciany, pochodnie, ozdoby,
+    poziom: lv.poziom, normalne: lv.normalne, ukryty: lv.ukryty, ukrytyPoziom, maSkrzynie, zejscie, ukryte };
 }
 
 /** Kratka podłogi? (poza planem: skała) */

@@ -139,6 +139,33 @@ export const PUKANIE = {
  */
 export const SKRZYNIA_LUP = { przedmiot: 0.75, drugi: 0.2, jakosci: [4, 16, 36, 30, 14] as const };
 
+/**
+ * Poziomy lochu (właściciel, 24.11.2026: „losowo 1–6 poziomów; ostatni ukryty, tylko w 25% lochów – zejście w losowym
+ * miejscu, zasypane za luźną ścianą, 3 ciosy i pojawia się zejście”). 75 % lochów ma 1–5 poziomów (losowo),
+ * 25 % ma 5 zwykłych + ukryty szósty. Skrzynia ze strażnikiem stoi na ostatnim zwykłym poziomie (i na ukrytym).
+ * Lochy misji i prologu mają jeden poziom. WARTOŚCI DO TESTU.
+ */
+export const POZIOMY_LOCHU = {
+  /** Szansa, że loch ma ukryty poziom za luźną ścianą (wtedy zwykłych jest `maks`). */
+  szansaUkrytego: 0.25,
+  /** Najwięcej zwykłych poziomów. */
+  maks: 5,
+  /** Potwory: życie i ciosy × (1 + mocNaPoziom × (poziom − 1)); ukryty jeszcze × mocUkrytego. */
+  mocNaPoziom: 0.2,
+  mocUkrytego: 1.25,
+  /** Skrzynia: złoto i EXP × (1 + nagrodaNaPoziom × (poziom − 1)). */
+  nagrodaNaPoziom: 0.25,
+  /** Ile ciosów trzeba zadać luźnej ścianie. */
+  ciosowSciany: 3,
+  /** Przycisk ucieczki pokazuje się po tylu sekundach od wejścia na poziom. */
+  przyciskPoS: 10,
+  /** Ucieczka (animacja biegnącego ludzika) trwa co najmniej tyle ms – w tym czasie wczytuje się powierzchnia. */
+  ucieczkaMs: 5000,
+};
+
+/** Skrzynia na ukrytym poziomie: szansa na coś lepszego (przedmioty jeszcze dopracujemy). */
+export const SKRZYNIA_UKRYTA = { monety: 2, exp: 2, diament: 3, przedmiot: 1, drugi: 0.6, jakosci: [0, 6, 24, 40, 30] as const };
+
 export const LOCH_TEKSTY = {
   get schodze() { return tx('🕯 Schodzę', '🕯 Go down'); },
   get nieTeraz() { return tx('Nie teraz', 'Not now'); },
@@ -164,5 +191,20 @@ export const LOCH_TEKSTY = {
   get zloto() { return tx('złota', 'gold'); },
   get mikstura() { return tx('mikstura leczenia', 'healing potion'); },
   get diament() { return tx('💎 diament!', '💎 a diamond!'); },
+  poziom: (n: number) => tx(`poziom -${n}`, `level -${n}`),
+  get zejdzNizej() { return tx('⬇ Zejście w głąb', '⬇ Way down'); },
+  zejdzPytanie: (n: number, ukryty: boolean) => ukryty
+    ? tx(`Za gruzem ciemne schody prowadzą jeszcze niżej – na poziom -${n}. Tu chyba nikt nie schodził od wieków…\n\nZejść?`, `Behind the rubble, dark stairs lead even deeper – to level -${n}. Nobody seems to have gone down here for ages…\n\nGo down?`)
+    : tx(`Schody prowadzą głębiej, na poziom -${n}. Im niżej, tym groźniej – i tym bogatsza skrzynia na dnie.\n\nZejść?`, `The stairs lead deeper, to level -${n}. The lower you go, the more dangerous it gets – and the richer the chest at the bottom.\n\nGo down?`),
+  get schodzeNizej() { return tx('⬇ Schodzę', '⬇ Go down'); },
+  get wyzej() { return tx('⬆ Schody w górę', '⬆ Stairs up'); },
+  wyzejPytanie: (n: number) => n > 0 ? tx(`Wrócić na poziom -${n}?`, `Go back up to level -${n}?`) : tx('Wyjść na powierzchnię?', 'Go up to the surface?'),
+  get scianaPeka() { return tx('Ściana się kruszy…', 'The wall crumbles…'); },
+  get scianaOdkryta() { return tx('🕳 Luźna ściana runęła – za nią schody w głąb!', '🕳 The loose wall caved in – stairs lead deeper behind it!'); },
+  get zejscieNizej() { return tx('Zejście', 'Way down'); },
+  get uciekajTytul() { return tx('🏃 Ucieczka z lochu', '🏃 Escape the dungeon'); },
+  get uciekajPytanie() { return tx('Na pewno chcesz uciec na powierzchnię? Wrócisz przy wejściu do lochu.', 'Do you really want to run back to the surface? You will come out by the dungeon\'s entrance.'); },
+  get uciekam() { return tx('🏃 Uciekam', '🏃 Run'); },
+  get uciekaszNapis() { return tx('Uciekasz na powierzchnię…', 'Running back to the surface…'); },
   get misyjna() { return tx('Na dnie skrzyni, pod złotem, leży to, po co tu przyszedłeś:', 'At the bottom of the chest, under the gold, lies what you came for:'); },
 };
