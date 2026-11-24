@@ -1,12 +1,13 @@
 // The loading zoom's close-up (owner, 24 Nov 2026: „zoom nie na wielkie piksele, tylko na orientacyjny teren, w którym
 // jesteśmy – żeby gracz wiedział, że jest w Polsce, a nie na Madagaskarze; bez pinezki i napisów”).
 //
-// The painted Earth poster is enlarged only a little; then this canvas takes over with our own world map: Natural
-// Earth II (painted land cover + shaded relief + rivers, public domain) cut into Web Mercator tiles 512 px, zooms
-// 0..7, with a crisp coastline and country borders (scripts/mapa-swiata/generuj.py → public/mapa-swiata/). It is
-// drawn every frame at the screen's real pixels; every step closer brings in the next zoom's tiles over the coarser
-// ones, so the picture gains detail instead of growing pixels. A few clouds rush past on the way down. The zoom
-// stops at a country-sized view around the destination – never the street.
+// The painted Earth poster is enlarged only a little; then this canvas takes over with our own world map drawn in
+// the poster's own style (owner: „bajkowo, steampunkowo, góry, lasy, żadnych granic”): parchment sea with a
+// turquoise watercolour halo and ink coasts, ochre/olive land, clumps of painted conifers, snowy mountains where
+// the land is really high. Made offline by scripts/mapa-swiata/generuj.py into Web Mercator tiles 512 px, zooms
+// 0..7 (public/mapa-swiata/). Drawn every frame at the screen's real pixels; every step closer brings in the next
+// zoom's tiles over the coarser ones, so the picture gains detail instead of growing pixels. A few clouds rush
+// past on the way down. The zoom stops at a country-sized view around the destination – never the street.
 
 /** Tunables. Spans are the screen's width in km. */
 export const OKOLICA = {
@@ -145,7 +146,7 @@ class Okolica {
     const T = this.dane?.spis.rozmiar ?? 512, maxz = this.dane?.spis.maxz ?? 0;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.globalAlpha = 1;
-    g.fillStyle = this.dane?.spis.morze ?? '#96b6be';
+    g.fillStyle = this.dane?.spis.morze ?? '#e8d3a6';
     g.fillRect(0, 0, c.width, c.height);
     g.imageSmoothingEnabled = true;
     g.imageSmoothingQuality = 'high';
