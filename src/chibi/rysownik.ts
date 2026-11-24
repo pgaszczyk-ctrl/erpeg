@@ -361,7 +361,7 @@ function material(h, m) {
   if (cz.wzor === 'zebra' && (Math.abs(p[0]) < 0.45 ? false : Math.abs(Math.sin((p[1] - cz.ty) * 1.9)) < 0.5)) return 'koscCiemna';
   if (cz.wzor === 'korzenie' && Math.abs(Math.sin(Math.atan2(p[0], p[2]) * 6)) < 0.25) return 'liscCiemny';
   if (cz.wzor === 'kwiatki' && Math.abs(Math.sin(p[0] * 3.1) * Math.sin(p[1] * 2.7) * Math.sin(p[2] * 2.3)) > 0.82) return 'kwiat';
-  if (cz.wzor === 'szata' && p[1] < cz.ty - 4) return 'szataCiemna';
+  if (cz.wzor === 'szata' && p[1] < cz.ty) return 'szataCiemna';
   if (cz.wzor === 'polysk' && p[1] > cz.glowa[1] + 2.2 && p[0] < -1 && p[0] > -3.2 && p[2] > 0) return 'blysk';
   if (cz.wzor === 'nity' && p[2] > 1.6 && (Math.abs(p[1] - cz.ty - 1.8) < 0.35 || Math.abs(p[1] - cz.ty + 1.8) < 0.35) && Math.abs(((p[0] + 10) % 1.6) - 0.8) < 0.35) return 'zelazo';
   if (cz.wzor === 'pasHelmu' && Math.abs(p[0]) < 0.75 && p[1] > m.hy + 0.3) return 'mosiadz';
@@ -467,18 +467,19 @@ function modelStwora(o, faza) {
       add(sph([x, hy + y, z], r), 'lisc', { wzor: 'kwiatki' });
     extra = { kolory: { skora: '#b6cc7a', kora: '#7a5230', lisc: '#5f913c', kwiat: '#f08ab8' }, kolorOczu: '#2a3a1a', oczyX: 0.33, oczyY: -0.1, twarz: ['skora'] };
   } else if (g === 'upior') {
-    const fl = 2.2 + Math.sin(faza * Math.PI * 2) * 0.6;
-    ty = 7 + fl; hy = 13 + fl; hr = 4.4;
-    add(p => Math.max(elip([0, ty - 1.5, 0], [3.8, 6.5, 3.2])(p), (fl - 0.5 + Math.sin(Math.atan2(p[0], p[2]) * 5) * 0.8 - p[1]) * 0.8), 'szata', { wzor: 'szata', ty });
-    const hc = [0, hy, 0];
-    add(p => Math.max(sph(hc, hr + 0.5)(p), -(sph([0, hy - 0.8, 3.6], hr * 0.95)(p))), 'szata');
-    add(sph([0, hy - 0.8, 0.2], hr * 0.82), 'twarzUpiora', { glowa: [0, hy - 0.8, 0.2], hr: hr * 0.82 });
+    // duszek z prześcieradła: biała kopułka, falisty dół w „językach”, czarne owalne oczy i „o” zamiast ust
+    const fl = 2.0 + Math.sin(faza * Math.PI * 2) * 0.6 + (zam ? 0.8 : 0);
+    hy = 12.5 + fl; hr = 5.2; ty = hy - 4;
+    const hc = [0, hy, cios ? 1.2 : 0];
+    const cialo = p => Math.min(sph(hc, hr)(p), rbox([0, hy - 5.8, hc[2] - 0.1], [hr * 1.05, 6.4, hr * 0.98], 3.2)(p), elip([0, fl + 1.2, hc[2] - 0.1], [hr * 1.18, 1.6, hr * 1.08])(p));
+    const fala = p => { const a = Math.atan2(p[0], p[2] - hc[2]); return fl + 2.2 - 2.6 * Math.abs(Math.cos(a * 2.5)); };
+    add(p => Math.max(cialo(p), (fala(p) - p[1]) * 0.8), 'szata', { glowa: hc, hr, wzor: 'szata', ty: fl + 2.2 });
     for (const sx of [-1, 1]) {
-      const rp = zam ? [sx * 3.2, ty + 6, 0.5] : cios ? [sx * 2.0, ty + 1.5, 5] : [sx * 4.2, ty - 0.5, 1.5];
-      add(kaps([sx * 3.0, ty + 2.5, 0], rp, 0.95), 'szata');
-      add(kaps(rp, [rp[0] + sx * 0.3, rp[1] + 0.6, rp[2] + 1.2], 0.35), 'kosc');
+      const rp = zam ? [sx * 5.6, hy - 1.2, 0.2] : cios ? [sx * 3.4, hy - 3.6, 4.2] : [sx * 5.6, hy - 4.6 + (sx * Math.sin(faza * Math.PI * 2)) * 0.6, 0.4];
+      add(elip(rp, [1.5, 1.1, 1.1]), 'szata');
     }
-    extra = { kolory: { szata: '#a9d6e8', szataCiemna: '#5f8aa8', twarzUpiora: '#1e2430', kosc: '#e8f2ff' }, kolorOczu: '#9ff4ff', oczyX: 0.3, oczyY: 0.05, oczySzer: 2, oczyWys: 1, twarz: ['twarzUpiora'] };
+    extra = { kolory: { szata: '#f2f0f8', szataCiemna: '#c9c4dc', usta: '#1e1a24' }, kolorOczu: '#1e1a24', oczyX: 0.32, oczyY: 0.06, oczySzer: 2, oczyWys: 4,
+      twarz: ['szata'], usta: { y: -0.4, w: 0.13 } };
   } else if (g === 'blob') {
     const sq = chod ? Math.abs(sw) : 0;
     const sy = 1 - sq * 0.18 + (zam ? -0.15 : cios ? 0.2 : 0), sx = 1 + sq * 0.15 + (zam ? 0.12 : 0);
