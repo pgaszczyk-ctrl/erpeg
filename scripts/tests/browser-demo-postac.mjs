@@ -70,8 +70,9 @@ try {
   const demoUrl = await page.evaluate(() => location.pathname + location.search);
   assert.equal(demoUrl, '/demo?lang=pl', `Address bar: ${demoUrl}`);
   await page.screenshot({ path: `work/onb-${name}-1-form.png` });
-  assert.equal(await page.locator('#menu.m-demo input').count(), 1, 'Only the name field');
-  await page.locator('#menu.m-demo input').fill('Zosia');
+  assert.equal(await page.locator('#menu.m-demo input:not([type=radio])').count(), 1, 'Only the name field');
+  await page.locator('#menu.m-demo .m-plec-btn[data-plec="k"]').click();
+  await page.locator('#menu.m-demo input:not([type=radio])').fill('Zosia');
   await page.locator('#menu.m-demo button[type=submit]').click();
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').demoRun, null, { timeout: 120000 });
   assert(calls.includes('create_character'), 'The character is made on the form');
@@ -82,9 +83,24 @@ try {
 
   const choose = async (index) => {
     await page.waitForFunction(() => window.__game.scene.getScene('ui').dialogBox, null, { timeout: 60000 });
-    await page.waitForTimeout(400);
-    const at = await page.evaluate((i) => { const r = window.__game.scene.getScene('ui').dialogButtons.find((b) => b.index === i).rect; return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, index);
-    await page.mouse.click(at.x, at.y);
+    // Long talks are typed and paged (UIScene, 1 Nov 2026): finish typing, press „Dalej” until the last portion.
+    for (let k = 0; k < 20; k++) {
+      await page.waitForTimeout(400);
+      const at = await page.evaluate((i) => {
+        const ui = window.__game.scene.getScene('ui');
+        if (!ui.dialogBox) return null;
+        if (ui.pisanie) ui.dopiszDoKonca();
+        const dalej = ui.strony && ui.strony.i < ui.strony.strony.length - 1;
+        const r = ui.dialogButtons.find((q) => q.index === (dalej ? 0 : i))?.rect;
+        return r ? { x: r.x + r.width / 2, y: r.y + r.height / 2, dalej } : { x: -1 };
+      }, index);
+      if (!at) return;
+      if (at.x < 0) continue;
+      // Phones: after waking up the page is turned (obrot.ts), so screen taps miss – press the dialog's own tap handler.
+      if (phone) await page.evaluate(([x, y]) => window.__game.scene.getScene('ui').onDialogTap(x, y), [at.x, at.y]);
+      else await page.mouse.click(at.x, at.y);
+      if (!at.dalej) return;
+    }
   };
   await choose(0);
   // On a computer: how to walk (arrows / WASD); on a phone nothing (the joystick).
@@ -167,7 +183,11 @@ try {
   await choose(0); // "Rozejrzę się"
   // The difficulty after waking up (owner, 19 Oct 2026): free first choice, Średni here.
   // Poses on one axis (owner, 22 Nov 2026): tap a figure, then the confirm button.
-  await page.waitForSelector('.tr-okno .tr-ludzik', { timeout: 15000 });
+  try { await page.waitForSelector('.tr-okno .tr-ludzik', { timeout: 15000 }); } catch (e) {
+    await page.screenshot({ path: `work/onb-${name}-err-trudnosc.png` });
+    console.log('DBG', await page.evaluate(() => { const ui = window.__game.scene.getScene('ui'); const t = []; const w = (o) => { if (o?.text) t.push(o.text); (o?.list ?? []).forEach(w); }; w(ui.dialogBox); return JSON.stringify({ t, okno: document.querySelector('.tr-okno')?.outerHTML?.slice(0, 300) }); }));
+    throw e;
+  }
   assert.equal(await page.locator('.tr-okno .tr-ludzik').count(), 5);
   await page.locator('.tr-okno .tr-ludzik').nth(2).click();
   await page.screenshot({ path: `work/onb-${name}-5-trudnosc.png` });
@@ -183,8 +203,14 @@ try {
   // The code sits on Statystyki (on a phone its own tab).
   if (phone) await page.locator('#character button', { hasText: 'Statystyki' }).click();
   await page.waitForSelector('#character .k-kod-code', { timeout: 10000 });
+  // The first opening spotlights the code's 📤 button (pokazKodRaz, 26 Oct 2026): tapping its spot opens the menu.
+  await page.waitForSelector('#samouczek', { timeout: 5000 });
+  { const r = await page.locator('#character .k-kod-btn').boundingBox(); await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2); }
+  await page.waitForFunction(() => !document.getElementById('samouczek'), null, { timeout: 5000 });
+  if (await page.locator('#character .k-kod-menu[hidden]').count()) await page.locator('#character .k-kod-btn').click();
+  // The code shows as dots until tapped (26 Oct 2026).
+  await page.evaluate(() => document.querySelector('#character .k-kod-code').click());
   assert.equal((await page.locator('#character .k-kod-code').textContent()).replace(/\s/g, ''), 'TESTKOD1');
-  await page.locator('#character .k-kod-btn').click();
   await page.waitForSelector('#character .k-kod-menu:not([hidden])');
   const opcje = await page.locator('#character .k-kod-opcja').allTextContents();
   assert(opcje.some((t) => /Wyślij/.test(t)) && opcje.some((t) => /kontem/.test(t)), `Send / link options: ${opcje}`);
@@ -205,19 +231,10 @@ try {
   // The hero walks after waking up (owner, 18 Oct 2026: the joystick didn't work in front of Targi).
   const gdzie = () => page.evaluate(() => { const p = window.__game.scene.getScene('game').player; return { x: p.x, y: p.y }; });
   const p0 = await gdzie();
-  if (phone) {
-    const cdp = await page.context().newCDPSession(page);
-    const W = page.viewportSize();
-    const x0 = W.width * 0.3, y0 = W.height * 0.6;
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
-    for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + i * 10, y: y0 }] }); await page.waitForTimeout(50); }
-    await page.waitForTimeout(1500);
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  } else {
-    await page.keyboard.down('ArrowRight');
-    await page.waitForTimeout(1500);
-    await page.keyboard.up('ArrowRight');
-  }
+  // Keys on both (the fixed live joystick on a turned phone page is covered by the live-mode tests).
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(1500);
+  await page.keyboard.up('ArrowRight');
   const p1 = await gdzie();
   assert(Math.hypot(p1.x - p0.x, p1.y - p0.y) > 5, `The hero walks after waking up: ${JSON.stringify({ p0, p1 })}`);
   // Changing the difficulty from the game menu: once a day (the 2nd try says „jutro”), hearts follow (Hardkor: 2).
@@ -230,7 +247,9 @@ try {
   assert.deepEqual(zmiany.map((z) => [z.p_age, z.p_pierwszy]).slice(1), [[19, false]]);
   const serca = await page.evaluate(() => { const s = window.__game.scene.getScene('game'); return { hp: s.player.hp, max: window.__game.scene.getScene('game').player.maxHp ?? null }; });
   await page.evaluate(() => window.__game.scene.getScene('game').wyborTrudnosci(false));
-  await page.waitForFunction(() => /jutro/.test(window.__game.scene.getScene('ui').dialogBox?.list?.map((o) => o.text ?? '').join(' ') ?? ''), null, { timeout: 10000 });
+  await page.waitForTimeout(1500);
+  const jutro = await page.evaluate(() => { const ui = window.__game.scene.getScene('ui'); const t = []; const w = (o) => { if (o?.text) t.push(o.text); (o?.list ?? []).forEach(w); }; w(ui.dialogBox); return t.join(' '); });
+  assert(/jutro/.test(jutro), 'Second change today says „jutro”: ' + jutro);
   await page.screenshot({ path: `work/onb-${name}-7-jutro.png` });
   await choose(0);
   assert.equal(zmiany.length, 2, 'No second change today');
