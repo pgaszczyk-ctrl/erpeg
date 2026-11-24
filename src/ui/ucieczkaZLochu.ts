@@ -60,7 +60,8 @@ export function animacjaUcieczki(ms: number): { zamknij: () => void } {
   const t0 = performance.now();
   let raf = 0;
 
-  const klatka = (now: number) => {
+  const klatka = (teraz: number) => {
+    const now = Math.max(t0, teraz); // the first frame's timestamp can be earlier than t0
     const t = Math.min(1, (now - t0) / ms);
     const przes = ruch ? (now - t0) * 0.12 * P : 0;
     // Ściana z kamieni (przewija się), sklepienie, podłoga.
