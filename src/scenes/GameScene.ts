@@ -35,6 +35,7 @@ import { STALE_HD } from '../content/wyglad';
 import { TestRide, vehicleSpeed } from '../testTransport';
 import { nowyBohater, type Bohater } from '../chibi/bohater';
 import { Stwory3D, stwory3d } from '../stwory3d';
+import { StworyChibi, stworyChibi } from '../chibi/StworyChibi';
 import { LOOK_TOP, LOOK_H } from '../look';
 import { touchInput, keyboardDir, consumeAttack, attackAim, resetTouch, resetKeys } from '../controls';
 import { loadingGame, loadingMapError } from '../ui/loadingMap';
@@ -438,6 +439,8 @@ export class GameScene extends Phaser.Scene {
   /** Movement feel: run-up/braking, look-ahead camera, dust, footsteps (src/ruch.ts). */
   private ruch?: DynamikaRuchu;
   private stwory3d?: Stwory3D;
+  /** Monsters as code-drawn clay chibis (chibi/StworyChibi.ts); the 3D models then draw only the townsfolk. */
+  private stworyChibi?: StworyChibi;
   private enemies: Enemy[] = [];
   private pickups: Phaser.GameObjects.Image[] = [];
   private missions: ResolvedMission[] = [];
@@ -623,6 +626,8 @@ export class GameScene extends Phaser.Scene {
     this.askingTown = false;
     this.mapView = new MapRenderer(this, this.city);
     this.testRide = new TestRide(this);
+    this.stworyChibi = stworyChibi() ? new StworyChibi(this) : undefined;
+    if (this.stworyChibi) { const sc = this.stworyChibi; this.events.once('shutdown', () => { sc.destroy(); if (this.stworyChibi === sc) this.stworyChibi = undefined; }); }
     this.stwory3d = stwory3d() ? new Stwory3D(this) : undefined;
     if (this.stwory3d) {
       const models = this.stwory3d;
@@ -1591,7 +1596,8 @@ export class GameScene extends Phaser.Scene {
     this.npcs.update(this.player.x, this.player.y, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y) && !this.demoRun?.przySmoku(x, y), (n) => session.riddles[n.id] === today());
     this.updateFog();
     this.weatherFx.update(dt, this.cameras.main, this.player, now, this.fogView.daylight);
-    this.stwory3d?.update(this.enemies, now);
+    this.stworyChibi?.update(this.enemies, now);
+    this.stwory3d?.update(this.stworyChibi ? [] : this.enemies, now);
     this.drawMagic(now);
 
     this.animateCrops(now);
@@ -2680,9 +2686,9 @@ export class GameScene extends Phaser.Scene {
     return {
       scene: this,
       player: this.player,
-      origin: (s, node, now) => this.stwory3d?.socket(s, node, now),
+      origin: (s, node, now) => this.stworyChibi ? undefined : this.stwory3d?.socket(s, node, now),
       sounds: this.combatAudio,
-      attackMarker: (s) => this.stwory3d?.attackMarkerMs(s, 'impact'),
+      attackMarker: (s) => this.stworyChibi ? undefined : this.stwory3d?.attackMarkerMs(s, 'impact'),
       przejscie: (ax, ay, bx, by) => przejscieSiedlisk(this.city, ax, ay, bx, by),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;

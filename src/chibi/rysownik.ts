@@ -202,14 +202,14 @@ function model(o, faza) {
       add(elip([d[0] - 2.3, ty + 7.1, d[2]], [1.2, 0.7, 0.5]), 'lisc'); add(elip([d[0] + 0.9, ty + 7.4, d[2]], [1.2, 0.7, 0.5]), 'lisc'); }
   }
   if (o.pas) czesci[czesci.findIndex(c => c.wzor === 'tulow')].skos = 1;
-  return { czesci, k, A, hy, hr, ty };
+  return { czesci, k, A, hy, hr, ty, kolory: o.kolDod, kolorOczu: o.kolorOczu, usta: o.ustaD, bezRumiencow: o.bezRumiencow };
 }
 
 const KOLOR_MAT = k => ({
   skora: k.skora, wlosy: k.wlosy, mundur: k.mundur, spodnie: k.spodnie, buty: '#6e4124', pas: '#5b3620', mosiadz: '#d0a548',
   stal: '#a9b1bd', drewno: '#7b4a2b', cieciwa: '#e9dcc0', czapka: k.czapka || '#303868', czapkaCiemna: '#20264a', helm: k.helm || '#3c4a7c',
   plaszcz: k.plaszcz || '#8c3c2a', szal: k.szal || '#2c3566', lisc: '#5f913c', niebieska: '#3a53b5', zielony: '#2f7376',
-  oko: '#2b1b16', biel: '#fff6e0', rumieniec: '#e98d78', usta: '#a85a4a', stalCiemna: '#3c4a7c'
+  oko: '#2b1b16', biel: '#fff6e0', rumieniec: '#e98d78', usta: '#a85a4a', stalCiemna: '#3c4a7c', liscCiemny: '#3a2a1a', kaptur: '#4a3a30', pletwa: '#2f8a7a'
 });
 
 // ---------- render ----------
@@ -218,15 +218,16 @@ function renderuj(o, yaw, faza, H) {
   const s = H / 20;
   const W = Math.ceil(H * 1.7) + 4, HH = Math.ceil(H * 1.4) + 4;
   const ox = W / 2, oy = HH - 3;
-  const m = model(Object.assign({}, o), faza);
-  const kol = KOLOR_MAT(m.k);
+  const m = o.stwor ? modelStwora(Object.assign({}, o), faza) : model(Object.assign({}, o), faza);
+  const kol = Object.assign(KOLOR_MAT(m.k), m.kolory || {});
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
   const loc = (w) => [cy * w[0] - sy * w[2], w[1], sy * w[0] + cy * w[2]];
   const sdf = p => { let best = 1e9, idx = -1; for (let i = 0; i < m.czesci.length; i++) { const d = m.czesci[i].sdf(p); if (d < best) { best = d; idx = i; } } return [best, idx]; };
   // całe ciało: uniesienie (skok), spłaszczenie przy lądowaniu, pochylenie w biegu, przechył przy uniku
   const un = o.unos || 0, sy0 = o.sy || 1, pch = o.pochyl || 0, prz = o.przechyl || 0;
   const cp = Math.cos(pch), sp = Math.sin(pch), cr = Math.cos(prz), sr = Math.sin(prz);
-  const T = (q) => { let x = q[0], y = (q[1] - un) / sy0, z = q[2];
+  const wyp = o.wypad || 0;
+  const T = (q) => { let x = q[0], y = (q[1] - un) / sy0, z = q[2] - wyp;
     if (pch) { const yy = y * cp + z * sp; z = -y * sp + z * cp; y = yy; }
     if (prz) { const xx = x * cr + y * sr; y = -x * sr + y * cr; x = xx; }
     return [x, y, z]; };
@@ -308,19 +309,21 @@ function renderuj(o, yaw, faza, H) {
     const odwT = (v, kier) => { let x = v[0], y = v[1], z = v[2];
       if (prz) { const xx = x * cr - y * sr; y = x * sr + y * cr; x = xx; }
       if (pch) { const yy = y * cp - z * sp; z = y * sp + z * cp; y = yy; }
-      if (!kier) y = y * sy0 + un; return [x, y, z]; };
+      if (!kier) { y = y * sy0 + un; z += wyp; } return [x, y, z]; };
     for (const sx of [-1, 1]) {
-      const ex = sx * 0.36, ey = -0.02, ez = Math.sqrt(1 - ex * ex - ey * ey);
+      const ex = sx * (m.oczyX ?? 0.36), ey = m.oczyY ?? -0.02, ez = Math.sqrt(Math.max(0.05, 1 - ex * ex - ey * ey));
       const q = odwT([hc[0] + ex * r, hc[1] + ey * r, hc[2] + ez * r]), nq = odwT([ex, ey, ez], true);
       const w0 = cy * q[0] + sy * q[2], w2 = -sy * q[0] + cy * q[2];
       const nw2 = -sy * nq[0] + cy * nq[2];
       if (nq[1] * B[1] + nw2 * B[2] < 0.12) continue;
       const ex0 = Math.floor(ox + w0 * s), ey0 = Math.floor(oy - (q[1] * U[1] + w2 * U[2]) * s);
-      for (const yy of [ey0 - 1, ey0]) {
-        if (ex0 < 0 || yy < 0 || ex0 >= W || yy >= HH) continue;
-        const b = buf[yy * W + ex0];
-        if (!b || b.czesc !== gi || (b.mat !== 'skora' && b.mat !== 'rumieniec')) continue;
-        put(yy * W + ex0, hexc(kol.oko));
+      const wys = m.oczyWys ?? 2, szer = m.oczySzer ?? 1, twarz = m.twarz || ['skora', 'rumieniec'];
+      for (let dy = 0; dy < wys; dy++) for (let dx = 0; dx < szer; dx++) {
+        const xx = ex0 + (sx < 0 ? -dx : dx), yy = ey0 - (wys - 1) + dy;
+        if (xx < 0 || yy < 0 || xx >= W || yy >= HH) continue;
+        const b = buf[yy * W + xx];
+        if (!b || b.czesc !== gi || !twarz.includes(b.mat)) continue;
+        put(yy * W + xx, hexc(m.kolorOczu || kol.oko));
       }
     }
   }
@@ -341,7 +344,8 @@ function material(h, m) {
     const q = [p[0] - cz.glowa[0], p[1] - cz.glowa[1], p[2] - cz.glowa[2]], r = cz.hr;
     if (q[2] > 0) {
       const ex = q[0] / r, ey = q[1] / r;
-      if (m.A && Math.abs(ex) > 0.48 && Math.abs(ex) < 0.72 && ey < -0.22 && ey > -0.42) return 'rumieniec';
+      if (m.usta && Math.abs(ex) < m.usta.w && ey < m.usta.y + 0.07 && ey > m.usta.y - 0.07 + Math.abs(ex) * (m.usta.usmiech || 0)) return 'usta';
+      if (m.A && !m.bezRumiencow && Math.abs(ex) > 0.48 && Math.abs(ex) < 0.72 && ey < -0.22 && ey > -0.42) return 'rumieniec';
     }
   }
   if (cz.wzor === 'tulow') {
@@ -352,11 +356,165 @@ function material(h, m) {
     if (p[1] > cz.ty + 2.1 && Math.abs(p[0]) < 1.6 && p[2] > 0.4) return 'mosiadz'; // stójka
   }
   if (cz.wzor === 'czapka' && p[1] < cz.cy + 0.9 && p[1] > cz.cy - 0.1) return 'mosiadz';
+  if (cz.wzor === 'brzuch' && p[1] < cz.by - 1.2) return 'futroJasne';
+  if (cz.wzor === 'brzuchImp' && p[2] > 1.2 && Math.abs(p[0]) < 2.0) return 'brzuch';
+  if (cz.wzor === 'zebra' && (Math.abs(p[0]) < 0.45 ? false : Math.abs(Math.sin((p[1] - cz.ty) * 1.9)) < 0.5)) return 'koscCiemna';
+  if (cz.wzor === 'korzenie' && Math.abs(Math.sin(Math.atan2(p[0], p[2]) * 6)) < 0.25) return 'liscCiemny';
+  if (cz.wzor === 'kwiatki' && Math.abs(Math.sin(p[0] * 3.1) * Math.sin(p[1] * 2.7) * Math.sin(p[2] * 2.3)) > 0.82) return 'kwiat';
+  if (cz.wzor === 'szata' && p[1] < cz.ty - 4) return 'szataCiemna';
+  if (cz.wzor === 'polysk' && p[1] > cz.glowa[1] + 2.2 && p[0] < -1 && p[0] > -3.2 && p[2] > 0) return 'blysk';
+  if (cz.wzor === 'nity' && p[2] > 1.6 && (Math.abs(p[1] - cz.ty - 1.8) < 0.35 || Math.abs(p[1] - cz.ty + 1.8) < 0.35) && Math.abs(((p[0] + 10) % 1.6) - 0.8) < 0.35) return 'zelazo';
   if (cz.wzor === 'pasHelmu' && Math.abs(p[0]) < 0.75 && p[1] > m.hy + 0.3) return 'mosiadz';
   if (cz.wzor === 'zapinka' && Math.abs(p[0]) < 0.6 && p[2] > 1.5) return 'mosiadz';
   if (cz.wzor === 'szachy') { const x = p[0] - cz.cc[0], y = p[1] - cz.cc[1]; if ((x < 0) !== (y > 0)) return 'stalCiemna'; }
   if (cz.wzor === 'liscie') { const a = Math.atan2(p[0], p[2]); if (Math.sin(a * 7) > 0.5 && p[1] < m.ty + 1.6) return 'lisc'; }
   return cz.mat;
+}
+
+
+// ---------- stwory (te same bryły, ten sam aparat co bohater) ----------
+// jednostki jak u bohatera: ~20 = wysokość „nominalna” postaci; render skaluje przez H.
+function modelStwora(o, faza) {
+  const czesci = [];
+  const add = (sdf, mat, ext) => czesci.push(Object.assign({ sdf, mat }, ext || {}));
+  const chod = o.chod ? 1 : 0, sw = Math.sin(faza * Math.PI * 2), cw = Math.cos(faza * Math.PI * 2);
+  const zam = o.poza === 'zamach', cios = o.poza === 'cios';
+  const g = o.stwor;
+  let hy = 12, hr = 4.5, ty = 6, extra = {};
+  if (g === 'wilk' || g === 'warg') {
+    const w = g === 'warg';
+    const bob = chod ? Math.abs(cw) * 0.5 : 0;
+    const by = 7.2 + bob;
+    add(elip([0, by, -0.5], [w ? 3.6 : 3.1, w ? 3.3 : 2.9, 6.4]), 'futro', { wzor: 'brzuch', by });
+    add(elip([0, by + 1.6, 4.4], [w ? 3.3 : 2.8, w ? 3.4 : 3.1, 3.2]), 'futro');
+    const hz = 8.3 + (cios ? 1.2 : 0), hyy = by + 4.0 - (zam ? 1.2 : 0);
+    hy = hyy; hr = w ? 3.8 : 3.3;
+    const hc = [0, hyy, hz];
+    add(sph(hc, hr), 'futro', { glowa: hc, hr });
+    add(elip([0, hyy - 1.0, hz + 3.0], [1.7, 1.4, 2.6]), 'pysk');
+    add(sph([0, hyy - 0.3, hz + 5.3], 0.75), 'nos');
+    if (cios || w) add(elip([0, hyy - 2.4, hz + 2.6], [1.4, 0.6, 2.2]), 'pysk');  // dolna szczęka (otwarta przy ciosie)
+    for (const sx of [-1, 1]) add(elip([sx * 1.9, hyy + hr * 0.95, hz - 0.6], [0.9, 1.8, 0.6]), 'futroCiemne');
+    if (w) for (let i = 0; i < 5; i++) add(elip([0, by + 3.0 - i * 0.2, 3 - i * 2.2], [0.5, 1.4 - i * 0.12, 0.8]), 'futroCiemne');
+    for (const [sx, sz, f] of [[-1, 4, 0], [1, 4, 0.5], [-1, -4.5, 0.5], [1, -4.5, 0]]) {
+      const s2 = chod ? Math.sin((faza + f) * Math.PI * 2) : 0, lift = chod ? Math.max(0, s2) * 1.2 : 0;
+      const kroki = cios ? (sz > 0 ? 2.5 : -2.5) : zam ? (sz > 0 ? -0.8 : 0.8) : s2 * 2.2;
+      add(kaps([sx * 1.9, by - 1.5, sz], [sx * 1.9, 1.0 + lift, sz + kroki], w ? 1.15 : 0.95), 'futro');
+      add(sph([sx * 1.9, 0.9 + lift, sz + kroki + 0.4], w ? 1.15 : 1.0), 'futroJasne');
+    }
+    const wag = chod ? sw * 1.2 : zam ? 2 : 0;
+    add(kaps([0, by + 1.2, -6.2], [wag, by + 3.2, -10], 1.1), 'futro');
+    add(sph([wag, by + 3.4, -10.4], 1.1), 'futroJasne');
+    extra = { kolory: w ? { futro: '#5a4234', futroCiemne: '#2e2420', futroJasne: '#8a7058', pysk: '#7a604a', nos: '#1e1a24' } : { futro: '#8b8d96', futroCiemne: '#53525c', futroJasne: '#d4cfc6', pysk: '#c9c2b6', nos: '#2a2430' },
+      kolorOczu: w ? '#ff4a3a' : '#ffd34a', oczyX: 0.42, oczyY: 0.18, twarz: ['futro'], oczyWys: 1, oczySzer: w ? 2 : 1 };
+  } else if (g === 'chochlik') {
+    const bob = chod ? Math.abs(cw) * 0.7 : 0;
+    ty = 5.5 + bob; hy = 11.8 + bob - (zam ? 0.6 : 0); hr = 4.7;
+    add(elip([0, ty, 0], [3.3, 3.5, 2.9]), 'skora', { wzor: 'brzuchImp', ty });
+    const hc = [0, hy, 0.5 + (cios ? 0.8 : 0)];
+    add(sph(hc, hr), 'skora', { glowa: hc, hr });
+    for (const sx of [-1, 1]) {
+      add(kaps([sx * 2.3, hy + 3.4, 0.2], [sx * 3.6, hy + 6.4, -0.8], 0.75), 'rog');
+      add(elip([sx * 5.2, hy + 0.6, 0], [1.9, 0.75, 0.55]), 'skora');
+      const krok = chod ? sw * sx * 1.4 : 0;
+      add(kaps([sx * 1.6, ty - 2.5, 0], [sx * 1.7, 1.0 + Math.max(0, sw * sx) * 0.8, krok], 0.95), 'skoraCiemna');
+      add(elip([sx * 1.7, 0.8, krok + 0.6], [1.0, 0.8, 1.4]), 'skoraCiemna');
+      const rp = zam ? [sx * 3.4, ty + 4.5, -0.5] : cios ? [sx * 2.4, ty + 0.8, 4.2] : [sx * 3.8, ty - 1.2, chod ? -sw * sx * 1.2 : 0.6];
+      add(kaps([sx * 2.8, ty + 1.6, 0], rp, 0.7), 'skora');
+      add(sph(rp, 0.85), 'skoraCiemna');
+    }
+    const t = chod ? sw : 0;
+    add(kaps([0, ty - 1.6, -2.6], [t * 1.5, ty - 0.6, -5.2], 0.45), 'skoraCiemna');
+    add(kaps([t * 1.5, ty - 0.6, -5.2], [t * 2.2, ty + 1.6, -6.0], 0.4), 'skoraCiemna');
+    add(elip([t * 2.3, ty + 2.2, -6.1], [0.9, 0.9, 0.4]), 'skoraCiemna');
+    extra = { kolory: { skora: '#d9643c', skoraCiemna: '#9c3a2a', brzuch: '#f2a46c', rog: '#efe3c8' }, kolorOczu: '#ffe04a', oczyX: 0.34, oczyY: 0.02, oczySzer: 2,
+      usta: { y: -0.42, w: 0.3, usmiech: -0.35 }, twarz: ['skora'] };
+  } else if (g === 'szkielet') {
+    const bob = chod ? Math.abs(cw) * 0.4 : 0;
+    ty = 6.6 + bob; hy = 12.6 + bob; hr = 4.2;
+    const nl = chod ? sw * 1.4 : 0;
+    for (const [sx, dz] of [[-1, nl], [1, -nl]]) {
+      add(kaps([sx * 1.4, ty - 2.4, 0], [sx * 1.5, 1.0 + Math.max(0, sx * sw) * 0.7, dz], 0.8), 'kosc');
+      add(elip([sx * 1.5, 0.7, dz + 0.5], [0.9, 0.6, 1.3]), 'kosc');
+      const rp = zam ? [sx * 2.6, ty + 5.5, -0.6] : cios ? [sx * 1.8, ty + 0.5, 4.4] : [sx * 3.2, ty - 2.2, chod ? -dz : 0.5];
+      add(kaps([sx * 2.5, ty + 2, 0], rp, 0.72), 'kosc');
+      add(sph(rp, 0.85), 'kosc');
+    }
+    add(kaps([0, ty - 2.6, -0.3], [0, ty + 2.6, -0.3], 0.55), 'kosc');
+    add(elip([0, ty + 0.9, 0.2], [2.5, 2.2, 1.7]), 'kosc', { wzor: 'zebra', ty });
+    add(elip([0, ty - 2.6, 0], [2.0, 0.9, 1.2]), 'kosc');
+    const hc = [0, hy, 0.3 + (cios ? 0.6 : 0)];
+    add(sph(hc, hr), 'kosc', { glowa: hc, hr });
+    add(elip([0, hy - hr * 0.85, 1.2], [hr * 0.6, 1.0, hr * 0.55]), 'kosc');
+    if (o.bron) { const d = zam ? [2.6, ty + 5.5, -0.6] : cios ? [1.8, ty + 0.5, 4.4] : [3.2, ty - 2.2, 0.5];
+      add(kaps(d, [d[0] + 0.4, d[1] + 5.5, d[2] + (cios ? 2.5 : 0)], 0.38), 'rdza', { cienka: 1 }); add(kaps([d[0] - 1, d[1] + 0.6, d[2]], [d[0] + 1, d[1] + 0.6, d[2]], 0.3), 'rdza'); }
+    extra = { kolory: { kosc: '#e6dfc8', koscCiemna: '#5e5648', rdza: '#8a5a3a' }, kolorOczu: '#1e1a24', oczyX: 0.34, oczyY: 0.0, oczySzer: 2, oczyWys: 2, twarz: ['kosc'],
+      usta: { y: -0.5, w: 0.22 }, bezRumiencow: true };
+  } else if (g === 'driada') {
+    const bob = chod ? Math.abs(cw) * 0.4 : 0;
+    ty = 6.6 + bob; hy = 12.6 + bob; hr = 4.3;
+    add(elip([0, 2.6 + bob * 0.5, 0], [3.3, 2.9, 3.0]), 'kora', { wzor: 'korzenie' });
+    add(elip([0, ty, 0], [2.4, 2.8, 2.0]), 'kora');
+    for (const sx of [-1, 1]) {
+      const rp = zam ? [sx * 3.0, ty + 5.5, 0.4] : cios ? [sx * 1.8, ty + 1.6, 4.8] : [sx * 3.8, ty - 1.6, chod ? -sw * sx * 1.2 : 0.8];
+      add(kaps([sx * 2.1, ty + 1.8, 0], rp, 0.5), 'kora');
+      add(kaps(rp, [rp[0] + sx * 0.8, rp[1] + 1.4, rp[2] + 0.6], 0.3), 'kora');
+      add(elip([rp[0] + sx, rp[1] + 1.9, rp[2]], [0.8, 0.5, 0.4]), 'lisc');
+    }
+    const hc = [0, hy, 0.3];
+    add(sph(hc, hr), 'skora', { glowa: hc, hr });
+    for (const [x, y, z, r] of [[0, 2.8, -0.6, 3.6], [-3.0, 1.6, -0.8, 2.7], [3.0, 1.8, -0.6, 2.7], [-2.2, 3.6, 1.3, 2.2], [2.0, 3.8, 1.0, 2.3], [0, 0.8, -3.2, 3.2], [-3.4, -1.4, -1.8, 2.2], [3.4, -1.2, -1.8, 2.2]])
+      add(sph([x, hy + y, z], r), 'lisc', { wzor: 'kwiatki' });
+    extra = { kolory: { skora: '#b6cc7a', kora: '#7a5230', lisc: '#5f913c', kwiat: '#f08ab8' }, kolorOczu: '#2a3a1a', oczyX: 0.33, oczyY: -0.1, twarz: ['skora'] };
+  } else if (g === 'upior') {
+    const fl = 2.2 + Math.sin(faza * Math.PI * 2) * 0.6;
+    ty = 7 + fl; hy = 13 + fl; hr = 4.4;
+    add(p => Math.max(elip([0, ty - 1.5, 0], [3.8, 6.5, 3.2])(p), (fl - 0.5 + Math.sin(Math.atan2(p[0], p[2]) * 5) * 0.8 - p[1]) * 0.8), 'szata', { wzor: 'szata', ty });
+    const hc = [0, hy, 0];
+    add(p => Math.max(sph(hc, hr + 0.5)(p), -(sph([0, hy - 0.8, 3.6], hr * 0.95)(p))), 'szata');
+    add(sph([0, hy - 0.8, 0.2], hr * 0.82), 'twarzUpiora', { glowa: [0, hy - 0.8, 0.2], hr: hr * 0.82 });
+    for (const sx of [-1, 1]) {
+      const rp = zam ? [sx * 3.2, ty + 6, 0.5] : cios ? [sx * 2.0, ty + 1.5, 5] : [sx * 4.2, ty - 0.5, 1.5];
+      add(kaps([sx * 3.0, ty + 2.5, 0], rp, 0.95), 'szata');
+      add(kaps(rp, [rp[0] + sx * 0.3, rp[1] + 0.6, rp[2] + 1.2], 0.35), 'kosc');
+    }
+    extra = { kolory: { szata: '#a9d6e8', szataCiemna: '#5f8aa8', twarzUpiora: '#1e2430', kosc: '#e8f2ff' }, kolorOczu: '#9ff4ff', oczyX: 0.3, oczyY: 0.05, oczySzer: 2, oczyWys: 1, twarz: ['twarzUpiora'] };
+  } else if (g === 'blob') {
+    const sq = chod ? Math.abs(sw) : 0;
+    const sy = 1 - sq * 0.18 + (zam ? -0.15 : cios ? 0.2 : 0), sx = 1 + sq * 0.15 + (zam ? 0.12 : 0);
+    hy = 5.5 * sy; hr = 5;
+    const hc = [0, 4.8 * sy, cios ? 1.2 : 0];
+    add(elip(hc, [5.2 * sx, 4.8 * sy, 5.0 * sx]), 'woda', { glowa: hc, hr: 5, wzor: 'polysk' });
+    add(sph([0, 9.4 * sy, -0.5], 1.6 * sx), 'woda');
+    extra = { kolory: { woda: '#4ea4ea', blysk: '#e6f8ff' }, kolorOczu: '#1e2a40', oczyX: 0.3, oczyY: 0.18, twarz: ['woda'] };
+  } else if (g === 'koziol') {
+    const bob = chod ? Math.abs(cw) * 0.5 : 0;
+    ty = 7 + bob; hy = 13.5 + bob - (zam ? 0.8 : 0); hr = 3.6;
+    const nl = chod ? sw * 1.5 : 0;
+    for (const [sx, dz] of [[-1, nl], [1, -nl]]) {
+      add(kaps([sx * 1.8, ty - 2.6, 0], [sx * 2.0, 3.0, dz - 0.8], 1.2), 'mosiadz');
+      add(kaps([sx * 2.0, 3.0, dz - 0.8], [sx * 2.0, 0.9 + Math.max(0, sx * sw) * 0.7, dz + 0.4], 0.95), 'zelazo');
+      add(rbox([sx * 2.0, 0.6, dz + 0.6], [1.0, 0.6, 1.2], 0.3), 'kopyto');
+      const rp = zam ? [sx * 3.6, ty + 5.5, -0.5] : cios ? [sx * 2.4, ty + 1, 5] : [sx * 4.4, ty - 1.4, chod ? -dz : 0.6];
+      add(kaps([sx * 3.4, ty + 2.3, 0], rp, 1.15), 'mosiadz');
+      add(sph(rp, 1.25), 'zelazo');
+    }
+    add(rbox([0, ty, 0], [3.4, 3.0, 2.4], 1.2), 'mosiadz', { wzor: 'nity', ty });
+    add(cyl([0, ty + 0.3, -2.8], 1.0, 2.2), 'miedz');
+    add(kaps([0, ty + 2.6, -3.0], [0, ty + 5.4, -3.2], 0.5), 'miedz');
+    const hc = [0, hy, 1.4 + (cios ? 1.2 : 0)];
+    add(elip(hc, [hr, hr * 1.05, hr * 1.25]), 'mosiadz', { glowa: hc, hr });
+    add(elip([0, hy - 1.6, hc[2] + 3.4], [1.9, 1.7, 2.4]), 'mosiadz');
+    add(elip([0, hy - 3.8, hc[2] + 3.2], [0.9, 1.6, 0.8]), 'zelazo');
+    for (const sx of [-1, 1]) {
+      let prev = [sx * 2.0, hy + 2.4, hc[2] - 0.6];
+      for (let i = 1; i <= 6; i++) { const a = i * 0.75; const pt = [sx * (2.0 + Math.sin(a) * 2.6 + i * 0.35), hy + 2.4 + Math.cos(a) * 1.8 - i * 0.3, hc[2] - 0.6 - Math.sin(a * 0.5) * 3.4];
+        add(kaps(prev, pt, 0.95 - i * 0.08), 'rog'); prev = pt; }
+      add(elip([sx * 4.2, hy + 0.4, hc[2] - 0.6], [1.6, 0.6, 0.9]), 'mosiadz');
+    }
+    extra = { kolory: { mosiadz: '#c9993a', zelazo: '#5a5a66', kopyto: '#2e2a30', miedz: '#b8643a', rog: '#e8dcc0' }, kolorOczu: '#ff3a2a', oczyX: 0.46, oczyY: 0.05, oczySzer: 2, oczyWys: 1, twarz: ['mosiadz'] };
+  }
+  return Object.assign({ czesci, k: {}, A: true, hy, hr, ty, bezRumiencow: g !== 'driada' && g !== 'chochlik' }, extra);
 }
 
 export { renderuj, rampa, czubek, kula, E };
