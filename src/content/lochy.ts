@@ -152,7 +152,7 @@ export const POZIOMY_LOCHU = {
   maks: 5,
   /** Potwory: życie i ciosy × (1 + mocNaPoziom × (poziom − 1)); ukryty jeszcze × mocUkrytego. */
   mocNaPoziom: 0.2,
-  mocUkrytego: 1.25,
+  mocUkrytego: 1.4,
   /** Skrzynia: złoto i EXP × (1 + nagrodaNaPoziom × (poziom − 1)). */
   nagrodaNaPoziom: 0.25,
   /** Ile ciosów trzeba zadać luźnej ścianie. */
@@ -161,6 +161,47 @@ export const POZIOMY_LOCHU = {
   przyciskPoS: 10,
   /** Ucieczka (animacja biegnącego ludzika) trwa co najmniej tyle ms – w tym czasie wczytuje się powierzchnia. */
   ucieczkaMs: 5000,
+};
+
+/**
+ * Wygląd lochów (właściciel, 24.11.2026: „dodaj dekorację lochów, trochę zmurszałe mury, ściekającą wodę; poziom za
+ * ukrytą ścianą bardziej elegancki, marmury; trudniejsi przeciwnicy”). Wszystko rysowane kodem.
+ */
+export const DEKOR_LOCHU = {
+  /** Szansa na ubytek w kamieniu/cegle lica (zmurszały mur). */
+  ubytek: 0.16,
+  /** Szansa na rysę na licu i na pękniętą płytę podłogi. */
+  rysa: 0.14,
+  /** Zacieki mchu spływające z góry lica. */
+  mech: 0.12,
+  /** Gruz u stóp ściany (kratka podłogi pod licem). */
+  gruz: 0.12,
+  /** Szansa, że kratka lica ma kapiącą wodę (zaciek + kałuża + spadające krople). */
+  kapanie: 0.07,
+  /** Co ile sekund spada kropla (losowo z przedziału, każde miejsce ma swój rytm). */
+  kroplaCoS: [1.4, 3.8] as [number, number],
+  /** Z jakiej odległości słychać kapanie (m). */
+  kapanieSlychacM: 22,
+  kapanieGlosnosc: 0.5,
+};
+
+/** Poziom za ukrytą ścianą: marmurowa sala i trudniejsi przeciwnicy. WARTOŚCI DO TESTU. */
+export const UKRYTY_POZIOM = {
+  /** Każda komnata ma grupę, a grupy są tyle razy liczniejsze. */
+  liczniej: 1.3,
+  /** Szansa, że potwór w komnacie jest z elity (silniejsze rodzaje danego lochu). */
+  szansaElity: 0.25,
+  elita: { krypta: ['zombie', 'zombie', 'upior'], podziemia: ['wielki_glut', 'herszt'], jaskinia: ['koziol', 'warg'] } as Record<RodzajLochu, RodzajWroga[]>,
+  /** Szansa, że zwykły potwór wpada w szał (berserker: szybszy, częstsze ciosy, czerwona poświata). */
+  berserk: 0.18,
+  /** Dodatkowa obstawa strażnika skrzyni. */
+  obstawa: { krypta: ['zombie', 'szkielet'], podziemia: ['herszt', 'bandyta'], jaskinia: ['warg', 'koziol'] } as Record<RodzajLochu, RodzajWroga[]>,
+  /** Kolory marmurowej sali. */
+  kolory: {
+    jasny: ['#ece6da', '#e3dccd', '#efe9de'], ciemny: ['#3b3542', '#332e3a', '#403946'],
+    zylka: 'rgba(120,108,96,0.55)', zylkaCiemna: 'rgba(200,190,210,0.25)',
+    zloto: '#d4af37', zlotoCien: '#8a6a1e', lico: '#e6dfd0', licoCien: '#aaa08d', wierzch: '#221e29', dywan: '#7a1c24', dywanCien: '#5a1219',
+  },
 };
 
 /** Skrzynia na ukrytym poziomie: szansa na coś lepszego (przedmioty jeszcze dopracujemy). */
@@ -205,6 +246,7 @@ export const LOCH_TEKSTY = {
   get uciekajTytul() { return tx('🏃 Ucieczka z lochu', '🏃 Escape the dungeon'); },
   get uciekajPytanie() { return tx('Na pewno chcesz uciec na powierzchnię? Wrócisz przy wejściu do lochu.', 'Do you really want to run back to the surface? You will come out by the dungeon\'s entrance.'); },
   get uciekam() { return tx('🏃 Uciekam', '🏃 Run'); },
+  get marmur() { return tx('✨ Marmurowa sala… Ktoś tu kiedyś mieszkał w przepychu. I wciąż czegoś pilnuje.', '✨ A marble hall… Someone once lived here in splendour. And something still keeps watch.'); },
   get uciekaszNapis() { return tx('Uciekasz na powierzchnię…', 'Running back to the surface…'); },
   get misyjna() { return tx('Na dnie skrzyni, pod złotem, leży to, po co tu przyszedłeś:', 'At the bottom of the chest, under the gold, lies what you came for:'); },
 };

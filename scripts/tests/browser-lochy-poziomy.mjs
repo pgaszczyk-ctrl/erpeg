@@ -86,6 +86,13 @@ try {
   console.log('przycisk po', poIleS.toFixed(1), 's');
   assert(poIleS >= 9, 'escape button only after ~10 s');
   await page.screenshot({ path: `work/lochy-poziomy/${tag}-1-przycisk.png` });
+  // Dripping water on an ordinary level: drops fall and splash.
+  const kap = await g(() => { const l = window.__game.scene.getScene('game').loch; return l.krople.map((q) => ({ x: q.x, y: q.y1 })); });
+  console.log('kapiące miejsca', kap.length);
+  assert(kap.length > 0, 'dripping water spots');
+  await g(([x, y]) => { const s = window.__game.scene.getScene('game'); s.protectUntil = Infinity; s.player.setPosition(x + 10, y + 12); }, [kap[0].x, kap[0].y]);
+  await page.waitForTimeout(1600);
+  await page.screenshot({ path: `work/lochy-poziomy/${tag}-1-kapanie.png` });
 
   // 2. Down the stairs in the farthest chamber.
   await spokoj();
@@ -140,6 +147,16 @@ try {
   assert(p6.ukryty, 'the hidden level');
   assert.equal(p6.chest, 'pilnowana', 'a guarded chest on the hidden level');
   await page.screenshot({ path: `work/lochy-poziomy/${tag}-6.png` });
+  // Marble hall + harder residents (owner, 24 Nov 2026): every chamber guarded, some elites and berserkers.
+  const m6 = await g(() => { const s = window.__game.scene.getScene('game'); const zywi = s.enemies.filter((e) => !e.isDead); return { ile: zywi.length, berserk: zywi.filter((e) => e.berserk).length, rodzaje: [...new Set(zywi.map((e) => e.kindId ?? e.kind?.name))] }; });
+  console.log('poziom 6 potwory', JSON.stringify(m6), 'poziom 2:', p2.potwory.length);
+  assert(m6.ile > p2.potwory.length, 'the hidden level has more monsters');
+  await g(() => { const s = window.__game.scene.getScene('game'); s.protectUntil = Infinity; for (const e of s.enemies) e.spokojny = true; const p = s.city.loch; const k = p.komnaty.find((q) => q.skarb); s.player.setPosition((k.cx + 0.5) * p.T, (k.y1 - 2) * p.T); });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `work/lochy-poziomy/${tag}-6-skarbiec.png` });
+  await g(() => { const s = window.__game.scene.getScene('game'); const p = s.city.loch; const k = p.komnaty.find((q) => q.duza && !q.skarb && !q.wejscie); s.player.setPosition((k.cx + 0.5) * p.T, (k.cy + 2.5) * p.T); });
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: `work/lochy-poziomy/${tag}-6-sala.png` });
 
   // 4. Up again: arrive by the hidden way down on -5.
   await spokoj();

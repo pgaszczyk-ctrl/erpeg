@@ -47,7 +47,7 @@ export interface PlanLochu {
   /** Pochodnie na licu ściany (kratka ściany, nad którą jest podłoga od południa). */
   pochodnie: { x: number; y: number }[];
   /** Ozdoby na podłodze (kratki). */
-  ozdoby: { x: number; y: number; co: 'kosci' | 'czaszka' | 'trumna' | 'beczka' | 'skrzynka' | 'pajeczyna' | 'kaluza' | 'stalagmit' | 'krysztal' | 'grzybki'; r: number }[];
+  ozdoby: { x: number; y: number; co: 'kosci' | 'czaszka' | 'trumna' | 'beczka' | 'skrzynka' | 'pajeczyna' | 'kaluza' | 'stalagmit' | 'krysztal' | 'grzybki' | 'gruz' | 'swiece' | 'urna' | 'posag' | 'lancuch'; r: number }[];
 }
 
 export function hashLochu(s: string) {
@@ -245,19 +245,21 @@ export function planLochu(rodzaj: RodzajLochu, seed: number, tutorial = false, l
 
   // Ozdoby: kości, czaszki, trumny (krypta) albo beczki i skrzynki (podziemia), pajęczyny w rogach, kałuże.
   const ozdoby: PlanLochu['ozdoby'] = [];
+  // Poziom ukryty (za luźną ścianą): marmurowa sala – posągi, urny, świeczniki, bez pajęczyn i gruzu.
+  const ukrytyPoz = lv.poziom > lv.normalne;
   const wolne = (x: number, y: number) => at(x, y) && !(Math.abs(x - schody.x) <= 1 && Math.abs(y - schody.y) <= 3) && !(Math.abs(x - skrzynia.x) <= 1 && Math.abs(y - skrzynia.y) <= 1) && !ozdoby.some((o) => Math.abs(o.x - x) < 2 && Math.abs(o.y - y) < 2);
   for (const k of komnaty) {
     if (!k.duza) continue;
-    for (const [x, y] of [[k.x0, k.y0], [k.x1 - 1, k.y0]]) if (r() < 0.6) ozdoby.push({ x, y, co: 'pajeczyna', r: r() });
-    const ile = losuj(1, 3);
+    for (const [x, y] of [[k.x0, k.y0], [k.x1 - 1, k.y0]]) if (r() < 0.6 && !ukrytyPoz) ozdoby.push({ x, y, co: 'pajeczyna', r: r() });
+    const ile = losuj(ukrytyPoz ? 2 : 1, ukrytyPoz ? 4 : 4);
     for (let i = 0; i < ile; i++) {
       const x = losuj(k.x0, k.x1 - 1), y = losuj(k.y0 + 1, k.y1 - 1);
       if (!wolne(x, y)) continue;
-      const co = rodzaj === 'krypta'
-        ? (['kosci', 'czaszka', 'trumna', 'kaluza'] as const)[Math.floor(r() * 4)]
-        : rodzaj === 'jaskinia'
-          ? (['stalagmit', 'krysztal', 'kosci', 'kaluza', 'grzybki', 'stalagmit'] as const)[Math.floor(r() * 6)]
-          : (['beczka', 'skrzynka', 'kosci', 'kaluza'] as const)[Math.floor(r() * 4)];
+      const lista = ukrytyPoz ? (['posag', 'urna', 'swiece', 'urna', 'posag'] as const)
+        : rodzaj === 'krypta' ? (['kosci', 'czaszka', 'trumna', 'kaluza', 'gruz', 'swiece', 'lancuch'] as const)
+          : rodzaj === 'jaskinia' ? (['stalagmit', 'krysztal', 'kosci', 'kaluza', 'grzybki', 'stalagmit', 'gruz'] as const)
+            : (['beczka', 'skrzynka', 'kosci', 'kaluza', 'gruz', 'lancuch', 'swiece'] as const);
+      const co = lista[Math.floor(r() * lista.length)];
       ozdoby.push({ x, y, co, r: r() });
     }
   }

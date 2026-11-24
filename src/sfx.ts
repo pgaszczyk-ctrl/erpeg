@@ -89,6 +89,35 @@ export function grzmot() {
 }
 
 /** Two dull knocks from below (a dungeon entrance calling the hero). `glos` 0..1, `pan` −1 (left) … 1 (right). */
+/** Kropla wody w lochu: krótkie, wznoszące się „kap” (cichy plusk w kałuży). */
+export function kapniecie(glos: number, pan = 0) {
+  const a = audio();
+  if (!a || glos <= 0.02) return;
+  const t = a.currentTime + 0.01;
+  const out = a.createGain();
+  out.gain.value = Math.min(1, glos) * 0.18;
+  let wy: AudioNode = out;
+  if (typeof a.createStereoPanner === 'function') {
+    const sp = a.createStereoPanner();
+    sp.pan.value = Math.max(-1, Math.min(1, pan));
+    out.connect(sp);
+    wy = sp;
+  }
+  wy.connect(a.destination);
+  const o = a.createOscillator();
+  o.type = 'sine';
+  const f = 700 + Math.random() * 500;
+  o.frequency.setValueAtTime(f, t);
+  o.frequency.exponentialRampToValueAtTime(f * 2.2, t + 0.05);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(1, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+  o.connect(g).connect(out);
+  o.start(t);
+  o.stop(t + 0.14);
+}
+
 export function pukanie(glos: number, pan = 0) {
   const a = audio();
   if (!a || glos <= 0.01) return;
