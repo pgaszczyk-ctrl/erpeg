@@ -693,6 +693,71 @@ export interface LochHost {
   straznik?: RodzajWroga;
 }
 
+/** Hex → [r, g, b]. */
+function rgb(h: string): [number, number, number] {
+  const n = parseInt(h.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+/**
+ * 12 kafli skalnej podłogi jaskini/kopalni (t × t px płótna). Jedna paleta z uśrednionego koloru płyt (odcienie blisko
+ * siebie), a skrajne wiersze i kolumny każdego kafla mają ten sam wzór – dowolne dwa kafle pasują do siebie z każdej strony.
+ * Wnętrze różne: kamyki, rysy, ciemniejsze i jaśniejsze płaty, mokry połysk.
+ */
+function kafleSkaly(K: { plyta: string[]; spoina: string }, t: number): HTMLCanvasElement[] {
+  const sr = K.plyta.map(rgb).reduce((a, c) => [a[0] + c[0], a[1] + c[1], a[2] + c[2]], [0, 0, 0]).map((v) => v / K.plyta.length);
+  const ton = (f: number) => `rgb(${sr.map((v) => Math.max(0, Math.min(255, Math.round(v * f)))).join(',')})`;
+  const tony = [ton(0.88), ton(0.95), ton(1), ton(1.05), ton(1.11)];
+  const r0 = rng(0x51ab1e);
+  // Wspólny brzeg: wzór tonów dla wiersza i kolumny (tylko środkowe tony 1–3, żeby styk był spokojny).
+  void r0;
+  const out: HTMLCanvasElement[] = [];
+  for (let k = 0; k < 12; k++) {
+    const c = document.createElement('canvas');
+    c.width = c.height = t;
+    const x = c.getContext('2d')!;
+    const r = rng(0x9e3779b9 ^ (k * 2654435761));
+    x.fillStyle = tony[2];
+    x.fillRect(0, 0, t, t);
+    // Płaty ciemniejsze/jaśniejsze w środku (miękkie, wewnątrz ramki 2 px).
+    // Nieregularne plamy (zbitki kółek) w dowolnym miejscu kafla, przycięte do ramki 1 px.
+    const plamy = 2 + Math.floor(r() * 3);
+    for (let i = 0; i < plamy; i++) {
+      x.fillStyle = tony[r() < 0.5 ? 1 : 3];
+      const cx = 1 + r() * (t - 2), cy = 1 + r() * (t - 2), R = 2 + r() * (t / 5);
+      for (let j = 0; j < 4; j++) {
+        const ox = cx + (r() - 0.5) * R * 1.4, oy = cy + (r() - 0.5) * R, rr = R * (0.5 + r() * 0.5);
+        for (let yy = Math.max(1, Math.floor(oy - rr)); yy <= Math.min(t - 2, Math.ceil(oy + rr)); yy++)
+          for (let xx = Math.max(1, Math.floor(ox - rr)); xx <= Math.min(t - 2, Math.ceil(ox + rr)); xx++)
+            if ((xx - ox) ** 2 + ((yy - oy) * 1.3) ** 2 <= rr * rr) x.fillRect(xx, yy, 1, 1);
+      }
+    }
+    // Kamyki: cień, kamień, odblask.
+    const ile = 2 + (k % 4);
+    for (let i = 0; i < ile; i++) {
+      const w = 1 + Math.floor(r() * 3), h = 1 + Math.floor(r() * 2);
+      const px = 1 + Math.floor(r() * (t - 2 - w)), py = 1 + Math.floor(r() * (t - 3 - h));
+      x.fillStyle = tony[1]; x.fillRect(px + 1, py + 1, w, h);
+      x.fillStyle = tony[r() < 0.5 ? 0 : 3]; x.fillRect(px, py, w, h);
+      if (w > 1) { x.fillStyle = tony[4]; x.fillRect(px, py, 1, 1); }
+    }
+    // Rysa w części kafli.
+    if (k % 3 === 0) {
+      x.fillStyle = tony[0];
+      let cx = 3 + Math.floor(r() * (t - 6)), cy = 2;
+      while (cy < t - 3) { x.fillRect(cx, cy, 1, 2); cx = Math.max(2, Math.min(t - 3, cx + Math.round(r() * 2 - 1))); cy += 2; }
+    }
+    // Mokry połysk w dwóch kaflach.
+    if (k === 4 || k === 9) { x.fillStyle = 'rgba(150,200,220,0.07)'; x.fillRect(2 + Math.floor(r() * 8), 3 + Math.floor(r() * (t - 8)), t / 2, 2); }
+    // Wspólny brzeg (te same piksele w każdym kaflu).
+    // (ton bazowy: styk dowolnych dwóch kafli jest niewidoczny, a nie tworzy kratki)
+    x.fillStyle = tony[2];
+    x.fillRect(0, 0, t, 1); x.fillRect(0, t - 1, t, 1); x.fillRect(0, 0, 1, t); x.fillRect(t - 1, 0, 1, t);
+    out.push(c);
+  }
+  return out;
+}
+
 export class LochWnetrze {
   readonly plan: PlanLochu;
   private img: Phaser.GameObjects.Image[] = [];
@@ -830,6 +895,8 @@ export class LochWnetrze {
     x.fillRect(0, 0, W, H);
     const pod = (tx: number, ty: number) => podloga(p, tx, ty);
     const UK = UKRYTY_POZIOM.kolory, DK = DEKOR_LOCHU;
+    let kafle: HTMLCanvasElement[] | undefined;
+    const wybrane = new Map<number, number>();
     /** Poziom za ukrytą ścianą: marmurowa sala zamiast zmurszałego kamienia. */
     const marmur = p.ukrytyPoziom;
     const zmurszaly = !marmur && !jaskiniowy(p.rodzaj);
@@ -869,15 +936,26 @@ export class LochWnetrze {
         continue;
       }
       if (jaskiniowy(p.rodzaj)) {
-        // Skała: plamy po 3×3 kratki bez spoin, drobne kamyki, gdzieniegdzie mokry połysk.
-        const pl = ((Math.floor(tx / 3) * 73856093) ^ (Math.floor(ty / 3) * 19349663)) >>> 0;
-        x.fillStyle = K.plyta[pl % K.plyta.length];
-        x.fillRect(X, Y, t, t);
-        for (let i = 0; i < 4; i++) {
-          x.fillStyle = r() < 0.5 ? K.plyta[(pl + 1 + i) % K.plyta.length] : K.spoina;
-          x.fillRect(X + Math.floor(r() * (t - 3)), Y + Math.floor(r() * (t - 2)), 2 + Math.floor(r() * 3), 2);
+        // Skała z 12 kafli o wspólnych krawędziach (właściciel, 25.11.2026: „nie szachownica – 12 tilesów pasujących
+        // góra/dół/bok, mieszane, pasujące odcieniami”): kafel z ziarna kratki, inny niż sąsiad z lewej i z góry.
+        kafle ??= kafleSkaly(K, t * 2);
+        // Kafel obejmuje 2×2 kratki; wybór na siatce kafli, inny niż sąsiad z lewej i z góry.
+        const kx = tx >> 1, ky = ty >> 1, W2 = (p.w >> 1) + 1;
+        let k = wybrane.get(ky * W2 + kx);
+        if (k === undefined) {
+          k = (((kx * 73856093) ^ (ky * 19349663) ^ p.seed) >>> 0) % kafle.length;
+          const lewy = wybrane.get(ky * W2 + kx - 1), gorny = wybrane.get((ky - 1) * W2 + kx);
+          for (let n = 1; (k === lewy || k === gorny) && n < kafle.length; n++) k = (k + 1) % kafle.length;
+          wybrane.set(ky * W2 + kx, k);
         }
-        if (r() < 0.04) { x.fillStyle = 'rgba(150,200,220,0.18)'; x.fillRect(X + 2, Y + 4, t - 5, 3); }
+        x.drawImage(kafle[k], (tx & 1) * t, (ty & 1) * t, t, t, X, Y, t, t);
+        // Rzadkie większe szczegóły na wierzchu (mogą zachodzić na sąsiedni kafel, więc nie widać siatki).
+        if (r() < 0.05) {
+          const cx = X + Math.floor(r() * t), cy = Y + Math.floor(r() * t), w = 2 + Math.floor(r() * 3);
+          x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(cx + 1, cy + 1, w, 2);
+          x.fillStyle = K.licoCien; x.fillRect(cx, cy, w, 2);
+          x.fillStyle = 'rgba(255,240,210,0.12)'; x.fillRect(cx, cy, w, 1);
+        }
         if (!pod(tx, ty - 1)) { x.fillStyle = 'rgba(0,0,0,0.38)'; x.fillRect(X, Y, t, 5); }
         if (!pod(tx - 1, ty)) { x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(X, Y, 4, t); }
         continue;
