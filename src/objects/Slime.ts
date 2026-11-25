@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { comicHud } from '../ui/comicHud';
 import { comicBurst } from '../ui/comicBurst';
+import { ODPORNOSCI, mnoznikZywiolu, opisMnoznika, ZYWIOLY, type Odpornosci, type Zywiol } from '../content/zywioly';
 
 /** How a hit looks and sounds (never its damage). */
 export interface TrafienieFx {
@@ -10,6 +11,8 @@ export interface TrafienieFx {
   krytyk?: boolean;
   /** The hero's own blow or projectile (only those stop the picture and nudge the camera). */
   bohater?: boolean;
+  /** The blow's element (content/zywioly.ts); none = physical. */
+  zywiol?: Zywiol;
 }
 export interface Trafienie { cel: Slime; x: number; y: number; zX: number; zY: number; ile: number; zabity: boolean; fx: TrafienieFx }
 import { live } from '../walka/live';
@@ -102,6 +105,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   vel = new Phaser.Math.Vector2();
   hp: number;
   readonly kind: EnemyKind;
+  /** Element multipliers (content/zywioly.ts); dragons get their species' table from SmokAI. */
+  odpornosc?: Odpornosci;
   readonly kindId: RodzajWroga;
   /** Where it was placed; it wanders around this spot. */
   home: Phaser.Math.Vector2;
@@ -153,6 +158,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     scene.add.existing(this);
     this.kind = k;
     this.kindId = kind;
+    this.odpornosc = ODPORNOSCI[kind];
     this.hp = k.hp;
     this.hd = hd;
     if (detailedBlob) {
@@ -400,6 +406,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (this.isDead || this.inAir || this.nietykalny) return false;
     this.trafiony = true;
     this.walkaDo = now + 5000;
+    // Elements and resistances (content/zywioly.ts): ×0 immune … ×2 weak.
+    const zywiol = fx.zywiol ?? 'fizyczny';
+    const mnoznik = mnoznikZywiolu(this.odpornosc, zywiol);
+    damage *= mnoznik;
     const prog = this.prog;
     if (prog) damage = Math.min(damage, Math.max(0, this.hp - prog.hp));
     const applied = Math.min(Math.max(0, damage), this.hp);
@@ -414,7 +424,10 @@ export class Slime extends Phaser.GameObjects.Sprite {
       this.nietykalny = true;
       prog.fn();
     }
-    if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied, { mocny: fx.mocny, krytyk: fx.krytyk });
+    const dopisek = fx.bohater ? opisMnoznika(mnoznik) : null;
+    if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied, { mocny: fx.mocny, krytyk: fx.krytyk, dopisek, kolorDopisku: ZYWIOLY[zywiol].kolor, slaby: mnoznik > 1.05 });
+    else if (comicHud && live() && dopisek && mnoznik <= 0) comicBurst(this.scene, this.x, this.y - 14, 'miss', 0, { dopisek, kolorDopisku: ZYWIOLY[zywiol].kolor });
+    if (fx.bohater && dopisek) this.scene.events.emit('zywiol', { cel: this, zywiol, mnoznik });
     this.modelHitAt = now;
     this.chasing = true;
     this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);

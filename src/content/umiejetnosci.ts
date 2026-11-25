@@ -7,7 +7,7 @@
 import type { Umiejetnosc } from './przedmioty';
 import { tx } from '../i18n';
 
-export type IdUmiejetnosci = 'mocny' | 'zamach' | 'tarcza' | 'mocny_strzal' | 'przebicie' | 'salwa' | 'mocny_czar' | 'wachlarz' | 'krag';
+export type IdUmiejetnosci = 'mocny' | 'zamach' | 'tarcza' | 'mocny_strzal' | 'przebicie' | 'salwa' | 'mocny_czar' | 'wachlarz' | 'krag' | 'blask';
 
 export interface Umiej {
   id: IdUmiejetnosci;
@@ -24,6 +24,7 @@ export const UMIEJETNOSCI: Umiej[] = [
   { id: 'zamach', get nazwa() { return tx('Zamach', 'Sweep'); }, ikona: '🌀', bron: 'miecz', poziom: 3, get opis() { return tx('Obrót z bronią: trafia każdego wroga dookoła (słabiej niż mocny cios).', 'A spin with your weapon: hits every enemy around (weaker than a strong blow).'); } },
   { id: 'tarcza', get nazwa() { return tx('Uderzenie tarczą', 'Shield bash'); }, ikona: '🛡', bron: 'miecz', poziom: 0, get opis() { return tx('Pchnięcie tarczą przed siebie: odrzuca i ogłusza wrogów.', 'A shove with your shield: knocks enemies back and stuns them.'); } },
   { id: 'przebicie', get nazwa() { return tx('Strzał przebijający', 'Piercing shot'); }, ikona: '🎯', bron: 'luk', poziom: 0, get opis() { return tx('Mocny strzał, który przelatuje przez kilku wrogów.', 'A strong shot that flies through several enemies.'); } },
+  { id: 'blask', get nazwa() { return tx('Blask Excalibura', 'Excalibur’s Radiance'); }, ikona: '☀', bron: 'miecz', poziom: 0, get opis() { return tx('Fala światła dookoła: rani wszystkich wrogów w pobliżu i oślepia ocalałych. Nieumarli dostają podwójnie.', 'A wave of light all round: hurts every enemy nearby and blinds the survivors. The undead take double.'); } },
   { id: 'krag', get nazwa() { return tx('Krąg mocy', 'Circle of power'); }, ikona: '🔮', bron: 'magia', poziom: 0, get opis() { return tx('Fala magii wokół ciebie: rani wszystkich wrogów w pobliżu.', 'A wave of magic around you: hurts every enemy nearby.'); } },
   { id: 'mocny_strzal', get nazwa() { return tx('Mocny strzał', 'Strong shot'); }, ikona: '🎯', bron: 'luk', poziom: 0, get opis() { return tx('Napięta do końca cięciwa: mocniej i celniej.', 'A fully drawn bowstring: harder and more accurate.'); } },
   { id: 'salwa', get nazwa() { return tx('Salwa', 'Volley'); }, ikona: '🏹', bron: 'luk', poziom: 3, get opis() { return tx('Trzy strzały naraz w wachlarzu.', 'Three arrows at once in a fan.'); } },

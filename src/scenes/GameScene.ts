@@ -21,7 +21,7 @@ import { lang } from '../i18n';
 import { legacyText, dialogueMetadata } from '../content/questy/text';
 import { shopItem, shopGoods, shopBagItem, type ShopEntry, type ShopPresentation } from '../ui/shopData';
 import { sellBagItem } from '../shopSales';
-import { SKALA_POSTACI } from '../skala';
+import { SKALA_POSTACI, W } from '../skala';
 import Phaser from 'phaser';
 import { InteractionSelection, type InteractionTarget } from '../interaction';
 import { InteractionOutline } from '../interactionOutline';
@@ -109,7 +109,7 @@ import { WORKSHOP_LOCATIONS } from '../content/warsztaty-miejsca';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  weaponRequirement, meleeDamage, shotDamage, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
+  weaponRequirement, meleeDamage, shotDamage, zywiolBroni, specjalnyBroni, lancuchBroni, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe, pickaxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
@@ -189,6 +189,7 @@ const DZWIEK_KROKU = { asfalt: 'krok-twardy', sciezka: 'krok-miekki', trawa: 'kr
 const KOLOR_KURZU = { asfalt: 0xb9b2a4, sciezka: 0xc8b49a, trawa: 0xa9b184, las: 0x9c8a66, piasek: 0xe0cc98, bloto: 0x6e5a3c, brod: 0x8fa8b0 } as const;
 import type { CombatSound } from '../audio/combatCatalog';
 import { specjalnyZEkwipunku, umiejetnoscOId, type Umiej } from '../content/umiejetnosci';
+import { ZYWIOLY, opisOdpornosci, type Zywiol } from '../content/zywioly';
 
 const HEART_DROP_CHANCE = 0.25;
 const RESPAWN_MS = 20000;
@@ -390,6 +391,8 @@ interface Shot {
   celnoscMinus?: number;
   /** Strzał przebijający: how many more enemies it may fly through after a hit. */
   przebija?: number;
+  /** The shot's element (content/zywioly.ts); none = from the weapon (its essence/power), else physical/arcane. */
+  zywiol?: Zywiol;
 }
 
 type Challenge =
@@ -484,6 +487,10 @@ export class GameScene extends Phaser.Scene {
   private bezKosztuStrzalu = false;
   /** The next shot flies through this many enemies (Strzał przebijający). */
   private przebicieStrzalu = 0;
+  /** Element for the shots fired right now by a special (Fala ognia = fire). */
+  private zywiolStrzalu?: Zywiol;
+  /** Element hints already given this session (kind:element). */
+  private zywiolPodpowiedzi = new Set<string>();
   private aimLine!: Phaser.GameObjects.Graphics;
   private lastShot = -Infinity;
   /** Part of a heart of damage not taken yet (easy levels). */
@@ -580,6 +587,10 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.combatAudio?.destroy();
     this.combatAudio = new CombatAudio(this);
+    // Elements (content/zywioly.ts): the first weakness/resistance of a kind is said in words.
+    const naZywiol = (z: { cel: Enemy; zywiol: Zywiol; mnoznik: number }) => this.podpowiedzZywiolu(z.cel, z.zywiol, z.mnoznik);
+    this.events.on('zywiol', naZywiol);
+    this.events.once('shutdown', () => this.events.off('zywiol', naZywiol));
     // Include create() itself: preparing the first chunks can occupy several seconds.
     this.introSince = loadingGame() ? this.time.now : null;
     // Keep workers/updates active without competing with the opaque intro for
@@ -1631,7 +1642,7 @@ export class GameScene extends Phaser.Scene {
     if (!foe) return;
     this.lastBolt = now;
     this.drawBolt(foe.x, foe.y);
-    if (foe.hit(new Phaser.Math.Vector2(foe.x, foe.y - 10), now, PIORUNY.obrazenia)) this.onEnemyKilled(foe);
+    if (foe.hit(new Phaser.Math.Vector2(foe.x, foe.y - 10), now, PIORUNY.obrazenia, { rodzaj: 'magia', bohater: true, zywiol: 'piorun' })) this.onEnemyKilled(foe);
   }
 
   /** A zigzag of light from the sky onto (x, y). */
@@ -2216,8 +2227,11 @@ export class GameScene extends Phaser.Scene {
       }
       const imb = imbueOf(gear.equip.bron)?.e;
       landed = true;
-      const fx = { rodzaj: !gear.equip.bron || gear.equip.bron === 'kijek' ? 'tepe' as const : 'ostrze' as const, mocny: strong, bohater: true };
-      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * power * this.essenceBoost(imb, s), fx)) this.onEnemyKilled(s);
+      const fx = { rodzaj: !gear.equip.bron || gear.equip.bron === 'kijek' ? 'tepe' as const : 'ostrze' as const, mocny: strong, bohater: true, zywiol: zywiolBroni() };
+      const cios = meleeDamage(Math.random) * power * this.essenceBoost(imb, s);
+      const lancuch = lancuchBroni();
+      if (lancuch && Math.random() < lancuch.szansa) this.time.delayedCall(60, () => this.lancuchPiorunow(s, cios, lancuch, this.time.now));
+      if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, cios, fx)) this.onEnemyKilled(s);
       else {
         this.essenceHit(imb, s, now);
         // A strong blow stuns for a moment (not dragons).
@@ -6666,7 +6680,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The special attack: weapon in hand + second hand (content/umiejetnosci.ts specjalnyZEkwipunku). */
   umiejetnosc(): Umiej {
-    return umiejetnoscOId(specjalnyZEkwipunku(this.handSkill(), gear.equip.dystans));
+    return umiejetnoscOId(specjalnyBroni() ?? specjalnyZEkwipunku(this.handSkill(), gear.equip.dystans));
   }
 
   /** The special button / Q (new controls): the weapon's chosen skill, paid in stamina or mana. */
@@ -6680,6 +6694,7 @@ export class GameScene extends Phaser.Scene {
     if (u.id === 'zamach') return this.zamach(now);
     if (u.id === 'tarcza') return this.uderzenieTarcza(now);
     if (u.id === 'krag') return this.kragMocy(now);
+    if (u.id === 'blask') return this.blask(now);
     if (!weapon) return;
     const foe = this.nearestFoe(this.shotRange(u.bron === 'magia' ? 'magia' : 'luk', u.id !== 'salwa' && u.id !== 'wachlarz'));
     const base = foe ? { x: foe.x - this.player.x, y: foe.y - this.player.y } : { x: this.player.facing.x, y: this.player.facing.y };
@@ -6687,6 +6702,7 @@ export class GameScene extends Phaser.Scene {
     const katy = u.id === 'salwa' ? [-0.2, 0, 0.2] : u.id === 'wachlarz' ? [-0.5, -0.25, 0, 0.25, 0.5] : [0];
     this.bezKosztuStrzalu = true; // the skill was paid as a whole above
     this.przebicieStrzalu = u.id === 'przebicie' ? WALKA_SPECJALNE.przebicie : 0;
+    this.zywiolStrzalu = u.id === 'wachlarz' ? 'ogien' : undefined;
     for (const [i, k] of katy.entries()) {
       // A volley's side arrows fly where they are aimed (no aim help that would bring them all onto one target).
       this.fireShot(weapon, { x: Math.cos(a0 + k), y: Math.sin(a0 + k) }, katy.length === 1, now, i === 0, katy.length === 1);
@@ -6694,6 +6710,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.bezKosztuStrzalu = false;
     this.przebicieStrzalu = 0;
+    this.zywiolStrzalu = undefined;
   }
 
   /**
@@ -6741,7 +6758,7 @@ export class GameScene extends Phaser.Scene {
       const da = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aim));
       if (da > arc / 2 && Math.hypot(dx, dy) > e.size + 4) continue;
       landed = true;
-      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * WALKA.mocnyMnoznikLive)) this.onEnemyKilled(e);
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * WALKA.mocnyMnoznikLive, { rodzaj: 'ostrze', mocny: true, bohater: true, zywiol: zywiolBroni() })) this.onEnemyKilled(e);
       else if (!e.heavy) e.daze(now, WALKA.miecz.ogluszenieMs);
     }
     if (landed) {
@@ -6785,9 +6802,97 @@ export class GameScene extends Phaser.Scene {
       if (e.isDead || e.inAir || e.peaceful) continue;
       if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
       landed = true;
-      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, shotDamage(weapon, Math.random) * K.mnoznik, { rodzaj: 'magia', mocny: true, bohater: true })) this.onEnemyKilled(e);
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, shotDamage(weapon, Math.random) * K.mnoznik, { rodzaj: 'magia', mocny: true, bohater: true, zywiol: zywiolBroni(weapon.id) ?? 'magia' })) this.onEnemyKilled(e);
     }
     if (landed) this.practiced('magia');
+  }
+
+  /** Blask Excalibura (owner, 25 Nov 2026: Excalibur's special from krzepa 7): a wave of light all round the hero. */
+  private blask(now: number) {
+    const B = WALKA_SPECJALNE.blask;
+    const reach = this.swingReach(B.zasieg);
+    const aim = Math.atan2(this.player.facing.y, this.player.facing.x);
+    this.animateMelee(aim, true, true);
+    this.swingWeapon(aim, true);
+    this.falaSwiatla(reach);
+    let landed = false;
+    for (const e of [...this.enemies]) {
+      if (e.isDead || e.inAir || e.peaceful) continue;
+      if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
+      landed = true;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * B.mnoznik, { rodzaj: 'ostrze', mocny: true, bohater: true, zywiol: 'swiatlo' })) this.onEnemyKilled(e);
+      else if (!e.heavy) e.daze(now, B.oslepienieMs, '☀', 0xfff3c4);
+    }
+    if (landed) {
+      this.wearWeapon(gear.equip.bron);
+      this.practiced('miecz');
+    }
+  }
+
+  /** A golden ring of light that grows from the hero and fades (Blask Excalibura). */
+  private falaSwiatla(reach: number) {
+    const g = this.add.graphics().setDepth(1_050_000).setBlendMode(Phaser.BlendModes.ADD);
+    const x = this.player.x, y = this.player.y - 4;
+    const t = { r: 4, a: 1 };
+    this.tweens.add({ targets: t, r: reach, a: 0, duration: 420, ease: 'Quad.Out',
+      onUpdate: () => {
+        g.clear();
+        g.fillStyle(0xfff3c4, 0.25 * t.a).fillCircle(x, y, t.r);
+        g.lineStyle(4, 0xffe27a, t.a).strokeCircle(x, y, t.r);
+        g.lineStyle(1.5, 0xffffff, t.a).strokeCircle(x, y, t.r * 0.92);
+      },
+      onComplete: () => g.destroy() });
+  }
+
+  /**
+   * Łańcuch piorunów (Gromowładny miecz with magic ≥ 3): from the struck enemy a bolt jumps to the nearest other
+   * enemy within reach, then on, each jump weaker.
+   */
+  private lancuchPiorunow(from: Enemy, cios: number, L: { skoki: number; mnoznik: number; zasiegW: number }, now: number) {
+    const trafieni = new Set<Enemy>([from]);
+    let x = from.x, y = from.y - 6, dmg = cios;
+    for (let i = 0; i < L.skoki; i++) {
+      dmg *= L.mnoznik;
+      const zasieg = L.zasiegW * W;
+      const nast = this.enemies.filter(e => !e.isDead && !e.inAir && !e.peaceful && e.visible && !trafieni.has(e) && Math.hypot(e.x - x, e.y - y) <= zasieg + e.size)
+        .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
+      if (!nast) break;
+      trafieni.add(nast);
+      this.drawArc(x, y, nast.x, nast.y - 6);
+      if (nast.hit(new Phaser.Math.Vector2(x, y), now, dmg, { rodzaj: 'magia', bohater: true, zywiol: 'piorun' })) this.onEnemyKilled(nast);
+      x = nast.x; y = nast.y - 6;
+    }
+    if (trafieni.size > 1) this.practiced('magia');
+  }
+
+  /** A short zigzag of lightning between two points. */
+  private drawArc(x0: number, y0: number, x1: number, y1: number) {
+    const g = this.add.graphics().setDepth(1_060_000);
+    const n = 6, pts: [number, number][] = [];
+    const nx = -(y1 - y0), ny = x1 - x0, d = Math.hypot(nx, ny) || 1;
+    for (let i = 0; i <= n; i++) {
+      const k = i === 0 || i === n ? 0 : (Math.random() - 0.5) * 9;
+      pts.push([x0 + (x1 - x0) * i / n + nx / d * k, y0 + (y1 - y0) * i / n + ny / d * k]);
+    }
+    for (const [w, c] of [[4, 0x6fb7ff], [1.5, 0xffffff]] as const) {
+      g.lineStyle(w, c, 1).beginPath().moveTo(pts[0][0], pts[0][1]);
+      for (const p of pts.slice(1)) g.lineTo(p[0], p[1]);
+      g.strokePath();
+    }
+    this.tweens.add({ targets: g, alpha: 0, duration: 260, delay: 60, onComplete: () => g.destroy() });
+  }
+
+  /** The first time a kind shows a weakness or a resistance to an element this session, say it in words. */
+  private podpowiedzZywiolu(cel: Enemy, zywiol: Zywiol, mnoznik: number) {
+    const klucz = `${cel.kindId}:${zywiol}`;
+    if (this.zywiolPodpowiedzi.has(klucz)) return;
+    this.zywiolPodpowiedzi.add(klucz);
+    const z = ZYWIOLY[zywiol];
+    const imie = cel.kind.name;
+    if (mnoznik > 1.05) return this.toast(`${z.ikona} ${imie}: słaby na ${z.nazwa.toLowerCase()}!`, 2500);
+    const { slaby } = opisOdpornosci(cel.odpornosc);
+    const rada = slaby.length ? ` Lepiej: ${slaby.map(s => `${s.ikona} ${s.nazwa.toLowerCase()}`).join(', ')} (esencje u alchemika).` : '';
+    this.toast(`${z.ikona} ${imie} ${mnoznik <= 0 ? 'jest całkiem odporny' : 'jest odporny'} na ${z.nazwa.toLowerCase()}.${rada}`, 3600);
   }
 
   /** Zamach (sword skill): a full turn with the weapon, every enemy around takes a blow (×0.8). */
@@ -6801,7 +6906,7 @@ export class GameScene extends Phaser.Scene {
       if (e.isDead || e.inAir || e.peaceful) continue;
       if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
       landed = true;
-      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * 0.8)) this.onEnemyKilled(e);
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * 0.8, { rodzaj: 'ostrze', mocny: true, bohater: true, zywiol: zywiolBroni() })) this.onEnemyKilled(e);
     }
     if (landed) {
       this.wearWeapon(gear.equip.bron);
@@ -6893,7 +6998,8 @@ export class GameScene extends Phaser.Scene {
     this.oprawa?.sledz(sprite, skill === 'magia', strong);
     this.shots.push({ sprite, x: this.player.x, y: this.player.y, originX: this.player.x, originY: this.player.y, range,
       arc: live() && !strong && skillLevel(skill) <= 3 ? WALKA.dystans.lukLotuPx : 0,
-      vx: dir.x * speed, vy: dir.y * speed, left: range, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus, przebija: this.przebicieStrzalu });
+      vx: dir.x * speed, vy: dir.y * speed, left: range, damage: shotDamage(weapon, Math.random) * (strong ? strongFactor(skill) : 1) * sila, skill, weapon: weapon.id, strong, missed: new Set(), celnoscMinus, przebija: this.przebicieStrzalu,
+      zywiol: this.zywiolStrzalu ?? zywiolBroni(weapon.id) ?? (skill === 'magia' ? 'magia' : undefined) });
   }
 
   private updateShots(dt: number) {
@@ -6926,7 +7032,7 @@ export class GameScene extends Phaser.Scene {
           this.practiced(shot.skill);
           const imb = imbueOf(shot.weapon)?.e;
           const instant = shot.skill === 'luk' && !WALKA.bezNatychmiast.includes(foe.kindId) && !foe.duel && Math.random() < instaKillChance();
-          const fx = { rodzaj: shot.skill === 'magia' ? 'magia' as const : 'strzala' as const, mocny: shot.strong, krytyk: instant, bohater: true };
+          const fx = { rodzaj: shot.skill === 'magia' ? 'magia' as const : 'strzala' as const, mocny: shot.strong, krytyk: instant, bohater: true, zywiol: shot.zywiol };
           if (foe.hit(new Phaser.Math.Vector2(shot.originX, shot.originY), now, instant ? foe.hp : shot.damage * this.essenceBoost(imb, foe), fx)) this.onEnemyKilled(foe);
           else this.essenceHit(imb, foe, now);
         } else if (this.training.hitAt(shot.x, shot.y, 8, shot.skill)) {
@@ -7437,7 +7543,7 @@ export class GameScene extends Phaser.Scene {
 
   /** The essence's side effect on a creature that survived the blow: stunned (oak) or frozen (frost). */
   private essenceHit(e: Esencja | undefined, s: Enemy, now: number) {
-    if (!e || s.isDead || Math.random() >= e.szansa) return;
+    if (!e || e.efekt === 'brak' || s.isDead || Math.random() >= e.szansa) return;
     if (e.efekt === 'oglusz') s.daze(now, e.ms);
     else s.daze(now, e.ms, '❄️', 0x9be7ff);
   }

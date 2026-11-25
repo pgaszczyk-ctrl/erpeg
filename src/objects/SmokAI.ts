@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ODPORNOSCI_SMOKOW } from '../content/zywioly';
 import type { Slime } from './Slime';
 import type { Player } from './Player';
 import { TEX } from '../art';
@@ -76,6 +77,7 @@ export class SmokAI {
   constructor(private scene: Phaser.Scene, readonly d: Slime, readonly gatunek: GatunekId, private host: SmokHost, private options: SmokOptions = {}) {
     d.heavy = true;
     d.brain = () => {};
+    d.odpornosc = ODPORNOSCI_SMOKOW[gatunek];
     const g = GATUNKI_SMOKOW[gatunek];
     zaslepki(scene);
     // Zaślepka: szary smok zabarwiony kolorem gatunku (zielony po zabarwieniu robił się bury).

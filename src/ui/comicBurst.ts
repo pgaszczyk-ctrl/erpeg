@@ -6,7 +6,11 @@ import { tx } from '../i18n';
 // 'miss' = the grey PUDŁO bubble; 'rana' = damage the hero takes (plain red numbers sinking from him, no star),
 // so the two can never be mistaken for each other (owner, 20 Nov 2026).
 const bursts = new WeakMap<Phaser.Scene, Phaser.GameObjects.Container[]>();
-export interface BurstOpcje { mocny?: boolean; krytyk?: boolean }
+export interface BurstOpcje {
+  mocny?: boolean; krytyk?: boolean;
+  /** A small word under the number (content/zywioly.ts: SŁABOŚĆ! / odporny / ODPORNY) in the element's colour. */
+  dopisek?: string | null; kolorDopisku?: number; slaby?: boolean;
+}
 const MAKS = 12;
 
 function liczba(n: number) {
@@ -24,7 +28,7 @@ export function comicBurst(scene: Phaser.Scene, x: number, y: number, kind: 'hit
   const zoom = Math.max(1, scene.cameras.main.zoom);
   const rounded = Math.round(damage);
   const plain = (kind === 'hit' && damage < 10 && !mocny && !krytyk) || kind === 'rana';
-  const text = kind === 'miss' ? tx('PUDŁO', 'MISS') : kind === 'rana' ? `-${liczba(damage)}` : `${rounded}${plain ? '' : '!'}`;
+  const text = kind === 'miss' ? (o.dopisek ?? tx('PUDŁO', 'MISS')) : kind === 'rana' ? `-${liczba(damage)}` : `${rounded}${plain ? '' : '!'}`;
   const kolor = kind === 'miss' ? '#373a45' : kind === 'rana' ? '#ff4a3d' : krytyk ? '#7a1d0e' : plain ? '#fff1c9' : '#a4291f';
   const label = scene.add.text(0, 0, text, {
     fontFamily: '"Comic Neue", "Trebuchet MS", sans-serif', fontStyle: 'bold',
@@ -53,7 +57,15 @@ export function comicBurst(scene: Phaser.Scene, x: number, y: number, kind: 'hit
     if (i % 2 === 0) top -= (h * size + 6) / zoom;
     else left = x + (i % 4 === 1 ? 1 : -1) * (w * size * .6) / zoom;
   }
-  const b = scene.add.container(left, top, [g, label]).setDepth(1_060_000 + (krytyk ? 2 : mocny ? 1 : 0)).setScale(.82 * size / zoom);
+  const parts: Phaser.GameObjects.GameObject[] = [g, label];
+  if (o.dopisek && kind === 'hit') {
+    const kolor = '#' + (o.kolorDopisku ?? 0xffffff).toString(16).padStart(6, '0');
+    parts.push(scene.add.text(0, h / 2 + 2, o.dopisek, {
+      fontFamily: '"Comic Neue", "Trebuchet MS", sans-serif', fontStyle: 'bold', fontSize: o.slaby ? '15px' : '12px',
+      color: o.slaby ? kolor : '#c9c4ba', stroke: '#19171b', strokeThickness: 3, resolution: 2,
+    }).setOrigin(.5, 0));
+  }
+  const b = scene.add.container(left, top, parts).setDepth(1_060_000 + (krytyk ? 2 : mocny ? 1 : 0)).setScale(.82 * size / zoom);
   b.setData({ comicWidth: w * size, comicHeight: h * size });
   b.setName(`comic-${kind}:${text}`); list.push(b);
   b.once('destroy', () => { const i = list!.indexOf(b); if (i >= 0) list!.splice(i, 1); });
