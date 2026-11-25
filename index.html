@@ -288,6 +288,28 @@
         #character .c-card-body .c-stat { font-size: 12px; }
         #character .c-card-desc { font-size: 11px; }
       }
+      /* Editor look tab (pack 51): the artist's figure beside three choices. */
+      .k-dag-pic .k-wyg-plotno { width: 100%; height: 100%; object-fit: contain; object-position: 50% 0; transform: scale(1.12); transform-origin: 50% 0; }
+      #character .k-wyg-row { display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; }
+      #character .k-wyg-ramka { width: min(300px, 40vw, calc((100dvh - 210px) / 1.5)); aspect-ratio: 2 / 3; border-radius: 50% 50% 8px 8px / 26% 26% 8px 8px;
+        background: radial-gradient(ellipse at 50% 40%, #f3e7c8, #c9b285 85%); box-shadow: 0 0 0 3px #1a110b, 0 0 0 9px #b07c30, 0 0 0 12px #1a110b; overflow: hidden; display: flex; }
+      #character .k-wyg-ramka .k-wyg-plotno { width: 100%; height: 100%; }
+      #character .k-wyg-ster { display: flex; flex-direction: column; align-items: stretch; gap: 12px; min-width: 240px; max-width: 360px; flex: 1 1 260px; }
+      #character .k-wyg-wybor { display: flex; align-items: center; gap: 8px; }
+      #character .k-wyg-strz { width: 46px; height: 46px; padding: 0; font-size: 18px; flex: none; }
+      #character .k-wyg-opis { flex: 1; text-align: center; background: #f1e3c2; color: #2a1c10; border: 2px solid #8a6a32; border-radius: 6px; padding: 5px 8px; min-height: 46px; box-sizing: border-box; }
+      #character .k-wyg-nazwa { font: 12px 'Alegreya Sans', sans-serif; text-transform: uppercase; letter-spacing: .08em; color: #7a5a2a; }
+      #character .k-wyg-wart { font: 600 16px 'Alegreya Sans', sans-serif; display: flex; align-items: center; justify-content: center; gap: 7px; }
+      #character .k-wyg-probka { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #1e1a24; flex: none; }
+      #character .k-wyg-los { align-self: center; padding: 8px 18px; font-size: 16px; }
+      #character .k-wyg-uwaga { text-align: center; font-size: 12px; }
+      @media (max-width: 960px) and (orientation: landscape) {
+        #character .k-wyg-row { flex-wrap: nowrap; gap: 16px; }
+        #character .k-wyg-ramka { width: calc((100dvh - 150px) / 1.5); }
+        #character .k-wyg-ster { gap: 6px; }
+        #character .k-wyg-strz { width: 40px; height: 40px; }
+        #character .k-wyg-opis { min-height: 40px; padding: 3px 6px; }
+      }
       /* „Wygląd” tab: a big daguerreotype beside the look controls. */
       #character .k-wyglad-row { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
       #character .k-dag-duzy { --sl: max(48px, min(96px, calc((100dvh - 230px) / 3))); }
