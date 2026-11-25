@@ -186,9 +186,10 @@ import { OprawaWalki, kolorySmugi } from '../walka/oprawa';
 import { DynamikaRuchu } from '../ruch';
 
 /** Footstep sound and dust colour by the ground under the boots (src/ruch.ts, audio/syntezaWalki.ts). */
-const DZWIEK_KROKU = { asfalt: 'krok-twardy', sciezka: 'krok-miekki', trawa: 'krok-miekki', las: 'krok-miekki', piasek: 'krok-piasek', bloto: 'krok-bloto', brod: 'krok-bloto' } as const;
+const DZWIEK_KROKU = { asfalt: 'krok-twardy', sciezka: 'krok-miekki', trawa: 'krok-trawa', las: 'krok-trawa', piasek: 'krok-piasek', bloto: 'krok-bloto', brod: 'krok-bloto' } as const;
 const KOLOR_KURZU = { asfalt: 0xb9b2a4, sciezka: 0xc8b49a, trawa: 0xa9b184, las: 0x9c8a66, piasek: 0xe0cc98, bloto: 0x6e5a3c, brod: 0x8fa8b0 } as const;
 import type { CombatSound } from '../audio/combatCatalog';
+import { SladyStop } from '../sladyStop';
 import { specjalnyZEkwipunku, umiejetnoscOId, type Umiej } from '../content/umiejetnosci';
 import { ZYWIOLY, opisOdpornosci, type Zywiol } from '../content/zywioly';
 
@@ -568,6 +569,8 @@ export class GameScene extends Phaser.Scene {
   private elzet?: Elzet;
   private lochy?: LochyWejscia;
   private loch?: LochWnetrze;
+  /** Footprints in mud/sand/snow and grass blades bending under the boots (src/sladyStop.ts). */
+  private slady?: SladyStop;
   private wilki = new Map<Enemy, StworAI>();
   private combatAudio!: CombatAudio;
   /** Boss's stomp: the hero walks slower until then (one at a time, never stacked). */
@@ -691,6 +694,7 @@ export class GameScene extends Phaser.Scene {
       dzwiek: (id, g = 1) => { this.combatAudio.at(id as CombatSound, 0, () => !this.leaving, g); },
       odBohatera: (t) => !!t.fx.bohater,
     });
+    this.slady = new SladyStop(this);
     this.ruch = new DynamikaRuchu(this, {
       kurz: (x, y, kat, sila) => this.oprawa?.kurz(x, y, kat, sila, KOLOR_KURZU[this.city.surfaceAt(x, y)]),
       kameraWolna: () => !this.loch && !artilleryTransit.active,
@@ -700,6 +704,7 @@ export class GameScene extends Phaser.Scene {
       if (v < p.speed * 0.3) return;
       const pod = this.city.surfaceAt(p.x, p.y);
       this.combatAudio.at(DZWIEK_KROKU[pod], 0, () => !this.leaving && !p.isDead);
+      this.slady?.krok(p.x, p.y, p.vel.x, p.vel.y, pod);
       // A running step kicks up a little dust on soft ground.
       if (pod !== 'asfalt' && v > p.speed * 0.8) this.oprawa?.kurz(p.x, p.y + 3, Math.atan2(-p.vel.y, -p.vel.x), 0.35, KOLOR_KURZU[pod]);
     };
@@ -1560,6 +1565,7 @@ export class GameScene extends Phaser.Scene {
     this.testRide.update(this.player, session.look.postac, session.name);
     this.ludzik3d?.update(this.player, dt);
     this.oprawa?.update();
+    this.slady?.update(this.player.x, this.player.y, this.player.depth);
     this.updateMythic(now);
     this.fixed.update(dt, this.player.x, this.player.y, now, (x, y) => pointInPolygon(this.vision, x, y) && !this.streets.blocks(x, y));
     this.elzet?.update(now);

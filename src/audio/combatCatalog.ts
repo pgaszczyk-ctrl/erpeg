@@ -29,6 +29,7 @@ export const COMBAT_SOUNDS = {
   'death-metal': { variants: 2, cue: 0, gain: .45, synth: true },
   'krok-twardy': { variants: 3, cue: 0, gain: .16, synth: true },
   'krok-miekki': { variants: 3, cue: 0, gain: .18, synth: true },
+  'krok-trawa': { variants: 3, cue: 0, gain: .1, synth: true },
   'krok-piasek': { variants: 3, cue: 0, gain: .16, synth: true },
   'krok-bloto': { variants: 3, cue: 0, gain: .18, synth: true },
 } as const;

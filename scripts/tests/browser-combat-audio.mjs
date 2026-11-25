@@ -37,7 +37,7 @@ for (const phone of [false,true]) {
  await page.waitForFunction(()=>window.__game?.scene.isActive('game')&&window.__game.scene.getScene('game').ludzik3d?.widoczny&&document.getElementById('loading-map')?.hidden!==false,null,{timeout:120000});
  if(phone)await page.locator('.hs-atak').tap();else await page.keyboard.press('Space');
 // 41 recorded files + 38 variants the game synthesises itself (audio/syntezaWalki.ts, 20 Nov 2026).
- await page.waitForFunction(()=>window.__game.scene.getScene('game').combatAudio.ready===79,null,{timeout:30000});
+ await page.waitForFunction(()=>window.__game.scene.getScene('game').combatAudio.ready===82,null,{timeout:30000});
  await g(()=>{const s=window.__game.scene.getScene('game');s.player.x+=180;s.cameras.main.setZoom(4);});
  const reset=()=>g(()=>{const s=window.__game.scene.getScene('game');s.combatAudio.stop();
   for(const e of [...s.enemies]){s.wilki.get(e)?.destroy();s.wilki.delete(e);e.destroy();}s.enemies=[];for(const q of s.shots)q.sprite.destroy();s.shots=[];

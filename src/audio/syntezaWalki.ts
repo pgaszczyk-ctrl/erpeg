@@ -128,6 +128,21 @@ const PRZEPISY: Record<string, { dl: number; gen: (sr: number, v: number) => Gen
     const n = szum(141 + v), lp = filtr('lp', 650 + v * 90, 0.8, sr), bp = filtr('bp', 2600, 1.2, sr);
     return (t) => lp(n()) * obw(t, 0.004, 0.035) * 1.6 + bp(n()) * obw(t - 0.01, 0.003, 0.02) * 0.35;
   } },
+  // Grass (owner, 25 Nov 2026: „to są jakieś klapki – ma być delikatne szuranie listków trawy o nogi”): no thump at
+  // all, a soft airy swish that swells and fades, made of many tiny blade ticks (grainy noise in the 3–7 kHz band).
+  'krok-trawa': { dl: 0.22, gen: (sr, v) => {
+    const n = szum(171 + v), los = szum(29 + v), hp = filtr('hp', 2600 + v * 200, 0.7, sr), bp = filtr('bp', 4800 + v * 450, 0.9, sr);
+    const lp = filtr('lp', 9000, 0.7, sr), lo = filtr('lp', 900, 0.7, sr);
+    let ziarno = 0, cel = 0;
+    const dlug = 0.075 + v * 0.012;
+    return (t, i) => {
+      if (i % 48 === 0) cel = Math.abs(los()) ** 2; // a blade brushing the boot now and then
+      ziarno += (cel - ziarno) * 0.08;
+      const fala = Math.sin(Math.PI * Math.min(1, t / (dlug * 2.2))) ** 1.5; // the swish swells and dies away
+      const x = n();
+      return lp(bp(hp(x))) * fala * (0.35 + 1.4 * ziarno) * 1.6 + lo(x) * obw(t, 0.02, 0.05) * 0.12;
+    };
+  } },
   'krok-piasek': { dl: 0.14, gen: (sr, v) => {
     const n = szum(151 + v), hp = filtr('hp', 2800 + v * 300, 0.8, sr), lp = filtr('lp', 500, 0.8, sr), los = szum(7 + v);
     return (t) => hp(n()) * obw(t, 0.006, 0.05) * (0.6 + 0.4 * Math.abs(los())) + lp(n()) * obw(t, 0.003, 0.03) * 0.8;
