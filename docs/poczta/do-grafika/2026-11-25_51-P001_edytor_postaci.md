@@ -110,5 +110,6 @@ Po próbie wstawię ją do edytora w grze i dam znać, co poprawić. Dopiero pot
 ## Później (nie teraz)
 
 - zarost dla mężczyzny jako osobna warstwa,
-- 2–3 kształty twarzy na płeć,
-- warianty postaci w zbroi z gry.
+- 2–3 kształty twarzy na płeć.
+
+**Postaci w zbrojach nie rysujemy** (zob. 51-P002).
