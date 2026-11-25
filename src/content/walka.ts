@@ -27,6 +27,7 @@
 export type Tabela = [poziom: number, wartosc: number][];
 
 export const WALKA = {
+  tempoGracza: 0.75,
   zaMoc: 1.5,
   mocnyPoMs: 1000,
   zasiegMiecz: 1.3,

@@ -181,7 +181,7 @@ export function practice(skill: Umiejetnosc, points = 1): number | null {
 
 /** Time between attacks of that kind, in ms. */
 export function cooldown(skill: Umiejetnosc) {
-  return Math.round(baseCooldown(skill) / 0.75);
+  return Math.round(baseCooldown(skill) / WALKA.tempoGracza);
 }
 
 function baseCooldown(skill: Umiejetnosc) {
