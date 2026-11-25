@@ -3,10 +3,11 @@
 // maluje: rysunek robi scenes/Lochy.ts (LochWnetrze). Id mapy niesie wszystko, co potrzebne do odtworzenia:
 //   loch:<rodzaj>:<seed>:<lat>:<lon>
 import { CityMap, PX_PER_M } from '../map/CityMap';
-import type { RodzajLochu } from '../content/lochy';
+import { jaskiniowy, type RodzajLochu } from '../content/lochy';
+import { SKALE, regionZloz, skalaZLitery, surowceW, type SkalaLochu } from '../content/kopalnie';
 import { planLochu, poziomyLochu, type PlanLochu } from './plan';
 
-export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean; /** A mission stage's dungeon (Etap typ 'loch'). */ misja?: boolean; /** Level below the surface (1 = first, default). */ poziom?: number }
+export interface IdLochu { rodzaj: RodzajLochu; seed: number; lat: number; lon: number; tutorial?: boolean; /** A mission stage's dungeon (Etap typ 'loch'). */ misja?: boolean; /** Level below the surface (1 = first, default). */ poziom?: number; /** Caves and mines: size (content/kopalnie.ts; default 'zwykly'). */ skala?: SkalaLochu }
 
 export const jestLochem = (id: string) => id.startsWith('loch:');
 
@@ -15,7 +16,8 @@ export const nazwyLochow = new Map<string, string>();
 
 export function idLochu(l: IdLochu) {
   const p = l.poziom && l.poziom > 1 ? `:p${l.poziom}` : '';
-  return `loch:${l.tutorial ? 'prolog:' : l.misja ? 'misja:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}${p}`;
+  const k = l.skala && l.skala !== 'zwykly' ? `:k${SKALE[l.skala].litera}` : '';
+  return `loch:${l.tutorial ? 'prolog:' : l.misja ? 'misja:' : ''}${l.rodzaj}:${l.seed}:${l.lat.toFixed(5)}:${l.lon.toFixed(5)}${k}${p}`;
 }
 
 /** The same dungeon, another level. */
@@ -26,13 +28,13 @@ export function idPoziomu(id: string, poziom: number) {
 
 /** How many levels the dungeon has (missions and the prologue: one). */
 export function poziomyId(l: IdLochu) {
-  return l.tutorial || l.misja ? { normalne: 1, ukryty: false } : poziomyLochu(l.rodzaj, l.seed);
+  return l.tutorial || l.misja ? { normalne: 1, ukryty: false } : poziomyLochu(l.rodzaj, l.seed, l.skala);
 }
 
 export function czytajIdLochu(id: string): IdLochu | null {
-  const m = /^loch:(prolog:|misja:)?(krypta|podziemia|jaskinia):(\d+):(-?[\d.]+):(-?[\d.]+)(?::p(\d+))?$/.exec(id);
+  const m = /^loch:(prolog:|misja:)?(krypta|podziemia|jaskinia|kopalnia):(\d+):(-?[\d.]+):(-?[\d.]+)(?::k([a-z]))?(?::p(\d+))?$/.exec(id);
   if (!m) return null;
-  return { tutorial: m[1] === 'prolog:', misja: m[1] === 'misja:', rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]), poziom: m[6] ? Number(m[6]) : 1 };
+  return { tutorial: m[1] === 'prolog:', misja: m[1] === 'misja:', rodzaj: m[2] as RodzajLochu, seed: Number(m[3]), lat: Number(m[4]), lon: Number(m[5]), skala: skalaZLitery(m[6]), poziom: m[7] ? Number(m[7]) : 1 };
 }
 
 /** Mapa lochu z jej planem (`city.loch`). */
@@ -40,7 +42,9 @@ export function mapaLochu(id: string): CityMap {
   const l = czytajIdLochu(id);
   if (!l) throw new Error('Nieznany loch');
   const lv = poziomyId(l);
-  const plan = planLochu(l.rodzaj, l.seed, l.tutorial, { poziom: Math.min(l.poziom ?? 1, lv.normalne + (lv.ukryty ? 1 : 0)), ...lv });
+  // Jaskinie i kopalnie: surowce żył i ich liczba z miejsca (region złóż – 2× więcej).
+  const opcje = jaskiniowy(l.rodzaj) && !l.tutorial && !l.misja ? { skala: l.skala, surowce: surowceW(l.lat, l.lon), wRegionie: !!regionZloz(l.lat, l.lon) } : { skala: l.skala };
+  const plan = planLochu(l.rodzaj, l.seed, l.tutorial, { poziom: Math.min(l.poziom ?? 1, lv.normalne + (lv.ukryty ? 1 : 0)), ...lv }, opcje);
   const T = plan.T;
   const W = plan.w * T, H = plan.h * T;
   // Jednostki mapy = px (unitsPerM = PX_PER_M → k = 1); pierścienie zapisane różnicowo jak w plikach map.

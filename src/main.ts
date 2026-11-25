@@ -1,6 +1,6 @@
 import { updateMusic } from './music';
 import { loadingMapVisible } from './ui/loadingMap';
-import { gear, weaponRequirement, zywiolBroni, lancuchBroni, specjalnyBroni } from './inventory';
+import { gear, weaponRequirement, zywiolBroni, lancuchBroni, specjalnyBroni, addItem, fruitCount } from './inventory';
 import { ustawGre } from './sesja';
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
@@ -133,7 +133,7 @@ setInterval(() => {
 (window as unknown as { __session: typeof session }).__session = session;
 (window as unknown as { __gear: typeof gear }).__gear = gear;
 // Item requirements and elements, for browser checks (scripts/tests/browser-zywioly.mjs).
-(window as unknown as { __inv: object }).__inv = { weaponRequirement, zywiolBroni, lancuchBroni, specjalnyBroni };
+(window as unknown as { __inv: object }).__inv = { weaponRequirement, zywiolBroni, lancuchBroni, specjalnyBroni, addItem, fruitCount };
 
 
 // Music starts with the authenticated, revealed map and continues through paused dialogs.

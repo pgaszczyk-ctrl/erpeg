@@ -19,7 +19,7 @@ export const SKUP_SPRZETU = { czescCeny: 0.4 };
 // w sklepie. W plecaku liczy się grupa (owoce, warzywa, grzyby, drewno): jedna
 // grupa = jedno miejsce, a to, ile jest czego, gra pamięta tylko do sprzedaży
 // (różne ceny). W innych krajach mogą dojść inne owoce i warzywa.
-export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust' | 'luska' | 'ruda_zelaza' | 'kiel';
+export type Owoc = 'jablko' | 'sliwka' | 'winogrono' | 'marchewka' | 'brokul' | 'salata' | 'ziemniak' | 'kapusta' | 'burak' | 'dynia' | 'grzyb' | 'drewno' | 'chrust' | 'luska' | 'ruda_zelaza' | 'miedz' | 'wegiel' | 'kiel';
 export type Grupa = 'owoce' | 'warzywa' | 'grzyby' | 'drewno' | 'surowce';
 
 /** jadalne – czy można to zjeść, żeby się leczyć (drewna się nie je). */
@@ -42,6 +42,9 @@ export const OWOCE: Record<Owoc, { nazwa: string; mnoga: string; wielu: string; 
   chrust: { nazwa: 'chrust', mnoga: 'chrust', wielu: 'chrustu', cena: 3, jadalne: false, grupa: 'drewno' },
   // Łup ze smoków (content/smoki.ts), na przyszłe wytwarzanie u kowala (właściciel 7.10.2026); na razie do sprzedania.
   ruda_zelaza: { nazwa: 'ruda żelaza', mnoga: 'rudy żelaza', wielu: 'rudy żelaza', cena: 30, jadalne: false, grupa: 'surowce' },
+  // Z żył w jaskiniach i kopalniach (content/kopalnie.ts, właściciel 25.11.2026); na przyszłe wytwarzanie u kowala.
+  miedz: { nazwa: 'ruda miedzi', mnoga: 'rudy miedzi', wielu: 'rudy miedzi', cena: 45, jadalne: false, grupa: 'surowce' },
+  wegiel: { nazwa: 'węgiel', mnoga: 'węgiel', wielu: 'węgla', cena: 15, jadalne: false, grupa: 'surowce' },
   luska: { nazwa: 'łuska smocza', mnoga: 'łuski smocze', wielu: 'łusek smoczych', cena: 40, jadalne: false, grupa: 'surowce' },
   // Łup z wilków/wargów (właściciel 26.10.2026, admin „🐺 Stworki”); na razie tylko do sprzedania.
   kiel: { nazwa: 'kieł', mnoga: 'kły', wielu: 'kłów', cena: 15, jadalne: false, grupa: 'surowce' },

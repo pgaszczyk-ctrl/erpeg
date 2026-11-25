@@ -124,7 +124,8 @@ import { przejscieSiedlisk } from '../siedliska/rejestr';
 import type { Siedlisko } from '../siedliska/typy';
 import { PrologRekruta } from './PrologRekruta';
 import { PROLOG_ID, PROLOG_LEAD_ID } from '../prolog/state';
-import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu } from './Lochy';
+import { LochyWejscia, LochWnetrze, lochSesja, type WejscieLochu, type Zyla } from './Lochy';
+import { JASKINIE, ZYLY, ZYLY_TEKSTY, kopalniaStala, regionZloz } from '../content/kopalnie';
 import { idLochu, idPoziomu, nazwyLochow, czytajIdLochu } from '../loch/mapa';
 import { podloga } from '../loch/plan';
 import { animacjaUcieczki } from '../ui/ucieczkaZLochu';
@@ -1072,7 +1073,7 @@ export class GameScene extends Phaser.Scene {
           nonce: session.nonce,
           progress: session.story.prolog?.dungeon?.id === this.city.id ? session.story.prolog.dungeon
             : this.lochMisji() ? { killed: [], chest: this.lochMisjiOtwarty() } : undefined,
-          nazwa: this.lochMisji()?.nazwa,
+          nazwa: this.lochMisji()?.nazwa ?? kopalniaStalaMapy(this.city.id),
           straznik: this.lochMisji()?.straznik,
           toast: (t, ms) => this.toast(t, ms),
           spawn: (x, y, kind, home) => {
@@ -1913,11 +1914,12 @@ export class GameScene extends Phaser.Scene {
     if(!this.challenge)for(const n of this.training.visibleNpcs())add(`sport:${n.x}:${n.y}`,n,'talk',tx('Trener','Coach'),()=>this.talkSport(n));
     const robot=this.elzet?.interactionTarget();if(robot)out.push(robot);
     const wizard=this.story.wizardSpot();if(wizard)add('wizard',wizard,'talk',tx('Mag','Wizard'),()=>this.story.talkToWizard());
-    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??(w.rodzaj==='jaskinia'?tx('Jaskinia','Cave'):tx('Piwnica','Cellar')),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
+    for(const w of this.lochy?.lista??[])add(`dungeon:${w.id}`,w,'enter',w.misja?.nazwa??w.nazwa??(w.rodzaj==='jaskinia'?tx('Jaskinia','Cave'):w.rodzaj==='kopalnia'?tx('Kopalnia','Mine'):tx('Piwnica','Cellar')),()=>this.lochDotyk(new Phaser.Math.Vector2(w.x,w.y-FEET.dy),w));
     if(this.loch) {
       const l=this.loch;
       add('dungeon:stairs',l.schody,'enter',l.plan.poziom>1?tx('Schody w górę','Stairs up'):tx('Wyjście','Exit'),()=>this.lochDotyk(new Phaser.Math.Vector2(l.schody.x,l.schody.y)));
       const zej=l.zejscie;if(zej)add('dungeon:down',zej,'enter',LOCH_TEKSTY.zejscieNizej,()=>this.lochDotyk(new Phaser.Math.Vector2(zej.x,zej.y)));
+      for(const z of l.zyly)if(l.zylaDostepna(z))add(`vein:${z.i}`,{x:z.x,y:z.y+l.plan.T*0.5},'use',ZYLY_TEKSTY.nazwa(z.s),()=>this.kopZyle(z),28);
       if(!out.some(t=>t.id==='prolog:chest')&&(this.city.loch?.tutorial||(l.skrzyniaPowod()!=='pusta'&&l.skrzyniaPowod()!=='brak')))add('dungeon:chest',l.skrzynia,'use',tx('Skrzynia','Chest'),()=>this.otworzSkrzynieLochu());
     }
     for(const p of this.city.places) if(Math.abs(p.door.x-this.player.x)<74&&Math.abs(p.door.y-this.player.y)<74) add(`place:${p.id}`,p.door,'enter',p.name||tx('Budynek','Building'),()=>{this.save();this.rozmowcaMiejsca(p);this.openPlace(p);});
@@ -2165,7 +2167,7 @@ export class GameScene extends Phaser.Scene {
     const fighting = !!this.nearestFoe(this.swingReach(strong ? WALKA.zasiegMiecz : 1) * 1.5);
     const drill = !!this.training.hitAt(this.player.x, this.player.y, this.swingReach() * 1.5, ranged ? (ranged.rodzaj === 'magia' ? 'magia' : 'luk') : 'miecz');
     // A bow or wand in hand: a tap shoots (unless it lands on a character, a door, a tree or a vegetable).
-    const gathering = !!ranged && !fighting && !!(this.zloza?.lista.some(z => z.obraz.visible && Math.hypot(z.x-hit.x,z.y-hit.y)<16) || this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
+    const gathering = !!ranged && !fighting && !!(this.zloza?.lista.some(z => z.obraz.visible && Math.hypot(z.x-hit.x,z.y-hit.y)<16) || this.loch?.zylaPrzy(hit.x, hit.y, 16) || this.orchards.hitAt(hit.x, hit.y, 12) || this.forest.hitAt(hit.x, hit.y, 12) || this.mapView.korony.hitAt(hit.x, hit.y, 12) || this.forest.vegAt(hit.x, hit.y, 12, new Set()));
     // An interaction is not a blow (and must not play its sound).
     const foeNear = this.enemies.some((e) => !e.isDead && !e.peaceful && Math.hypot(e.x - hit.x, e.y - hit.y) < 14 + e.size);
     if (!live() && this.interactChain(hit, strong, foeNear)) return;
@@ -2254,6 +2256,9 @@ export class GameScene extends Phaser.Scene {
     }
     const ore = this.zloza?.lista.find(z => z.obraz.visible && Math.hypot(z.x-hit.x,z.y-hit.y)<16);
     if (ore) { this.mine(ore); return; }
+    // Jaskinie i kopalnie: żyła rudy w ścianie (kilof).
+    const zyla = this.loch?.zylaPrzy(hit.x, hit.y, 16) ?? this.loch?.zylaPrzy(this.player.x, this.player.y, 22);
+    if (zyla) { this.kopZyle(zyla); return; }
     // Fruit trees: each swing knocks one fruit down.
     // Fruit trees don't count as sword practice.
     const tree = this.orchards.hitAt(hit.x, hit.y, 12 * this.player.reach);
@@ -2301,6 +2306,25 @@ export class GameScene extends Phaser.Scene {
     }
     navigator.vibrate?.(15);
     this.emitHud(); this.save(true);
+  }
+
+  /** A pickaxe blow at an ore vein in a cave/mine (content/kopalnie.ts ZYLY): every ZYLY.uderzen blows one nugget. */
+  private kopZyle(z: Zyla) {
+    const loch = this.loch;
+    if (!loch || this.inCombat() || this.time.now < this.mineReady) return;
+    if (Math.hypot(z.x - this.player.x, z.y + loch.plan.T * 0.5 - this.player.y) > 34) return;
+    this.mineReady = this.time.now + ZYLY.odstepMs;
+    const tool = pickaxe();
+    if (!tool) return this.toast(ZYLY_TEKSTY.kilof, 2600);
+    const co = loch.uderzZyle(z);
+    navigator.vibrate?.(15);
+    if (co !== 'grudka') return;
+    if (!addFruit(z.s)) { loch.oddajGrudke(z); return this.toast(ZYLY_TEKSTY.pelno, 1800); }
+    const wear = useWeapon(tool, session.level.zuzycie);
+    this.floatText(z.x, z.y - 10, ZYLY_TEKSTY.grudka(z.s), z.s === 'miedz' ? '#7ee0b8' : z.s === 'wegiel' ? '#c8c8d8' : '#e8c56a');
+    if (wear === 'broken' || wear === 'warn') this.toast(ZYLY_TEKSTY.zuzycie, 2200);
+    if (!loch.zylaDostepna(z)) this.updateInteractionTarget();
+    this.emitHud();
   }
 
   /** Trees being chopped (overhaul 09): blows left and the progress bar over the crown. */
@@ -4105,7 +4129,7 @@ export class GameScene extends Phaser.Scene {
       }
       const opis = LOCHY[w.rodzaj];
       this.dialog({
-        title: w.misja?.nazwa ? `🕯 ${w.misja.nazwa}` : `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
+        title: w.misja?.nazwa ? `🕯 ${w.misja.nazwa}` : w.nazwa ? `⛏ ${w.nazwa}` : `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
         text: opis.wejscie,
         buttons: [LOCH_TEKSTY.schodze, LOCH_TEKSTY.nieTeraz],
         onChoose: (i) => { if (i === 0) this.zejdzDoLochu(w); },
@@ -4158,15 +4182,30 @@ export class GameScene extends Phaser.Scene {
   /** Down the stairs: the dungeon is its own small map (src/loch/mapa.ts), like walking onto another map. */
   /** A big camp's cave (src/siedliska, `Siedlisko.jaskinia`): an ordinary dungeon entrance of the kind 'jaskinia'. */
   private jaskiniaSiedliska(sd: Siedlisko) {
-    if (!sd.jaskinia || !this.lochy) return;
-    this.lochy.dodajSiedliskowe({ id: `${sd.id}:jaskinia`, rodzaj: 'jaskinia', x: sd.jaskinia.x, y: sd.jaskinia.y, seed: sd.seed, przy: tx('obóz bandytów', 'bandit camp') });
+    if (!this.lochy) return;
+    const ll = this.city.toLatLon(sd.x, sd.y);
+    const reg = regionZloz(ll.lat, ll.lon);
+    const skala = reg ? 'duzy' : 'zwykly';
+    if (sd.jaskinia) {
+      this.lochy.dodajSiedliskowe({ id: `${sd.id}:jaskinia`, rodzaj: 'jaskinia', x: sd.jaskinia.x, y: sd.jaskinia.y, seed: sd.seed, skala, przy: tx('obóz bandytów', 'bandit camp') });
+      return;
+    }
+    // Obóz bez własnej jaskini: czasem wejście tuż za palisadą (właściciel: „w obozach wrogów lub nieopodal”).
+    const r = rng(sd.seed ^ 0x6a09e667);
+    if (r() > JASKINIE.przyObozie) return;
+    const R = Math.max(sd.ramka.x1 - sd.ramka.x0, sd.ramka.y1 - sd.ramka.y0) / 2;
+    const a = r() * Math.PI * 2, d = R + (25 + r() * 45) * PX_PER_M;
+    const q = this.lochy.miejsceJaskini(sd.x + Math.cos(a) * d, sd.y + Math.sin(a) * d, 40 * PX_PER_M, false);
+    if (!q) return;
+    const kop = r() < (reg ? JASKINIE.kopalnieWRegionie : JASKINIE.kopalnie);
+    this.lochy.dodajSiedliskowe({ id: `${sd.id}:obok`, rodzaj: kop ? 'kopalnia' : 'jaskinia', x: q.x, y: q.y, seed: sd.seed ^ 0x1f83d9ab, skala, przy: tx('przy obozie bandytów', 'by the bandit camp') });
   }
 
   private async zejdzDoLochu(w: WejscieLochu) {
     if (this.travelling) return;
     this.travelling = true;
     const ll = this.city.toLatLon(w.x, w.y);
-    lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: w.misja?.nazwa ?? LOCHY[w.rodzaj].nazwa };
+    lochSesja.powrot = { m: this.city.id, x: w.x, y: w.y + 6, nazwa: w.misja?.nazwa ?? w.nazwa ?? LOCHY[w.rodzaj].nazwa };
     lochSesja.misja = w.misja ?? null;
     // The tutorial owns its stable instance globally; entering the ordinary dungeon earlier never consumes it.
     const tutorialId = this.prolog?.prepareDungeon(w);
@@ -4183,8 +4222,8 @@ export class GameScene extends Phaser.Scene {
     }
     const cam = this.cameras.main;
     cam.fadeOut(500, 0, 0, 0);
-    const id = tutorialId ?? idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon, misja: !!w.misja });
-    if (w.misja?.nazwa) nazwyLochow.set(id, w.misja.nazwa);
+    const id = tutorialId ?? idLochu({ rodzaj: w.rodzaj, seed: w.seed, lat: ll.lat, lon: ll.lon, misja: !!w.misja, skala: w.skala });
+    if (w.misja?.nazwa ?? w.nazwa) nazwyLochow.set(id, (w.misja?.nazwa ?? w.nazwa)!);
     this.time.delayedCall(520, () => {
       getMap(id).then((city) => {
         const plan = city.loch!;
@@ -6124,7 +6163,7 @@ export class GameScene extends Phaser.Scene {
   /** Mechanics buy iron ore/wood and repair owned equipment. */
   private openWorkshop(p: CityPlace, tab = 0) {
     const fixes = repairable();
-    const goods = (['ruda_zelaza', 'drewno'] as Owoc[]).filter(f => fruitCount(f) > 0);
+    const goods = (['ruda_zelaza', 'miedz', 'wegiel', 'drewno'] as Owoc[]).filter(f => fruitCount(f) > 0);
     const entries: ShopEntry[] = tab === 0 ? fixes.map((id, index) => ({
       id: `repair:${id}`, index, name: `Napraw: ${item(id)!.nazwa}`, category: 'services',
       picture: itemPictureUrl(id), description: 'Mechanik przywróci sprzętowi pełną wytrzymałość.',
@@ -6137,7 +6176,7 @@ export class GameScene extends Phaser.Scene {
       price: fruitCount(f) * OWOCE[f].cena, action: 'SPRZEDAJ', refresh: true,
     }));
     const text = tab === 0 ? 'Napraw sprzęt u mechanika. Jeśli jest sprawny, naprawa nie jest potrzebna.'
-      : `Mechanik skupuje rudę żelaza po ${OWOCE.ruda_zelaza.cena} monet i drewno po ${OWOCE.drewno.cena} monet za sztukę.`;
+      : `Mechanik skupuje rudę żelaza po ${OWOCE.ruda_zelaza.cena} monet, rudę miedzi po ${OWOCE.miedz.cena}, węgiel po ${OWOCE.wegiel.cena} i drewno po ${OWOCE.drewno.cena} monet za sztukę.`;
     this.shopDialog(p, {
       title: `Warsztat — ${p.name}`, text,
       tabs: { labels: ['NAPRAW', 'SPRZEDAJ'], active: tab, colors: [0x2f6f9f, 0x3fa34d] },
@@ -8470,3 +8509,9 @@ export class GameScene extends Phaser.Scene {
   }
 }
 
+/** A fixed mine's own name (Bogdanka, Stary Gaj…) for its dungeon map id, any level. */
+function kopalniaStalaMapy(id: string): string | undefined {
+  const l = czytajIdLochu(id);
+  const k = l && !l.misja && !l.tutorial ? kopalniaStala(l.seed) : null;
+  return k ? tr(k.nazwa) : undefined;
+}

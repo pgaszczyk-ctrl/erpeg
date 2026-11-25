@@ -86,7 +86,7 @@ export const MATERIAL_PICTURES = [
 ];
 /** Goods shown with a material picture instead of the game's small texture / the group's emoji. */
 const GOODS_PICTURES: Partial<Record<Owoc | Grupa, string>> = {
-  drewno: 'drewno', chrust: 'chrust', ruda_zelaza: 'ruda_zelaza',
+  drewno: 'drewno', chrust: 'chrust', ruda_zelaza: 'ruda_zelaza', miedz: 'miedz', wegiel: 'wegiel',
   // Order 45 D
   jablko: 'jablko', sliwka: 'sliwka', winogrono: 'winogrono', marchewka: 'marchewka', brokul: 'brokul', salata: 'salata',
   grzyb: 'grzyb', kiel: 'kiel', luska: 'luska', ziemniak: 'ziemniak', kapusta: 'kapusta', burak: 'burak', dynia: 'dynia',

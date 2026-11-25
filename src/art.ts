@@ -1034,7 +1034,7 @@ export const GOODS_TEX = {
   // ikony12 A1 (64×64, loaded in BootScene), shown at 1/5 on the ground.
   chrust: 'item-chrust',
   // From dragons (content/smoki.ts): a code-drawn scale until the artist's icon.
-  luska: 'goods-luska', ruda_zelaza: 'item-ruda_zelaza', kiel: 'goods-kiel',
+  luska: 'goods-luska', ruda_zelaza: 'item-ruda_zelaza', miedz: 'item-miedz', wegiel: 'item-wegiel', kiel: 'goods-kiel',
 } as const;
 
 /** A wolf fang (placeholder): a curved ivory tooth with the outline. */

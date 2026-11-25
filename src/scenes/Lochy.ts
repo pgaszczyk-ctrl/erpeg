@@ -4,7 +4,9 @@
 import Phaser from 'phaser';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { rng } from '../rng';
-import { DEKOR_LOCHU, LOCH, LOCHY, LOCH_TEKSTY, POZIOMY_LOCHU, PUKANIE, UKRYTY_POZIOM, type RodzajLochu } from '../content/lochy';
+import { DEKOR_LOCHU, LOCH, LOCHY, LOCH_TEKSTY, POZIOMY_LOCHU, PUKANIE, UKRYTY_POZIOM, jaskiniowy, type RodzajLochu } from '../content/lochy';
+import { JASKINIE, KOPALNIE_STALE, SKALE, ZYLY, ZYLY_TEKSTY, regionZloz, type SkalaLochu, type Surowiec } from '../content/kopalnie';
+import { tr } from '../i18n';
 import { BERSERKER } from '../content/gangi';
 import { KLATEK_ZEJSCIA, obrazZejscia, plotnoKurzu, plotnoPoswiaty, type ObrazZejscia } from '../loch/zejscieObraz';
 import { KATY_PIKSELOWE } from '../gen/budynki';
@@ -52,6 +54,9 @@ export interface WejscieLochu {
   przod?: 1 | -1;
   /** A mission stage's own entrance (Etap typ 'loch'): which mission and stage, the dungeon's name and guardian. */
   misja?: { id: string; etap: number; nazwa?: string; straznik?: RodzajWroga };
+  /** Caves and mines: size (content/kopalnie.ts) and a fixed mine's own name. */
+  skala?: SkalaLochu;
+  nazwa?: string;
 }
 
 function poleRing(r: number[]) {
@@ -122,6 +127,58 @@ function tekstury(scene: Phaser.Scene) {
     c.fillStyle = '#0b0a09'; c.beginPath(); c.ellipse(22, 25, 8.5, 6.5, 0, Math.PI, 0); c.fill(); c.fillRect(13.5, 25, 17, 4);
     c.fillStyle = '#5c7a42'; c.fillRect(6, 15, 4, 2); c.fillRect(34, 15, 3, 2); c.fillRect(15, 7, 3, 1);
     c.fillStyle = '#d9d2bf'; c.fillRect(31, 30, 4, 1); c.fillRect(33, 29, 1, 3);
+  });
+  // Wejście do kopalni: sztolnia w skalnym pagórku, drewniane stemple z oczepem, szyny i wózek z rudą.
+  plotno('loch-wej-kopalnia', 48, 38, (c) => {
+    const skala = ['#4e4438', '#6b5b48', '#857259', '#9c8668'];
+    c.fillStyle = ink; c.beginPath(); c.ellipse(24, 20, 23, 15, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skala[1]; c.beginPath(); c.ellipse(24, 20, 22, 14, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skala[2]; c.beginPath(); c.ellipse(21, 15, 16, 9, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = skala[3]; c.fillRect(11, 8, 8, 2); c.fillRect(28, 10, 6, 2);
+    c.fillStyle = '#5c7a42'; c.fillRect(5, 16, 4, 2); c.fillRect(38, 14, 4, 2);
+    // Ciemny otwór sztolni.
+    c.fillStyle = ink; c.fillRect(14, 15, 20, 17);
+    c.fillStyle = '#0b0a09'; c.fillRect(16, 17, 16, 15);
+    // Stemple i oczep.
+    c.fillStyle = ink; c.fillRect(13, 14, 4, 19); c.fillRect(31, 14, 4, 19); c.fillRect(11, 12, 26, 4);
+    c.fillStyle = '#7a5530'; c.fillRect(14, 15, 2, 17); c.fillRect(32, 15, 2, 17); c.fillRect(12, 13, 24, 2);
+    c.fillStyle = '#9a7040'; c.fillRect(14, 15, 1, 17); c.fillRect(12, 13, 24, 1);
+    // Szyny wychodzące ze sztolni.
+    c.fillStyle = '#6e6258'; c.fillRect(19, 26, 1, 12); c.fillRect(28, 26, 1, 12);
+    c.fillStyle = '#5a3a20'; for (let y = 28; y < 38; y += 3) c.fillRect(17, y, 14, 1);
+    // Wózek z rudą.
+    c.fillStyle = ink; c.fillRect(36, 26, 11, 8);
+    c.fillStyle = '#5a5e66'; c.fillRect(37, 27, 9, 6);
+    c.fillStyle = '#b5683a'; c.fillRect(38, 25, 7, 3);
+    c.fillStyle = '#e09a5a'; c.fillRect(39, 25, 2, 1);
+    c.fillStyle = ink; c.fillRect(37, 33, 3, 3); c.fillRect(43, 33, 3, 3);
+  });
+  // Żyły rudy w licu ściany: bryła skały z błyszczącymi grudkami (żelazo – rdzawe, miedź – zielono-miedziane, węgiel – czarne).
+  const ZYLA_KOLORY: Record<Surowiec, [string, string, string]> = {
+    ruda_zelaza: ['#8a4a2a', '#c27a44', '#f0b27a'],
+    miedz: ['#2f7a5e', '#c8733a', '#7ee0b8'],
+    wegiel: ['#151417', '#2c2a30', '#8a8aa0'],
+  };
+  for (const [sw, [a, b, cc]] of Object.entries(ZYLA_KOLORY)) plotno(`loch-zyla-${sw}`, 20, 14, (c) => {
+    const pr = rng(hashLochu(sw));
+    c.fillStyle = ink; c.beginPath(); c.ellipse(10, 8, 9.5, 6, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#5a4d40'; c.beginPath(); c.ellipse(10, 8, 8.5, 5, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#6f604f'; c.fillRect(4, 4, 8, 2);
+    for (let i = 0; i < 7; i++) {
+      const gx = 3 + Math.floor(pr() * 13), gy = 4 + Math.floor(pr() * 7);
+      c.fillStyle = ink; c.fillRect(gx - 1, gy - 1, 4, 3);
+      c.fillStyle = a; c.fillRect(gx, gy, 3, 2);
+      c.fillStyle = b; c.fillRect(gx, gy, 2, 1);
+      if (pr() < 0.5) { c.fillStyle = cc; c.fillRect(gx, gy, 1, 1); }
+    }
+  });
+  // Lampa górnicza (w kopalni zamiast pochodni): mosiężna, na haku, z ciepłym płomykiem.
+  plotno('loch-lampa', 10, 18, (c) => {
+    c.fillStyle = ink; c.fillRect(4, 0, 2, 4); c.fillRect(1, 4, 8, 11);
+    c.fillStyle = '#b8862e'; c.fillRect(2, 5, 6, 2); c.fillRect(2, 12, 6, 2);
+    c.fillStyle = '#ffd27a'; c.fillRect(3, 7, 4, 5);
+    c.fillStyle = '#fff2c0'; c.fillRect(4, 8, 2, 3);
+    c.fillStyle = '#7a5a1e'; c.fillRect(3, 14, 4, 2);
   });
   // Schody w górę (w lochu), od góry: stopnie jaśniejące ku wyjściu.
   plotno('loch-schody', 48, 40, (c) => {
@@ -350,6 +407,7 @@ export class LochyWejscia {
       if (this.znane.has(id) || !this.city.ready({ x0: p.door.x - 60, y0: p.door.y - 60, x1: p.door.x + 60, y1: p.door.y + 60 })) continue;
       this.dodaj(id, this.swiatynia(p));
     }
+    this.jaskinie(px, py, R);
     // Daleko od bohatera: obrazki zdjęte (wrócą, gdy podejdzie).
     for (const w of this.lista) {
       const blisko = Math.abs(w.x - px) < R * 1.2 && Math.abs(w.y - py) < R * 1.2;
@@ -361,6 +419,63 @@ export class LochyWejscia {
         this.stan.delete(w.id);
       }
     }
+  }
+
+  /**
+   * Jaskinie i kopalnie (content/kopalnie.ts): stałe (Bogdanka, mała w Starym Gaju, prawdziwe kopalnie) i losowe – po jednej
+   * na komórkę geograficzną 0.01° z szansą JASKINIE.szansa (w regionie złóż ×2, wtedy duże). Wejście na zieleni/polu, z dala
+   * od budynków i dróg. Ten sam wynik przy każdym wczytaniu (ziarno z komórki).
+   */
+  private jaskinie(px: number, py: number, R: number) {
+    const c = this.city;
+    if (c.loch) return;
+    for (const k of KOPALNIE_STALE) {
+      const id = `stala:${k.id}`;
+      if (this.znane.has(id)) continue;
+      const p = c.fromLatLon(k.lat, k.lon);
+      if (Math.abs(p.x - px) > R || Math.abs(p.y - py) > R) continue;
+      if (!c.ready({ x0: p.x - 300, y0: p.y - 300, x1: p.x + 300, y1: p.y + 300 })) continue;
+      const q = this.miejsceJaskini(p.x, p.y, 120 * M, false) ?? this.wolneMiejsce(p.x, p.y);
+      this.znane.set(id, null);
+      if (!q) continue;
+      const w: WejscieLochu = { id: `${c.id}:${id}`, rodzaj: k.rodzaj, x: q.x, y: q.y, seed: k.seed, skala: k.skala, nazwa: tr(k.nazwa) };
+      this.znane.set(id, w);
+      this.lista.unshift(w);
+    }
+    const geo = c.toLatLon(px, py);
+    const dLat = R / M / 111_132, dLon = R / M / (111_320 * Math.cos((geo.lat * Math.PI) / 180));
+    for (let gy = Math.floor((geo.lat - dLat) * 100); gy <= Math.floor((geo.lat + dLat) * 100); gy++) {
+      for (let gx = Math.floor((geo.lon - dLon) * 100); gx <= Math.floor((geo.lon + dLon) * 100); gx++) {
+        const id = `g${gx}:${gy}`;
+        if (this.znane.has(id)) continue;
+        const r = rng(hashLochu(`jaskinia:${gx}:${gy}`));
+        const lat = (gy + 0.2 + r() * 0.6) / 100, lon = (gx + 0.2 + r() * 0.6) / 100;
+        const reg = regionZloz(lat, lon);
+        if (r() > JASKINIE.szansa * (reg ? JASKINIE.wRegionie : 1)) { this.znane.set(id, null); continue; }
+        const p = c.fromLatLon(lat, lon);
+        if (!c.ready({ x0: p.x - 200, y0: p.y - 200, x1: p.x + 200, y1: p.y + 200 })) continue;
+        const q = this.miejsceJaskini(p.x, p.y, 150 * M, true);
+        if (!q) { this.znane.set(id, null); continue; }
+        const kop = r() < (reg ? JASKINIE.kopalnieWRegionie : JASKINIE.kopalnie);
+        this.dodaj(id, { id: `${c.id}:jaskinia:${gx}:${gy}`, rodzaj: kop ? 'kopalnia' : 'jaskinia', x: q.x, y: q.y, seed: hashLochu(`jaskinia:${gx}:${gy}:seed`), skala: reg ? 'duzy' : 'zwykly' });
+      }
+    }
+  }
+
+  /** A spot for a cave/mine mouth within `promien` of (x, y): green land (or anything with `teren` false), away from buildings and roads. */
+  miejsceJaskini(x: number, y: number, promien: number, teren: boolean): { x: number; y: number } | null {
+    const c = this.city, T = new Set(JASKINIE.teren);
+    const ok = (qx: number, qy: number) => (!teren || c.areaKindsAt(qx, qy).some((k) => T.has(k))) && !c.roadAt(qx, qy)
+      && !c.buildingWithin(qx, qy, JASKINIE.odBudynkowM * M) && this.miejsce(qx, qy)
+      && !c.places.some((p) => Math.hypot(p.door.x - qx, p.door.y - qy) < 40 * M)
+      && !c.siedliska.some((sd) => qx > sd.ramka.x0 && qx < sd.ramka.x1 && qy > sd.ramka.y0 && qy < sd.ramka.y1);
+    if (ok(x, y)) return { x, y };
+    for (let r = 6 * M; r <= promien; r += 6 * M) for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2 + r * 0.01;
+      const qx = x + Math.cos(a) * r, qy = y + Math.sin(a) * r;
+      if (ok(qx, qy)) return { x: qx, y: qy };
+    }
+    return null;
   }
 
   private dodaj(id: string, w: WejscieLochu | null) {
@@ -406,9 +521,11 @@ export class LochyWejscia {
 
   private pokaz(w: WejscieLochu) {
     const s = this.scene;
-    if (w.rodzaj === 'jaskinia') {
-      // Skalny otwór jaskini (siedliska) – bez klapy i bez pukania.
-      const img = s.add.image(w.x, w.y, 'loch-wej-jaskinia').setOrigin(0.5, 0.82).setScale(0.75).setDepth(w.y + 2);
+    if (jaskiniowy(w.rodzaj)) {
+      // Skalny otwór jaskini / sztolnia kopalni – bez klapy i bez pukania.
+      const kop = w.rodzaj === 'kopalnia';
+      const sc = (kop ? 0.75 : 0.75) * (w.skala === 'wielki' || w.skala === 'duzy' ? 1.25 : w.skala === 'maly' ? 0.85 : 1);
+      const img = s.add.image(w.x, w.y, kop ? 'loch-wej-kopalnia' : 'loch-wej-jaskinia').setOrigin(0.5, 0.82).setScale(sc).setDepth(w.y + 2);
       const blask = s.add.image(w.x, w.y - 1, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(0x8ab8ff).setDisplaySize(40, 30).setDepth(w.y - 7).setAlpha(0.25);
       s.tweens.add({ targets: blask, alpha: { from: 0.12, to: 0.32 }, duration: 1800 + (w.seed % 900), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       this.obrazki.set(w.id, [img, blask]);
@@ -553,7 +670,10 @@ export const lochSesja = {
 interface Lokator { kind: RodzajWroga; x: number; y: number; komnata: number; straznik: boolean }
 
 /** Co zostało pokonane w lochu w tej sesji logowania (id lochu → numery potworów, skrzynia). */
-interface StanLochu { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean; /** Ciosy w luźną ścianę i czy już runęła. */ sciana: number; odkryte: boolean }
+interface StanLochu { zabici: Set<number>; skrzynia: boolean; ogloszony: boolean; /** Ciosy w luźną ścianę i czy już runęła. */ sciana: number; odkryte: boolean; /** Żyły rudy: ciosy do grudki i wykopane grudki (numer żyły). */ zyly?: Map<number, { a: number; n: number }> }
+
+/** Żyła rudy w ścianie jaskini/kopalni (px mapy), jej obraz i ile grudek daje. */
+export interface Zyla { i: number; x: number; y: number; s: Surowiec; grudek: number; obraz: Phaser.GameObjects.Image; blask: Phaser.GameObjects.Image }
 const stany = new Map<string, StanLochu>();
 
 export interface LochHost {
@@ -575,7 +695,8 @@ export interface LochHost {
 
 export class LochWnetrze {
   readonly plan: PlanLochu;
-  private img!: Phaser.GameObjects.Image;
+  private img: Phaser.GameObjects.Image[] = [];
+  readonly zyly: Zyla[] = [];
   private ciemno!: Phaser.GameObjects.Rectangle;
   private plomienie: { glow: Phaser.GameObjects.Image; fire: Phaser.GameObjects.Image; f: number }[] = [];
   private skrzyniaImg!: Phaser.GameObjects.Image;
@@ -711,7 +832,8 @@ export class LochWnetrze {
     const UK = UKRYTY_POZIOM.kolory, DK = DEKOR_LOCHU;
     /** Poziom za ukrytą ścianą: marmurowa sala zamiast zmurszałego kamienia. */
     const marmur = p.ukrytyPoziom;
-    const zmurszaly = !marmur && p.rodzaj !== 'jaskinia';
+    const zmurszaly = !marmur && !jaskiniowy(p.rodzaj);
+    const kopalnia = p.rodzaj === 'kopalnia';
     const MECH = '#56703f';
     const scianaKratka = new Set<number>();
     for (const [a, b, cc, d] of p.sciany) for (let ty = b; ty < d; ty++) for (let tx = a; tx < cc; tx++) scianaKratka.add(ty * p.w + tx);
@@ -746,7 +868,7 @@ export class LochWnetrze {
         if (!pod(tx - 1, ty)) { x.fillStyle = 'rgba(0,0,0,0.20)'; x.fillRect(X, Y, 3, t); }
         continue;
       }
-      if (p.rodzaj === 'jaskinia') {
+      if (jaskiniowy(p.rodzaj)) {
         // Skała: plamy po 3×3 kratki bez spoin, drobne kamyki, gdzieniegdzie mokry połysk.
         const pl = ((Math.floor(tx / 3) * 73856093) ^ (Math.floor(ty / 3) * 19349663)) >>> 0;
         x.fillStyle = K.plyta[pl % K.plyta.length];
@@ -841,13 +963,25 @@ export class LochWnetrze {
           const [a, b] = DK.kroplaCoS;
           kapiace.push({ x: (sx + 0.5) / D, y0: (yL + 2) / D, y1: py / D, okres: a + (b - a) * r(), faza: r() });
         }
-        if (p.rodzaj === 'jaskinia') {
+        if (jaskiniowy(p.rodzaj)) {
           // Lico skały: nieregularne bryły zamiast cegieł.
           for (let i = 0; i < 5; i++) {
             x.fillStyle = r() < 0.5 ? K.licoCien : 'rgba(255,240,210,0.10)';
             x.fillRect(X + Math.floor(r() * (t - 4)), yL + Math.floor(r() * (hL - 3)), 3 + Math.floor(r() * 5), 2 + Math.floor(r() * 2));
           }
-          if (r() < 0.1) { x.fillStyle = K.akcent; x.fillRect(X + Math.floor(r() * (t - 4)), yL + 1, 4, 2); }
+          if (!kopalnia && r() < 0.1) { x.fillStyle = K.akcent; x.fillRect(X + Math.floor(r() * (t - 4)), yL + 1, 4, 2); }
+          // Kopalnia: obudowa – co 4 kratki drewniany stempel na licu, nad nim oczep.
+          if (kopalnia && tx % 4 === 0) {
+            const sx = X + Math.floor(t / 2) - 2;
+            x.fillStyle = '#1e1a24'; x.fillRect(sx - 1, yL, 6, hL);
+            x.fillStyle = '#7a5530'; x.fillRect(sx, yL, 4, hL);
+            x.fillStyle = '#9a7040'; x.fillRect(sx, yL, 1, hL);
+            x.fillStyle = '#5a3a20'; x.fillRect(sx + 3, yL, 1, hL);
+          }
+          if (kopalnia && hL > 6) {
+            x.fillStyle = '#1e1a24'; x.fillRect(X, yL, t, 3);
+            x.fillStyle = '#6e4a28'; x.fillRect(X, yL, t, 2);
+          }
           continue;
         }
         // Kamienie / cegły.
@@ -1004,6 +1138,32 @@ export class LochWnetrze {
           x.fillStyle = UK.jasny[2]; x.fillRect(X + 6, Y - 8, 4, 17); x.fillRect(X + 7, Y - 12, 2, 4); x.fillRect(X + 4, Y - 6, 2, 6); x.fillRect(X + 10, Y - 7, 2, 5);
           x.fillStyle = UK.licoCien; x.fillRect(X + 9, Y - 8, 1, 17); x.fillRect(X + 8, Y - 12, 1, 4);
           break;
+        case 'wozek':
+          // Wózek kopalniany na kawałku szyn, z rudą.
+          x.fillStyle = '#5a3a20'; for (let i = 0; i < 4; i++) x.fillRect(X - 2 + i * 6, Y + 13, 2, 3);
+          x.fillStyle = '#6e6258'; x.fillRect(X - 3, Y + 13, t + 6, 1); x.fillRect(X - 3, Y + 15, t + 6, 1);
+          x.fillStyle = ink; x.fillRect(X + 1, Y + 3, 14, 10);
+          x.fillStyle = '#5a5e66'; x.fillRect(X + 2, Y + 4, 12, 8);
+          x.fillStyle = '#474a52'; x.fillRect(X + 2, Y + 9, 12, 1);
+          x.fillStyle = o.r < 0.5 ? '#b5683a' : '#2c2a30'; x.fillRect(X + 3, Y + 2, 10, 3);
+          x.fillStyle = o.r < 0.5 ? '#e09a5a' : '#8a8aa0'; x.fillRect(X + 4, Y + 2, 2, 1);
+          x.fillStyle = ink; x.fillRect(X + 2, Y + 12, 3, 3); x.fillRect(X + 11, Y + 12, 3, 3);
+          break;
+        case 'kilof':
+          // Porzucony kilof.
+          x.fillStyle = ink; x.fillRect(X + 3, Y + 11, 10, 3); x.fillRect(X + 2, Y + 6, 4, 9);
+          x.fillStyle = '#8a6a3a'; x.fillRect(X + 4, Y + 12, 9, 1);
+          x.fillStyle = '#9aa0a8'; x.fillRect(X + 3, Y + 7, 2, 7);
+          x.fillStyle = '#d8dce0'; x.fillRect(X + 3, Y + 7, 1, 2);
+          break;
+        case 'stempel':
+          // Sterta stempli (okrąglaki).
+          for (const [dx, dy] of [[2, 10], [7, 10], [12, 10], [4, 6], [9, 6]]) {
+            x.fillStyle = ink; x.fillRect(X + dx - 1, Y + dy - 1, 6, 6);
+            x.fillStyle = '#9a7040'; x.fillRect(X + dx, Y + dy, 4, 4);
+            x.fillStyle = '#c49a5e'; x.fillRect(X + dx + 1, Y + dy + 1, 2, 2);
+          }
+          break;
         case 'kaluza':
           x.fillStyle = 'rgba(40,60,80,0.55)';
           x.fillRect(X + 2, Y + 6, 12, 5); x.fillRect(X + 4, Y + 4, 8, 9);
@@ -1038,8 +1198,39 @@ export class LochWnetrze {
     }
     const key = `loch-${p.rodzaj}-${p.seed}-${p.poziom}`;
     if (s.textures.exists(key)) s.textures.remove(key);
-    s.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
-    this.img = s.add.image(0, 0, key).setOrigin(0).setScale(1 / D).setDepth(-1e8);
+    // Duże poziomy (kopalnie w regionach złóż) cięte na kawałki ≤ 2048 px – starsze telefony nie mają większych tekstur.
+    const KAW = 2048;
+    if (W <= KAW && H <= KAW) {
+      s.textures.addCanvas(key, c)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+      this.img.push(s.add.image(0, 0, key).setOrigin(0).setScale(1 / D).setDepth(-1e8));
+    } else {
+      for (let y0 = 0; y0 < H; y0 += KAW) for (let x0 = 0; x0 < W; x0 += KAW) {
+        const k = `${key}-${x0}-${y0}`;
+        const cw = Math.min(KAW, W - x0), ch = Math.min(KAW, H - y0);
+        const part = document.createElement('canvas');
+        part.width = cw;
+        part.height = ch;
+        part.getContext('2d')!.drawImage(c, x0, y0, cw, ch, 0, 0, cw, ch);
+        if (s.textures.exists(k)) s.textures.remove(k);
+        s.textures.addCanvas(k, part)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        this.img.push(s.add.image(x0 / D, y0 / D, k).setOrigin(0).setScale(1 / D).setDepth(-1e8));
+      }
+      c.width = c.height = 1;
+    }
+    // Żyły rudy na licach ścian (sprite'y – znikają, gdy wykopane).
+    this.stan.zyly ??= new Map();
+    const rz = rng(p.seed ^ 0x3c6ef372);
+    p.zyly.forEach((z, i) => {
+      const [a, b] = ZYLY.grudek;
+      const grudek = a + Math.floor(rz() * (b - a + 1));
+      const at = this.px(z.x, z.y);
+      const y = z.y * T - T * 0.45;
+      const obraz = s.add.image(at.x, y, `loch-zyla-${z.s}`).setScale(1 / D).setDepth(z.y * T - 1);
+      const blask = s.add.image(at.x, y, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setTint(z.s === 'miedz' ? 0x7ee0b8 : z.s === 'wegiel' ? 0x9aa0c0 : 0xffb070).setDisplaySize(T * 2.4, T * 1.8).setDepth(1_041_250).setAlpha(0.25);
+      const zyla: Zyla = { i, x: at.x, y, s: z.s, grudek, obraz, blask };
+      if (!this.zylaDostepna(zyla)) { obraz.setVisible(false); blask.setVisible(false); }
+      this.zyly.push(zyla);
+    });
 
     // Schody w górę, smuga światła dziennego z góry.
     const sch = this.px(p.schody.x, p.schody.y);
@@ -1068,9 +1259,10 @@ export class LochWnetrze {
     // Pochodnie na licach ścian.
     for (const q of p.pochodnie) {
       const at = this.px(q.x, q.y);
-      const fire = s.add.image(at.x, at.y + T * 0.15, marmur ? 'loch-kandelabr' : 'loch-pochodnia').setOrigin(0.5, 1).setScale(1 / D).setDepth(at.y + T * 0.5);
+      const fire = s.add.image(at.x, at.y + T * 0.15, marmur ? 'loch-kandelabr' : kopalnia ? 'loch-lampa' : 'loch-pochodnia').setOrigin(0.5, 1).setScale(1 / D).setDepth(at.y + T * 0.5);
       const glow = s.add.image(at.x, at.y + T * 0.6, 'loch-swiatlo').setBlendMode(Phaser.BlendModes.ADD).setDisplaySize(T * 9, T * 8).setDepth(1_041_300).setAlpha(0.5);
       if (marmur) glow.setTint(0xfff0d8);
+      else if (kopalnia) glow.setTint(0xffd9a0);
       this.plomienie.push({ glow, fire, f: r() * 10 });
     }
     // Krople wody: ukryte, dopóki nie spadają (update).
@@ -1105,7 +1297,7 @@ export class LochWnetrze {
           kinds.push({ kind: r() < U.szansaElity ? elita[Math.floor(r() * elita.length)] : O.potwory[Math.floor(r() * O.potwory.length)], straznik: false });
         }
       } else {
-        if (r() > LOCH.szansaGrupy) return;
+        if (r() > (jaskiniowy(p.rodzaj) ? SKALE[p.skala].szansaGrupy : LOCH.szansaGrupy)) return;
         const [a, b] = LOCH.wKomnacie;
         const ile = Math.round(a + (b - a) * (0.25 + 0.75 * k.glebokosc) * (0.6 + 0.4 * r()));
         for (let j = 0; j < ile; j++) kinds.push({ kind: O.potwory[Math.floor(r() * O.potwory.length)], straznik: false });
@@ -1129,7 +1321,7 @@ export class LochWnetrze {
       const e = this.h.spawn(l.x, l.y, l.kind, { x: (k.cx + 0.5) * T, y: (k.cy + 0.5) * T, r: R });
       // Jaskinia pod wielkim obozem: groźniejsza niż krypta (właściciel: „trudniejsze potworki”) – życie i ciosy ×1,4.
       // Niżej położone poziomy – coraz groźniej; ukryty najgroźniej.
-      const moc = (p.rodzaj === 'jaskinia' && !p.tutorial ? 1.4 : 1) * (1 + POZIOMY_LOCHU.mocNaPoziom * (p.poziom - 1)) * (p.ukrytyPoziom ? POZIOMY_LOCHU.mocUkrytego : 1);
+      const moc = (jaskiniowy(p.rodzaj) && !p.tutorial ? (p.rodzaj === 'jaskinia' ? 1.4 : 1.25) : 1) * (1 + POZIOMY_LOCHU.mocNaPoziom * (p.poziom - 1)) * (p.ukrytyPoziom ? POZIOMY_LOCHU.mocUkrytego : 1);
       if (moc !== 1) { e.power = (e.power ?? 1) * moc; e.hp = Math.max(1, Math.round(e.hp * moc)); }
       // Ukryty poziom: część zwykłych potworów w szale (osobne ziarno – rozstawienie się nie zmienia).
       if (p.ukrytyPoziom && !l.straznik && rng(p.seed ^ (i * 2654435761))() < UKRYTY_POZIOM.berserk) {
@@ -1166,6 +1358,48 @@ export class LochWnetrze {
       this.h.toast(LOCH_TEKSTY.oczyszczony, 3200);
     }
     return true;
+  }
+
+  zylaDostepna(z: Zyla) {
+    return (this.stan.zyly?.get(z.i)?.n ?? 0) < z.grudek;
+  }
+
+  /** The nearest workable vein within `r` px of (x, y). */
+  zylaPrzy(x: number, y: number, r: number): Zyla | null {
+    let best: Zyla | null = null, bd = r;
+    for (const z of this.zyly) {
+      if (!this.zylaDostepna(z)) continue;
+      const d = Math.hypot(z.x - x, z.y + this.plan.T * 0.5 - y);
+      if (d < bd) { best = z; bd = d; }
+    }
+    return best;
+  }
+
+  /** One pickaxe blow at a vein (the tool is checked by GameScene). 'grudka' = a nugget is due now (GameScene puts it in the backpack). */
+  uderzZyle(z: Zyla): 'cios' | 'grudka' | 'pusta' {
+    if (!this.zylaDostepna(z)) return 'pusta';
+    const m = this.stan.zyly ??= new Map();
+    const st = m.get(z.i) ?? { a: 0, n: 0 };
+    m.set(z.i, st);
+    st.a++;
+    const s = z.obraz.scene, x0 = z.obraz.x;
+    s.tweens.killTweensOf(z.obraz);
+    z.obraz.setX(x0);
+    s.tweens.add({ targets: z.obraz, x: { from: x0 - 0.7, to: x0 + 0.7 }, duration: 40, yoyo: true, repeat: 1, onComplete: () => z.obraz.setX(x0) });
+    this.kurz(z.x, z.y + this.plan.T * 0.8, 2);
+    if (st.a < ZYLY.uderzen) return 'cios';
+    st.a = 0;
+    st.n++;
+    if (!this.zylaDostepna(z)) {
+      s.tweens.add({ targets: [z.obraz, z.blask], alpha: 0, duration: 400, onComplete: () => { z.obraz.setVisible(false); z.blask.setVisible(false); } });
+    }
+    return 'grudka';
+  }
+
+  /** Undo the last nugget when it didn't fit in the backpack. */
+  oddajGrudke(z: Zyla) {
+    const st = this.stan.zyly?.get(z.i);
+    if (st && st.n > 0) { st.n--; st.a = ZYLY.uderzen - 1; z.obraz.setVisible(true).setAlpha(1); z.blask.setVisible(true).setAlpha(0.25); }
   }
 
   /** Tutorial adapter; the ordinary dungeon uses exactly the same generator and monsters. */
@@ -1269,17 +1503,25 @@ export class LochWnetrze {
         }
       } else if (!this.stan.skrzynia) this.skrzyniaPuls.setVisible(false);
     }
+    for (const z of this.zyly) {
+      if (!this.zylaDostepna(z)) continue;
+      const on = this.zylaDostepna(z) && z.x > v.x - 30 && z.x < v.right + 30 && z.y > v.y - 30 && z.y < v.bottom + 30 && znane(z.x, z.y + this.plan.T);
+      z.obraz.setVisible(on);
+      z.blask.setVisible(on);
+      if (on) z.blask.setAlpha(0.18 + 0.14 * Math.sin(t * 2.6 + z.i));
+    }
     if (!this.ostrzegl && this.skrzyniaPilnowana()) {
       const k = this.skrzynia;
       if (Math.hypot(k.x - hero.x, k.y - hero.y) < 14 * this.plan.T) {
         this.ostrzegl = true;
-        this.h.toast(LOCH_TEKSTY.straznik, 2800);
+        this.h.toast(jaskiniowy(this.plan.rodzaj) ? ZYLY_TEKSTY.leze : LOCH_TEKSTY.straznik, 2800);
       }
     }
   }
 
   destroy() {
-    this.img?.destroy();
+    for (const i of this.img) i.destroy();
+    this.img = [];
     this.wyjscie?.usun();
   }
 }

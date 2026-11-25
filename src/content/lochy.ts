@@ -7,7 +7,10 @@
 import type { RodzajWroga } from './fabula';
 import { tx } from '../i18n';
 
-export type RodzajLochu = 'krypta' | 'podziemia' | 'jaskinia';
+export type RodzajLochu = 'krypta' | 'podziemia' | 'jaskinia' | 'kopalnia';
+
+/** Jaskinie i kopalnie: nieregularne komnaty, kręte korytarze, żyły rudy, skarb w leżu (content/kopalnie.ts). */
+export const jaskiniowy = (r: RodzajLochu) => r === 'jaskinia' || r === 'kopalnia';
 
 export interface OpisLochu {
   nazwa: string;
@@ -79,6 +82,25 @@ export const LOCHY: Record<RodzajLochu, OpisLochu> = {
       akcent: '#6f8a7a',
     },
     nagroda: { monety: [160, 320], exp: 320, mikstura: 2, diament: 0.06 },
+  },
+  // Opuszczona kopalnia (właściciel, 25.11.2026: „jaskinie/kopalnie… materiały typu żelazo czy miedź”): stemple, wózki,
+  // żyły rudy w ścianach, nieregularne chodniki; na dnie leże ze skarbem.
+  kopalnia: {
+    get nazwa() { return tx('Opuszczona kopalnia', 'Abandoned mine'); },
+    get wejscie() { return tx('Spróchniałe stemple podpierają wejście do sztolni. Szyny znikają w ciemności, a z głębi dochodzi stukanie – jakby ktoś wciąż kopał.\n\nZejść do kopalni?', 'Rotten props hold up the mouth of the adit. Rails vanish into the dark, and from deep inside comes a tapping – as if someone were still digging.\n\nGo down into the mine?'); },
+    wezly: [[3, 3], [5, 4]],
+    potwory: ['szkielet', 'glut', 'warg', 'zombie', 'glut', 'bandyta'],
+    straznik: 'koziol',
+    obstawa: ['szkielet', 'glut', 'warg'],
+    kolory: {
+      plyta: ['#4a4038', '#544840', '#41382f', '#5c4f44'],
+      spoina: '#2a221c',
+      wierzch: '#1b1714',
+      lico: '#62574a',
+      licoCien: '#3e352c',
+      akcent: '#8a6a3a',
+    },
+    nagroda: { monety: [140, 280], exp: 280, mikstura: 1, diament: 0.05 },
   },
 };
 
@@ -191,11 +213,11 @@ export const UKRYTY_POZIOM = {
   liczniej: 1.3,
   /** Szansa, że potwór w komnacie jest z elity (silniejsze rodzaje danego lochu). */
   szansaElity: 0.25,
-  elita: { krypta: ['zombie', 'zombie', 'upior'], podziemia: ['wielki_glut', 'herszt'], jaskinia: ['koziol', 'warg'] } as Record<RodzajLochu, RodzajWroga[]>,
+  elita: { krypta: ['zombie', 'zombie', 'upior'], podziemia: ['wielki_glut', 'herszt'], jaskinia: ['koziol', 'warg'], kopalnia: ['koziol', 'warg'] } as Record<RodzajLochu, RodzajWroga[]>,
   /** Szansa, że zwykły potwór wpada w szał (berserker: szybszy, częstsze ciosy, czerwona poświata). */
   berserk: 0.18,
   /** Dodatkowa obstawa strażnika skrzyni. */
-  obstawa: { krypta: ['zombie', 'szkielet'], podziemia: ['herszt', 'bandyta'], jaskinia: ['warg', 'koziol'] } as Record<RodzajLochu, RodzajWroga[]>,
+  obstawa: { krypta: ['zombie', 'szkielet'], podziemia: ['herszt', 'bandyta'], jaskinia: ['warg', 'koziol'], kopalnia: ['warg', 'koziol'] } as Record<RodzajLochu, RodzajWroga[]>,
   /** Kolory marmurowej sali. */
   kolory: {
     jasny: ['#ece6da', '#e3dccd', '#efe9de'], ciemny: ['#3b3542', '#332e3a', '#403946'],
