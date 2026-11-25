@@ -611,6 +611,13 @@ export class StworAI {
       q.zostalo -= krok;
       if (q.zostalo <= 0) return false;
       g.fillStyle(0x1e1a24, 1);
+      if (this.s.rolaKrypty === 'lucznik') {
+        const speed = Math.hypot(q.vx, q.vy) || 1;
+        const dx = q.vx / speed, dy = q.vy / speed;
+        g.lineStyle(1.5, 0xd4b277).lineBetween(q.x - dx * 7, q.y - dy * 7, q.x, q.y);
+        g.fillStyle(0xcbd6de).fillTriangle(q.x + dx * 2, q.y + dy * 2, q.x - dx * 2 - dy * 2, q.y - dy * 2 + dx * 2, q.x - dx * 2 + dy * 2, q.y - dy * 2 - dx * 2);
+        return true;
+      }
       g.fillCircle(q.x, q.y, 2.2);
       g.fillStyle(0x9a6a32, 1);
       g.fillCircle(q.x, q.y, 1.5);

@@ -181,8 +181,12 @@ export function practice(skill: Umiejetnosc, points = 1): number | null {
 
 /** Time between attacks of that kind, in ms. */
 export function cooldown(skill: Umiejetnosc) {
+  return Math.round(baseCooldown(skill) / 0.75);
+}
+
+function baseCooldown(skill: Umiejetnosc) {
   const lvl = skillLevel(skill);
-  if (skill === 'miecz') return Math.round(zTabeli(WALKA.miecz.przerwa, lvl));
+  if (skill === 'miecz') return zTabeli(WALKA.miecz.przerwa, lvl);
   if (skill === 'luk') return Math.round(Math.max(WALKA.luk.najkrotszaPrzerwa, zTabeli(WALKA.luk.przerwa, lvl)));
   const u = UMIEJETNOSCI[skill];
   return Math.max(300, u.przerwa - (lvl - 1) * u.szybciejNaPoziom);
@@ -302,6 +306,13 @@ export function powerRequirement(id: string | null | undefined): string | null {
   if (!p?.mocWymaga || !(p.efekt || p.zywiol || p.specjalny)) return null;
   const skill = powerSkill(id);
   return skillLevel(skill) < p.mocWymaga ? `Moc przedmiotu – wymaga ${UMIEJETNOSCI[skill].dopelniacz}: ${p.mocWymaga}` : null;
+}
+
+/** Physical family of the equipped melee weapon, including quality variants. */
+export function rodzajCiosu(): 'tepe' | 'ostrze' {
+  const p = item(gear.equip.bron);
+  const rodzina = p?.baza ?? p?.id;
+  return !rodzina || rodzina === 'kijek' || /mlot|maczug/.test(rodzina) ? 'tepe' : 'ostrze';
 }
 
 /** The element of the weapon in hand: an essence rubbed in wins, then the weapon's own (only while its power works). */

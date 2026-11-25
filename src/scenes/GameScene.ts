@@ -110,7 +110,7 @@ import { WORKSHOP_LOCATIONS } from '../content/warsztaty-miejsca';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  weaponRequirement, meleeDamage, shotDamage, zywiolBroni, specjalnyBroni, lancuchBroni, hitChance, strongFactor, instaKillChance, rangedWeapon, efektBroni, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
+  weaponRequirement, rodzajCiosu, meleeDamage, shotDamage, zywiolBroni, specjalnyBroni, lancuchBroni, hitChance, strongFactor, instaKillChance, rangedWeapon, efektBroni, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe, pickaxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
@@ -1524,7 +1524,7 @@ export class GameScene extends Phaser.Scene {
       // (objects/StworAI.ts), never by touching the hero.
       if ((live() || s.lowisko) && !this.wilki.has(s) && s.kindId !== 'smok' && !s.duel && !s.brain && !this.demoRun?.isDragon(s)) {
         const home = s.lowiskoHome ?? (s.leash ? { x: s.leash.x, y: s.leash.y, r: Math.max(s.leash.r, 40 * PX_PER_M) } : { x: s.home.x, y: s.home.y, r: 90 * PX_PER_M });
-        this.wilki.set(s, new StworAI(this.wilkHost(), s, home, profilStwora(s.kindId, s.kind.damage * (s.power ?? 1))));
+        this.wilki.set(s, new StworAI(this.wilkHost(s.power), s, home, profilStwora(s.rolaKrypty === 'lucznik' ? 'glut' : s.kindId, s.kind.damage)));
       }
       const wilk = this.wilki.get(s);
       if (dragon) dragon.update(now, dt);
@@ -2234,12 +2234,13 @@ export class GameScene extends Phaser.Scene {
       }
       const imb = imbueOf(gear.equip.bron)?.e;
       landed = true;
-      const fx = { rodzaj: !gear.equip.bron || gear.equip.bron === 'kijek' ? 'tepe' as const : 'ostrze' as const, mocny: strong, bohater: true, zywiol: zywiolBroni() };
+      const fx = { rodzaj: rodzajCiosu(), mocny: strong, bohater: true, zywiol: zywiolBroni() };
       const cios = meleeDamage(Math.random) * power * this.essenceBoost(imb, s);
       const lancuch = lancuchBroni();
       if (lancuch && Math.random() < lancuch.szansa) this.time.delayedCall(60, () => this.lancuchPiorunow(s, cios, lancuch, this.time.now));
+      const hpPrzed = s.hp;
       if (s.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, cios, fx)) this.onEnemyKilled(s);
-      else {
+      else if (s.hp < hpPrzed) {
         this.essenceHit(imb, s, now);
         // A strong blow stuns for a moment (not dragons).
         if (strong && s.kindId !== 'smok') s.daze(now, WALKA.miecz.ogluszenieMs);
@@ -2649,7 +2650,7 @@ export class GameScene extends Phaser.Scene {
     else this.atakiDystans = Math.max(0, this.atakiDystans - 1);
   }
 
-  private wilkHost(): StworHost {
+  private wilkHost(sila = 1): StworHost {
     return {
       scene: this,
       player: this.player,
@@ -2659,7 +2660,7 @@ export class GameScene extends Phaser.Scene {
       przejscie: (ax, ay, bx, by) => przejscieSiedlisk(this.city, ax, ay, bx, by),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
-        const pending = this.wilkCarry + poPancerzu(obrazenie * session.level.obrazenia, defense(), fizyczne);
+        const pending = this.wilkCarry + poPancerzu(obrazenie * sila * session.level.obrazenia, defense(), fizyczne);
         const dmg = Math.floor(pending);
         if (!this.player.hurt(from, this.time.now, dmg)) return;
         this.wilkCarry = pending - dmg;
@@ -6771,8 +6772,9 @@ export class GameScene extends Phaser.Scene {
       const da = Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aim));
       if (da > arc / 2 && Math.hypot(dx, dy) > e.size + 4) continue;
       landed = true;
-      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * WALKA.mocnyMnoznikLive, { rodzaj: 'ostrze', mocny: true, bohater: true, zywiol: zywiolBroni() })) this.onEnemyKilled(e);
-      else if (!e.heavy) e.daze(now, WALKA.miecz.ogluszenieMs);
+      const hpPrzed = e.hp;
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * WALKA.mocnyMnoznikLive, { rodzaj: rodzajCiosu(), mocny: true, bohater: true, zywiol: zywiolBroni() })) this.onEnemyKilled(e);
+      else if (e.hp < hpPrzed && !e.heavy) e.daze(now, WALKA.miecz.ogluszenieMs);
     }
     if (landed) {
       this.wearWeapon(gear.equip.bron);
@@ -6796,8 +6798,9 @@ export class GameScene extends Phaser.Scene {
       if (Math.hypot(dx, dy) > reach + e.size) continue;
       if (Math.abs(Phaser.Math.Angle.Wrap(Math.atan2(dy, dx) - aim)) > arc / 2 && Math.hypot(dx, dy) > e.size + 4) continue;
       landed = true;
+      const hpPrzed = e.hp;
       if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * T.mnoznik, { rodzaj: 'tepe', mocny: true, bohater: true })) this.onEnemyKilled(e);
-      else if (!e.heavy) e.daze(now, T.ogluszenieMs);
+      else if (e.hp < hpPrzed && !e.heavy) e.daze(now, T.ogluszenieMs);
     }
     if (landed) this.practiced('miecz');
   }
@@ -6833,8 +6836,9 @@ export class GameScene extends Phaser.Scene {
       if (e.isDead || e.inAir || e.peaceful) continue;
       if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
       landed = true;
+      const hpPrzed = e.hp;
       if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * B.mnoznik, { rodzaj: 'ostrze', mocny: true, bohater: true, zywiol: 'swiatlo' })) this.onEnemyKilled(e);
-      else if (!e.heavy) e.daze(now, B.oslepienieMs, '☀', 0xfff3c4);
+      else if (e.hp < hpPrzed && !e.heavy) e.daze(now, B.oslepienieMs, '☀', 0xfff3c4);
     }
     if (landed) {
       this.wearWeapon(gear.equip.bron);
@@ -6919,7 +6923,7 @@ export class GameScene extends Phaser.Scene {
       if (e.isDead || e.inAir || e.peaceful) continue;
       if (Math.hypot(e.x - this.player.x, e.y - (this.player.y + 2)) > reach + e.size) continue;
       landed = true;
-      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * 0.8, { rodzaj: 'ostrze', mocny: true, bohater: true, zywiol: zywiolBroni() })) this.onEnemyKilled(e);
+      if (e.hit(new Phaser.Math.Vector2(this.player.x, this.player.y), now, meleeDamage(Math.random) * 0.8, { rodzaj: rodzajCiosu(), mocny: true, bohater: true, zywiol: zywiolBroni() })) this.onEnemyKilled(e);
     }
     if (landed) {
       this.wearWeapon(gear.equip.bron);
@@ -7046,8 +7050,9 @@ export class GameScene extends Phaser.Scene {
           const imb = imbueOf(shot.weapon)?.e;
           const instant = shot.skill === 'luk' && !WALKA.bezNatychmiast.includes(foe.kindId) && !foe.duel && Math.random() < instaKillChance();
           const fx = { rodzaj: shot.skill === 'magia' ? 'magia' as const : 'strzala' as const, mocny: shot.strong, krytyk: instant, bohater: true, zywiol: shot.zywiol };
+          const hpPrzed = foe.hp;
           if (foe.hit(new Phaser.Math.Vector2(shot.originX, shot.originY), now, instant ? foe.hp : shot.damage * this.essenceBoost(imb, foe), fx)) this.onEnemyKilled(foe);
-          else this.essenceHit(imb, foe, now);
+          else if (foe.hp < hpPrzed) this.essenceHit(imb, foe, now);
         } else if (this.training.hitAt(shot.x, shot.y, 8, shot.skill)) {
           done = true;
           this.practiced(shot.skill);

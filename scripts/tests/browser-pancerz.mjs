@@ -33,6 +33,35 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const g=fn=>page.evaluate(fn);
  await g(()=>{const s=window.__game.scene.getScene('game');s.noHurtUntil=Infinity;s.protectUntil=Infinity;window.__session.immortal=true;for(const e of s.enemies)e.destroy();s.enemies=[];});
 
+ // Dungeon combat uses the same hit and AI damage entry points as the surface.
+ const dungeon = await g(() => {
+   const scene = window.__game.scene.getScene('game'), hero = scene.player;
+   const check = (kind, rodzaj, zywiol, mocny = false, role, front = true) => {
+     const enemy = scene.spawnEnemy(hero.x, hero.y + 30, undefined, kind);
+     enemy.hp = 100;
+     enemy.rolaKrypty = role;
+     enemy.kierunekTarczy = 0;
+     const from = hero.facing.clone().set(enemy.x + (front ? 10 : -10), enemy.y);
+     const now = scene.time.now;
+     enemy.hit(from, now, 8, {rodzaj, zywiol, mocny, bohater: true});
+     const result = [100 - enemy.hp, enemy.ogluszony(now)];
+     scene.enemies.splice(scene.enemies.indexOf(enemy), 1);
+     enemy.destroy();
+     return result;
+   };
+   return [
+     check('szkielet', 'strzala', 'fizyczny', true),
+     check('szkielet', 'tepe', 'fizyczny'),
+     check('szkielet', 'ostrze', 'fizyczny', true),
+     check('zombie', 'magia', 'mroz', true),
+     check('szkielet', 'magia', 'mroz', true),
+     check('zombie', 'ostrze', 'fizyczny'),
+     check('szkielet', 'ostrze', 'fizyczny', false, 'tarczownik'),
+     check('szkielet', 'ostrze', 'fizyczny', false, 'tarczownik', false)
+   ];
+ });
+ assert.deepEqual(dungeon, [[0,false],[8,false],[6,true],[0,false],[0,false],[8,false],[1.5,false],[6,false]]);
+
  // Real live-combat entry point: compare identical physical hits with/without armour.
  const combat=await g(()=>{
   const s=window.__game.scene.getScene('game'),p=s.player,eq=window.__gear.equip;
