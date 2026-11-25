@@ -56,7 +56,8 @@ try {
   };
   for (let i = 0; i < ZESTAWY.length; i++) {
     await page.evaluate((z) => { Object.assign(window.__gear.equip, z); window.__game.scene.getScene('game').gearChanged(); }, ZESTAWY[i]);
-    await page.waitForTimeout(TELEFON ? 9000 : 6000);
+    await page.waitForTimeout(TELEFON ? 14000 : 10000);
+    console.log('klatka', await page.evaluate(() => { const l = window.__game.scene.getScene('game').ludzik3d; return [l.image?.texture.key?.slice(0, 60), l.image?.displayHeight]; }));
     const eq = await page.evaluate(() => window.__game.scene.getScene('game').ludzik3d.strojO.eq);
     console.log('zestaw', i, Object.fromEntries(Object.entries(eq).map(([k, v]) => [k, v.ksztalt ?? v.kolor])));
     for (const m of ['helm', 'bron', 'druga', 'zbroja', 'buty']) assert.ok(eq[m], `${m} has its look in set ${i}`);
@@ -70,10 +71,10 @@ try {
     const g = window.__game.scene.getScene('game'), p = g.player;
     const ids = ['helm_rogaty', 'kolczan_lowcy', 'kostur_krysztalowy', 'ksiega_grimuar', 'swietlisty', 'kolczan_zloty'];
     ids.forEach((id, i) => g.upuscPrzedmiot(p.x - 30 + i * 12, p.y + 22, id));
-    return ids.map((id) => { const it = g.pickups.find((q) => q.getData?.('kind') === `item:${id}`); return { id, tex: it?.texture.key, w: it?.displayWidth }; });
+    return ids.map((id) => { const it = g.pickups.find((q) => q.getData?.('kind') === `item:${id}`); return { id, tex: it?.texture.key, skala: it?.getData('skala') ?? null, w: it?.width }; });
   });
   console.log('lup', lup);
-  for (const l of lup) { assert.equal(l.tex, `ziemia-${l.id}`); assert.ok(l.w > 9 && l.w < 13, `${l.id} lies at world pixel size`); }
+  for (const l of lup) { assert.equal(l.tex, `ziemia-${l.id}`); assert.equal(l.w, 22, `${l.id}: a 22 px miniature`); }
   await page.waitForTimeout(1500);
   await page.evaluate(() => { const g = window.__game.scene.getScene('game'); g.player.y -= 0; });
   const r = await page.evaluate(() => { const g = window.__game.scene.getScene('game'), c = g.cameras.main, p = g.player, o = window.__game.canvas.getBoundingClientRect().width / window.__game.canvas.width;
