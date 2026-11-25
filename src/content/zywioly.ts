@@ -33,8 +33,8 @@ export const ODPORNOSCI: Partial<Record<RodzajWroga, Odpornosci>> = {
   // Driada to drewno i liście.
   driada: { ogien: 1.75, mroz: 0.75 },
   // Nieumarli: światło i ogień ich palą, zimno im nie szkodzi.
-  zombie: { ogien: 1.5, swiatlo: 1.5, mroz: 0.5 },
-  szkielet: { fizyczny: 0.75, swiatlo: 2, mroz: 0.5 },
+  zombie: { ogien: 1.5, swiatlo: 1.5, mroz: 0 },
+  szkielet: { fizyczny: 0.75, swiatlo: 2, mroz: 0 },
   upior: { fizyczny: 0.6, swiatlo: 2, magia: 1.25, mroz: 0.5 },
   // Woda: piorun przewodzi, ogień syczy i gaśnie, mróz ścina.
   blob: { piorun: 2, ogien: 0.5, mroz: 1.5 },
@@ -62,7 +62,7 @@ export function mnoznikZywiolu(o: Odpornosci | undefined, z: Zywiol) {
 
 /** Krótki dopisek przy liczbie obrażeń. */
 export function opisMnoznika(m: number): string | null {
-  if (m <= 0) return tx('ODPORNY', 'IMMUNE');
+  if (m <= 0) return tx('NIEWRAŻLIWY', 'IMMUNE');
   if (m < 0.95) return tx('odporny', 'resists');
   if (m > 1.05) return tx('SŁABOŚĆ!', 'WEAK!');
   return null;

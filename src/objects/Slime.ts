@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { tx } from '../i18n';
 import { comicHud } from '../ui/comicHud';
 import { comicBurst } from '../ui/comicBurst';
 import { ODPORNOSCI, mnoznikZywiolu, opisMnoznika, ZYWIOLY, type Odpornosci, type Zywiol } from '../content/zywioly';
@@ -104,6 +105,16 @@ export class Slime extends Phaser.GameObjects.Sprite {
   static tempo = 1;
   vel = new Phaser.Math.Vector2();
   hp: number;
+  poziomLochu = 0;
+  rolaKrypty?: 'tarczownik' | 'lucznik';
+  private kierunekTarczy = Math.PI / 2;
+
+  get nazwaWalki() {
+    const nazwa = this.rolaKrypty === 'tarczownik' ? tx('Szkielet tarczownik', 'Skeleton shieldbearer')
+      : this.rolaKrypty === 'lucznik' ? tx('Szkielet łucznik', 'Skeleton archer') : this.kind.name;
+    return this.poziomLochu ? nazwa + tx(' · poz. ', ' · Lv. ') + this.poziomLochu : nazwa;
+  }
+
   readonly kind: EnemyKind;
   /** Element multipliers (content/zywioly.ts); dragons get their species' table from SmokAI. */
   odpornosc?: Odpornosci;
@@ -145,7 +156,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   modelDeathAt = -Infinity;
   modelAttack?: { clip: string; start: number; contact: number; end: number; aim: number };
 
-  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
+  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut', readonly mnoznikHp = 1) {
     const k = ENEMY_KINDS[kind];
     // Wilk/warg have no art yet (łowiska test pilot): placeholder on the bandit's humanoid sheet, tinted –
     // same idiom the game already used for koziol/the grey dragon before their own art arrived.
@@ -159,7 +170,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.kind = k;
     this.kindId = kind;
     this.odpornosc = ODPORNOSCI[kind];
-    this.hp = k.hp;
+    this.hp = k.hp * mnoznikHp;
     this.hd = hd;
     if (detailedBlob) {
       // Keep the previous body's world width and feet/collision anchor. Static art supplied.
@@ -215,7 +226,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   makeBerserk(zycie: number, auraKolor: number, mrugMs: number, predkosc = 1) {
     this.berserk = true;
     this.pace = predkosc;
-    this.hp = Math.max(1, Math.round(this.kind.hp * zycie)); // whole blows: 3 → 2 for an imp
+    this.hp = Math.max(1, Math.round(this.kind.hp * zycie * this.mnoznikHp)); // whole blows: 3 → 2 for an imp
     const a = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
     a.setOrigin(this.originX, this.originY).setTint(auraKolor).setTintMode(Phaser.TintModes.FILL);
     a.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
@@ -269,7 +280,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (!show) { this.pasek?.setVisible(false); this.napis?.setVisible(false); return; }
     if (!this.pasek) {
       this.pasek = this.scene.add.graphics();
-      this.napis = this.scene.add.text(0, 0, this.kind.name, { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '6px', resolution: 4, color: '#fff2d0', stroke: '#1e1a24', strokeThickness: 2 }).setOrigin(0.5, 1);
+      this.napis = this.scene.add.text(0, 0, this.nazwaWalki, { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '6px', resolution: 4, color: '#fff2d0', stroke: '#1e1a24', strokeThickness: 2 }).setOrigin(0.5, 1);
       this.once(Phaser.GameObjects.Events.DESTROY, () => { this.pasek?.destroy(); this.napis?.destroy(); });
     }
     const top = this.y - Math.max(10, this.displayHeight * (this.model3d ? 0.62 * POWIEKSZENIE_3D : this.hd ? 0.62 : 0.7));
@@ -361,6 +372,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Call after think(); keeps the sprite facing its movement. */
   updateLook() {
+    if (this.rolaKrypty === 'tarczownik' && this.vel.lengthSq() > 1) this.kierunekTarczy = Math.atan2(this.vel.y, this.vel.x);
     if (!this.ownLook && !this.model3d) this.face();
   }
 
@@ -408,7 +420,13 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.walkaDo = now + 5000;
     // Elements and resistances (content/zywioly.ts): ×0 immune … ×2 weak.
     const zywiol = fx.zywiol ?? 'fizyczny';
-    const mnoznik = mnoznikZywiolu(this.odpornosc, zywiol);
+    let mnoznik = mnoznikZywiolu(this.odpornosc, zywiol);
+    const kosci = this.kindId === 'szkielet' && zywiol === 'fizyczny';
+    if (kosci && fx.rodzaj === 'strzala') mnoznik = 0;
+    if (kosci && fx.rodzaj === 'tepe') mnoznik = 1;
+    const kat = this.modelAttack?.aim ?? this.kierunekTarczy;
+    if (kosci && this.rolaKrypty === 'tarczownik' && !fx.mocny &&
+        Math.cos(Math.atan2(from.y - this.y, from.x - this.x) - kat) > 0.5) mnoznik *= 0.25;
     damage *= mnoznik;
     const prog = this.prog;
     if (prog) damage = Math.min(damage, Math.max(0, this.hp - prog.hp));
@@ -427,13 +445,16 @@ export class Slime extends Phaser.GameObjects.Sprite {
     const dopisek = fx.bohater ? opisMnoznika(mnoznik) : null;
     if (comicHud && live() && applied > 0) comicBurst(this.scene, this.x, this.y - 14, 'hit', applied, { mocny: fx.mocny, krytyk: fx.krytyk, dopisek, kolorDopisku: ZYWIOLY[zywiol].kolor, slaby: mnoznik > 1.05 });
     else if (comicHud && live() && dopisek && mnoznik <= 0) comicBurst(this.scene, this.x, this.y - 14, 'miss', 0, { dopisek, kolorDopisku: ZYWIOLY[zywiol].kolor });
-    if (fx.bohater && dopisek) this.scene.events.emit('zywiol', { cel: this, zywiol, mnoznik });
+    if (fx.bohater && dopisek && !kosci) this.scene.events.emit('zywiol', { cel: this, zywiol, mnoznik });
+    if (applied <= 0) return false;
     this.modelHitAt = now;
     this.chasing = true;
-    this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
-    this.knockUntil = now + 300;
-    const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 15 : ODRZUT / this.kind.scale);
-    this.vel.set(push.x, push.y);
+    if (fx.mocny || !live()) {
+      this.stunnedUntil = Math.max(this.stunnedUntil, now + 300);
+      this.knockUntil = now + 300;
+      const push = new Phaser.Math.Vector2(this.x - from.x, this.y - from.y).normalize().scale(this.heavy ? 0 : this.kindId === 'smok' ? 15 : ODRZUT / this.kind.scale);
+      this.vel.set(push.x, push.y);
+    }
 
     // One event for the presentation (walka/oprawa.ts: sparks, sound, hit stop, shake); the damage is already done.
     if (applied > 0) this.scene.events.emit('trafienie', { cel: this, x: this.x, y: this.y, zX: from.x, zY: from.y, ile: applied, zabity: this.isDead, fx } satisfies Trafienie);

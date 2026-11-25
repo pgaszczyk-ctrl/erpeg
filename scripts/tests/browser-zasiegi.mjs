@@ -85,7 +85,7 @@ try{for(const mobile of [false,true]){
  if(mobile){await page.locator('.hs-atak').tap();await page.locator('.hs-atak').tap();}else{await page.keyboard.press('Space');await page.keyboard.press('Space');}
  await page.waitForTimeout(100);
  const cooldown=await page.evaluate(()=>{const s=window.__game.scene.getScene('game');window.__game.scene.pause('game');return{shots:s.shots.length,ms:s.player.attackCooldown};});
- assert.equal(cooldown.shots,1,'two immediate real inputs produce one shot');assert.equal(cooldown.ms,650);
+ assert.equal(cooldown.shots,1,'two immediate real inputs produce one shot');assert.equal(cooldown.ms,Math.round(650 / 0.75));
  await page.screenshot({path:`work/zasiegi/${mobile?'phone':'desktop'}.png`});assert.deepEqual(errors,[]);
  results.push({mobile,...report,chase,cooldown});console.log('PASS',mobile?'phone':'desktop','ranges / strict boundary / slow arc / single target / walls / miss / distant chase / leash / retreat refresh / input cooldown');await context.close();
 }await writeFile('work/zasiegi/results.json',JSON.stringify(results,null,2));}finally{await browser.close();await server.httpServer.close();}

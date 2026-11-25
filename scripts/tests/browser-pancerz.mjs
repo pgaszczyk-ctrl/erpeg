@@ -33,6 +33,63 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const g=fn=>page.evaluate(fn);
  await g(()=>{const s=window.__game.scene.getScene('game');s.noHurtUntil=Infinity;s.protectUntil=Infinity;window.__session.immortal=true;for(const e of s.enemies)e.destroy();s.enemies=[];});
 
+ // Compare actual spawns on each difficulty, and both directions at the staircase.
+ const progression = await g(() => {
+   const scene = window.__game.scene.getScene('game'), session = window.__session;
+   const previousLevel = session.level, previousExp = session.exp, previousDungeon = scene.loch;
+   try {
+     const hp = [1, 2, 4].map(multiplier => {
+       session.level = {...previousLevel, hpWrogow: multiplier};
+       const e = scene.spawnEnemy(scene.player.x, scene.player.y, undefined, 'szkielet');
+       const value = e.hp / (e.power ?? 1);
+       scene.enemies.splice(scene.enemies.indexOf(e), 1);
+       e.destroy();
+       return value;
+     });
+     session.level = previousLevel;
+     scene.loch = {plan: {poziom: 1}};
+     session.exp = 600; // level 4
+     const blocked = scene.zaWczesnieNaZejscie(2);
+     scene.loch.plan.poziom = 2;
+     const canReturn = !scene.zaWczesnieNaZejscie(1);
+     scene.loch.plan.poziom = 1;
+     session.exp = 1000; // level 5
+     return {hp, blocked, canReturn, canEnter: !scene.zaWczesnieNaZejscie(2)};
+   } finally {
+     session.level = previousLevel; session.exp = previousExp; scene.loch = previousDungeon;
+   }
+ });
+ assert.deepEqual(progression, {hp:[10,20,40], blocked:true, canReturn:true, canEnter:true});
+
+ // Dungeon combat uses the same hit and AI damage entry points as the surface.
+ const dungeon = await g(() => {
+   const scene = window.__game.scene.getScene('game'), hero = scene.player;
+   const check = (kind, rodzaj, zywiol, mocny = false, role, front = true) => {
+     const enemy = scene.spawnEnemy(hero.x, hero.y + 30, undefined, kind);
+     enemy.hp = 100;
+     enemy.rolaKrypty = role;
+     enemy.kierunekTarczy = 0;
+     const from = hero.facing.clone().set(enemy.x + (front ? 10 : -10), enemy.y);
+     const now = scene.time.now;
+     enemy.hit(from, now, 8, {rodzaj, zywiol, mocny, bohater: true});
+     const result = [100 - enemy.hp, enemy.ogluszony(now)];
+     scene.enemies.splice(scene.enemies.indexOf(enemy), 1);
+     enemy.destroy();
+     return result;
+   };
+   return [
+     check('szkielet', 'strzala', 'fizyczny', true),
+     check('szkielet', 'tepe', 'fizyczny'),
+     check('szkielet', 'ostrze', 'fizyczny', true),
+     check('zombie', 'magia', 'mroz', true),
+     check('szkielet', 'magia', 'mroz', true),
+     check('zombie', 'ostrze', 'fizyczny'),
+     check('szkielet', 'ostrze', 'fizyczny', false, 'tarczownik'),
+     check('szkielet', 'ostrze', 'fizyczny', false, 'tarczownik', false)
+   ];
+ });
+ assert.deepEqual(dungeon, [[0,false],[8,false],[6,true],[0,false],[0,false],[8,false],[1.5,false],[6,false]]);
+
  // Real live-combat entry point: compare identical physical hits with/without armour.
  const combat=await g(()=>{
   const s=window.__game.scene.getScene('game'),p=s.player,eq=window.__gear.equip;

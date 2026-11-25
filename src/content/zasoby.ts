@@ -1,6 +1,8 @@
 // Stamina (sword/bow) and mana (magic) – the owner's test package of 26 Oct 2026 (walka/live.ts), numbers from
 // the brief „walka i łowiska” 3A, marked as TEST VALUES to tune. Time units: seconds of active play.
 
+import { WALKA } from './walka';
+
 export const ZASOBY = {
   /** Stamina: base maximum, + per character level above 1 („samo zwiększa ilość” – more on higher levels). */
   stamina: { max: 100, naPoziom: 4, regen: 15, regenNaPoziom: 0.5, opoznienieS: 1.5 },
@@ -40,7 +42,7 @@ export const ZASOBY = {
   zycieNaS: 0.5,
   zyciePoS: 4,
   /** Strong attack / skill cooldown (s), on top of its cost. */
-  mocnyCooldownS: 4,
+  mocnyCooldownS: 4 / WALKA.tempoGracza,
 };
 
 /** Maximum stamina / mana at a character level. */

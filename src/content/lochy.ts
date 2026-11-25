@@ -152,6 +152,8 @@ export const POZIOMY_LOCHU = {
   maks: 5,
   /** Potwory: życie i ciosy × (1 + mocNaPoziom × (poziom − 1)); ukryty jeszcze × mocUkrytego. */
   mocNaPoziom: 0.2,
+  /** Od średniej trudności pierwsze zejście w głąb wymaga poziomu bohatera 5. */
+  pierwszyProg: 5,
   mocUkrytego: 1.4,
   /** Skrzynia: złoto i EXP × (1 + nagrodaNaPoziom × (poziom − 1)). */
   nagrodaNaPoziom: 0.25,

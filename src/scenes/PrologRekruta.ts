@@ -278,7 +278,7 @@ export class PrologRekruta {
       // Same connected ground as the saved archer; no random respawn into a building.
       const x=at.x+(i?8:-8), y=at.y;
       const pos=this.h.city.isFree(x,y+4,3,2)?{x,y}:at;
-      const e=this.h.spawn(pos.x,pos.y); e.temp=true; e.missionId=PROLOG_ID; e.hp=Math.max(2,meleeDamage()*2); e.power=.5;
+      const e=this.h.spawn(pos.x,pos.y); e.temp=true; e.missionId=PROLOG_ID; e.hp=Math.max(2,meleeDamage()*2)*e.mnoznikHp; e.power=.5;
       this.enemies.set(e,i);
     }
   }

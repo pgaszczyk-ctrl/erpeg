@@ -562,7 +562,7 @@ export interface LochHost {
   wyjdz: () => void;
   /** The escape button (shown PRZYCISK s after arriving): asks, then runs up to the surface. */
   uciekaj: () => void;
-  spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean; hp: number; power?: number };
+  spawn: (x: number, y: number, kind: RodzajWroga, home: { x: number; y: number; r: number }) => Phaser.GameObjects.Sprite & { isDead: boolean; hp: number; power?: number; poziomLochu: number; rolaKrypty?: 'tarczownik' | 'lucznik' };
   toast: (t: string, ms?: number) => void;
   /** Numer logowania – stan lochu (pokonani, skrzynia) trwa tylko do następnego. */
   nonce: string | number;
@@ -1122,11 +1122,19 @@ export class LochWnetrze {
         }
       }
     });
+    const komnatyZLucznikiem = new Set<number>();
     this.lokatorzy.forEach((l, i) => {
+      // Assign roles before skipping defeated enemies so revisits keep the same roster.
+      const obstawa = p.rodzaj === 'krypta' && p.poziom >= 3 && !l.straznik && (l.kind === 'zombie' || l.kind === 'szkielet');
+      const lucznik = obstawa && p.poziom >= 5 && !komnatyZLucznikiem.has(l.komnata);
+      if (lucznik) komnatyZLucznikiem.add(l.komnata);
       if (this.stan.zabici.has(i)) return;
       const k = p.komnaty[l.komnata];
       const R = Math.max(k.x1 - k.x0, k.y1 - k.y0) * T * 0.9 + 4 * T;
-      const e = this.h.spawn(l.x, l.y, l.kind, { x: (k.cx + 0.5) * T, y: (k.cy + 0.5) * T, r: R });
+      const e = this.h.spawn(l.x, l.y, lucznik ? 'szkielet' : l.kind, { x: (k.cx + 0.5) * T, y: (k.cy + 0.5) * T, r: R });
+      if (!p.tutorial) e.poziomLochu = p.poziom;
+      if (lucznik) e.rolaKrypty = 'lucznik';
+      else if (obstawa && l.kind === 'szkielet') e.rolaKrypty = 'tarczownik';
       // Jaskinia pod wielkim obozem: groźniejsza niż krypta (właściciel: „trudniejsze potworki”) – życie i ciosy ×1,4.
       // Niżej położone poziomy – coraz groźniej; ukryty najgroźniej.
       const moc = (p.rodzaj === 'jaskinia' && !p.tutorial ? 1.4 : 1) * (1 + POZIOMY_LOCHU.mocNaPoziom * (p.poziom - 1)) * (p.ukrytyPoziom ? POZIOMY_LOCHU.mocUkrytego : 1);
