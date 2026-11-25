@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const reuse = require('./reuse-deploy-artifact.cjs');
 const source = fs.readFileSync('.github/scripts/reuse-deploy-artifact.cjs', 'utf8');
-const current = /const REUSE_WORKFLOW = '([^']+)'/.exec(source)[1];
+const previous = /const REUSE_WORKFLOW = '([^']+)'/.exec(source)[1];
+const current = /const PAGES_WAIT_WORKFLOW = '([^']+)'/.exec(source)[1];
 const legacy = /const LEGACY_WORKFLOW = '([^']+)'/.exec(source)[1];
 const workflow = fs.readFileSync('.github/workflows/deploy.yml');
 assert.equal(crypto.createHash('sha1').update(`blob ${workflow.length}\0`).update(workflow).digest('hex'), current, 'reviewed migration must match the exact workflow');
@@ -18,7 +19,7 @@ async function check(kind, options = {}) {
     actions: {
       listWorkflowRuns: async () => ({ data: { workflow_runs: [{ id: 10, head_sha: 'old', conclusion: options.conclusion ?? 'success' }] } }),
       listWorkflowRunArtifacts: async () => ({ data: { artifacts: [{ name: kind, expired: !!options.expired, size_in_bytes: 100 }] } }),
-      listJobsForWorkflowRun: async () => ({ data: { jobs: [{ name: kind, status: 'completed', conclusion: options.job ?? 'success' }] } }),
+      listJobsForWorkflowRun: async () => ({ data: { jobs: [{ name: kind, status: 'completed', conclusion: options.job ?? 'success' }, ...(options.jobs ?? [])] } }),
     },
   } };
   const result = await reuse({ github, kind, context: { repo: { owner: 'owner', repo: 'game' }, sha: 'new', runId: 20, ref: 'refs/heads/test' },
@@ -41,6 +42,11 @@ async function check(kind, options = {}) {
   assert.equal(await check('test', { job: 'failure' }), null);
   assert.equal(await check('test', { status: 'diverged' }), null);
   assert.equal(await check('production', { conclusion: 'cancelled' }), null);
+  assert.equal(await check('production', { recipe: previous, conclusion: 'failure' }), null);
+  assert.equal(await check('production', { recipe: previous, conclusion: 'failure', jobs: [
+    { name: 'test', status: 'completed', conclusion: 'success' },
+    { name: 'publish', status: 'completed', conclusion: 'failure' },
+  ] }), 10, 'the publish-only update can reuse both checked builds from a failed publication');
   assert.equal(await check('test', { conclusion: 'cancelled' }), 10, 'completed test survives cancellation of the unrelated production build');
   console.log('PASS artifact provenance, exact recipe, changed inputs, renamed inputs, incomplete diff, expiry and failed jobs');
 })().catch(e => { console.error(e); process.exitCode = 1; });

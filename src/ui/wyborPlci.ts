@@ -13,7 +13,7 @@ export interface WyborPlci {
 }
 
 /** `imie`: the name field – while it still holds the ready-made name, it changes to one of the chosen gender. */
-export function wyborPlci(imie?: HTMLInputElement): WyborPlci {
+export function wyborPlci(imie?: HTMLInputElement, losuj: (p: Plec) => string = losoweImie): WyborPlci {
   styl();
   let wybrana: Plec | null = null;
   let gotowe = imie?.value ?? '';
@@ -44,7 +44,7 @@ export function wyborPlci(imie?: HTMLInputElement): WyborPlci {
       }
       box.classList.remove('m-plec-brak');
       // An untouched ready-made name follows the gender (a woman isn't offered „Zbyszko”).
-      if (imie && imie.value === gotowe) { gotowe = losoweImie(p); imie.value = gotowe; }
+      if (imie && imie.value === gotowe) { gotowe = losuj(p); imie.value = gotowe; }
     };
     przyciski[p] = b;
     rzad.append(b);

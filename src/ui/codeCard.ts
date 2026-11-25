@@ -134,7 +134,7 @@ async function pictureCanvas(name: string, code: string, _link: string) {
   g.textAlign = 'center';
   g.fillStyle = '#ffffff';
   g.font = '20px monospace';
-  g.fillText(name, 180, 76);
+  g.fillText(name, 180, 76, c.width - 28);
   g.fillStyle = '#fff2a8';
   g.font = 'bold 40px monospace';
   g.fillText(prettyCode(code), 180, 140);

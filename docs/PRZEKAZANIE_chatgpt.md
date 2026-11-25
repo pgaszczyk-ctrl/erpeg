@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-25 — imię i tytuł postaci
+
+- Kreator proponuje jedną pełną nazwę w polu Imię. Są 40 tytułów PL/EN, a wybór płci odświeża tylko podpowiedź, której gracz nie edytował. Cała nazwa jest zapisywana i służy do wczytania postaci.
+- Zmiany: `src/content/tytulyPostaci.ts`, `src/ui/{menu,wyborPlci,codeCard}.ts`, `docs/sql/character-name-40.sql`. Test bazy w transakcji potwierdził utworzenie i zalogowanie z nazwą długości 40 znaków oraz odrzucenie 41 znaków. Transakcję wycofano.
+- Playwright sprawdził edycję podpowiedzi, zapis i ponowne wczytanie w PL na komputerze i w EN na telefonie 390 × 844. Połączenie z grą przechwycono w przeglądarce.
+
 ## 2026-11-20 — próba 2 strażnika, 50-G001
 
 - Oddano dwie klatki postoju (przód i lewo), maskę części, maskę materiałów, punkty mocowania i podglądy w `docs/poczta/od-grafika/50_straznik_proba2/`. Odpowiedź dla programisty jest w `docs/poczta/od-grafika/2026-11-20_50-G001_straznik_proba2.md`.
