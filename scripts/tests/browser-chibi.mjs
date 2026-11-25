@@ -35,7 +35,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${URL0}?lang=pl&ostrosc=1&chibi=1&live=0`);
   await page.getByRole('button', { name: 'Nowa postać' }).click();
-  await page.getByPlaceholder('np. Zbyszko').fill('Zbyszko');
+  await page.getByPlaceholder(/np\. (Zbyszko|Dobrawa)/).fill('Zbyszko');
   await page.getByText('Mężczyzna', { exact: false }).first().click();
   await page.getByRole('button', { name: 'Stwórz postać' }).click();
   await page.waitForTimeout(3000); await page.screenshot({ path: `work/chibi/po-utworzeniu${sfx}.png` });

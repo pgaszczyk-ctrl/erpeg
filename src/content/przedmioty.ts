@@ -119,8 +119,15 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kusza', nazwa: 'Kusza', miejsce: 'bron', rodzaj: 'luk', amunicja: 'belty', moc: 10, cena: 25000, wytrzymalosc: 1200 },
   { id: 'pistolet_parowy', nazwa: 'Pistolet parowy', miejsce: 'bron', rodzaj: 'luk', amunicja: 'naboje', moc: 14, cena: 60000, wytrzymalosc: 1400 },
   { id: 'rozdzka', nazwa: 'Różdżka', miejsce: 'bron', rodzaj: 'magia', moc: 4, cena: 2000, gdzie: 'biblioteka' },
+  // Owner's new items (25 Nov 2026, artist pictures with the request for on-hero miniatures). Numbers temporary.
+  { id: 'kostur_krysztalowy', nazwa: 'Kryształowy kostur', miejsce: 'bron', rodzaj: 'magia', moc: 6, cena: 9000, gdzie: 'biblioteka', opis: 'Kostur z fioletowym kryształem w drewnianych szponach.' },
   { id: 'kula', nazwa: 'Szklana kula', miejsce: 'dystans', rodzaj: 'magia', moc: 3, cena: 9000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są mocniejsze.' },
   { id: 'ksiega', nazwa: 'Księga zaklęć', miejsce: 'dystans', rodzaj: 'magia', moc: 6, cena: 26000, gdzie: 'biblioteka', opis: 'W drugiej ręce: czary z różdżki są dużo mocniejsze.' },
+  { id: 'ksiega_grimuar', nazwa: 'Fioletowy grimuar', miejsce: 'dystans', rodzaj: 'magia', moc: 8, cena: 40000, gdzie: 'biblioteka', opis: 'Okuty mosiądzem, z ametystem w gwieździe. W drugiej ręce: czary z różdżki są bardzo mocne.' },
+  // Quivers (owner, 25 Nov 2026): in the second hand, worn on the back; their `moc` adds to bow shots (like a magic
+  // item adds to spells). rodzaj 'luk' keeps them out of the shield's defence. Numbers temporary.
+  { id: 'kolczan_lowcy', nazwa: 'Kołczan łowcy', miejsce: 'dystans', rodzaj: 'luk', moc: 1, cena: 1200, opis: 'Zielone płótno z łatą i skórzane okucia. W drugiej ręce: strzały z łuku są mocniejsze.' },
+  { id: 'kolczan_zloty', nazwa: 'Złoty kołczan', miejsce: 'dystans', rodzaj: 'luk', moc: 3, cena: 8000, opis: 'Mosiężna tuba ze zdobionymi okuciami. W drugiej ręce: strzały z łuku są dużo mocniejsze.' },
   // Pancerz sumuje się i zmniejsza obrażenia fizyczne (content/pancerz.ts).
   // Tarcze (paczka ikony12 B2): w drugiej ręce, dodają obronę jak zbroja. Liczby tymczasowe.
   { id: 'tarcza_drewniana', nazwa: 'Tarcza drewniana', miejsce: 'dystans', moc: 1, cena: 700, opis: 'Okrągła, z desek. W drugiej ręce: +1 do obrony.' },
@@ -129,6 +136,7 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'kolczuga', nazwa: 'Kolczuga', miejsce: 'zbroja', moc: 4, cena: 9600 },
   { id: 'skorzany_helm', nazwa: 'Skórzany hełm', miejsce: 'helm', moc: 1, cena: 800 },
   { id: 'zelazny_helm', nazwa: 'Żelazny hełm', miejsce: 'helm', moc: 2, cena: 5200 },
+  { id: 'helm_rogaty', nazwa: 'Złoty rogaty hełm', miejsce: 'helm', moc: 6, cena: 15000, opis: 'Złocisty, z nosalem i dwoma białymi rogami.' },
   // Nakrycia głowy widać na ludziku (rysunki w look.ts).
   { id: 'kapelusz', nazwa: 'Kapelusz Robin Hooda', miejsce: 'helm', moc: 1, cena: 900 },
   { id: 'czapka_maga', nazwa: 'Magiczna czapka', miejsce: 'helm', moc: 1, cena: 2500, gdzie: 'biblioteka' },
@@ -178,7 +186,7 @@ const WYMAGANIA_BRONI: Record<string, number> = {
   zelazny: 3, miecz_mosiezny: 4, stalowy: 5, szabla_hartowana: 8, rycerski: 10,
   karabela_damascenska: 12, szklany_miecz: 10, siekiera: 1,
   luk: 1, luk_refleksyjny: 5, dlugi_luk: 7, kusza: 10, pistolet_parowy: 12,
-  rozdzka: 1, swietlisty: 1, gromowladny: 6, excalibur: 5, karabin_trybunal: 12,
+  rozdzka: 1, kostur_krysztalowy: 4, swietlisty: 1, gromowladny: 6, excalibur: 5, karabin_trybunal: 12,
 };
 for (const p of PRZEDMIOTY) if (p.miejsce === 'bron') p.wymaganySkill = WYMAGANIA_BRONI[p.id] ?? 1;
 

@@ -17,6 +17,8 @@ export const ITEM_PICTURES = [
   'miecz_rekruta', 'luk_rekruta', 'rozdzka_szkolna', 'kapelusz_szkolny', 'karabin_trybunal', 'klasztorny_pochlaniacz',
   'plaszcz_cechmistrza', 'buty_biegacza', 'gwizdek_maszynisty', 'kluczyk_nakrecacz', 'kieszonkowy_chronometr',
   'zegarek_czeladnika', 'filtr_aetherowy', 'zlota_pilka', 'paczek', 'hamburger',
+  // Owner's new items (25 Nov 2026).
+  'kostur_krysztalowy', 'kolczan_zloty', 'kolczan_lowcy', 'helm_rogaty', 'ksiega_grimuar',
 ];
 // Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items.
 // (Order 45 D gave the recruit kit its own pictures; no stand-ins left.)
@@ -47,6 +49,7 @@ const HD = new Set([
   'strzaly', 'belty', 'naboje', 'ladunek_magii', 'drewno', 'chrust', 'kij', 'kilof', 'wegiel', 'ruda_zelaza', 'miedz',
   'piasek', 'odlamek_komety', 'sztaba_zelaza', 'sztaba_stali', 'sztaba_mosiadzu', 'szklo', 'ogniwo', 'ogniwo_puste',
   'diament', 'rower', 'hulajnoga_parowa', 'ziemniak', 'kapusta', 'burak', 'dynia', 'grupa_owoce', 'grupa_warzywa', 'grupa_grzyby',
+  'kostur_krysztalowy', 'kolczan_zloty', 'kolczan_lowcy', 'helm_rogaty', 'ksiega_grimuar',
 ]);
 
 /** The file Phaser loads as `item-<id>` (small textures: the pixel export, not the smooth HD picture). */
