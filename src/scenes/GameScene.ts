@@ -110,7 +110,7 @@ import { WORKSHOP_LOCATIONS } from '../content/warsztaty-miejsca';
 import { PRZEDMIOTY, NAUKA_MAGII, UMIEJETNOSCI, SWIATLO, PLECAK, MAKS_POZIOM, PIORUNY, type Przedmiot, type Umiejetnosc } from '../content/przedmioty';
 import {
   gear, item, addItem, addFruit, fruitCount, fruitValue, sellAllFruit, practice, cooldown, skillLevel, skillProgress,
-  weaponRequirement, meleeDamage, shotDamage, zywiolBroni, specjalnyBroni, lancuchBroni, hitChance, strongFactor, instaKillChance, rangedWeapon, weaponEffect, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
+  weaponRequirement, meleeDamage, shotDamage, zywiolBroni, specjalnyBroni, lancuchBroni, hitChance, strongFactor, instaKillChance, rangedWeapon, efektBroni, eatFruit as eatInventoryFruit, blockChance, owns, takeFruit, takeGroup, totalFruit, groupCount, luckyCoins, groupValue, sellGroup, imbueOf, addEssence,
   condition, isBroken, useWeapon, repairCost, repair, repairable, ammoOf, takeAmmo, ammoRoom, addAmmo, ownedAmmo, axe, ownsAxe, pickaxe,
   goodsByKind, takeItem, gearLifeBonus, gearSpeedBonus, gearAimBonus, foodCount, nextFood,
 } from '../inventory';
@@ -1618,14 +1618,14 @@ export class GameScene extends Phaser.Scene {
 
   /** Mythic weapons: the glowing sword shines, the thunder sword strikes by itself. */
   private updateMythic(now: number) {
-    const fx = weaponEffect();
-    this.glow.setVisible(fx === 'swiatlo');
-    if (fx === 'swiatlo') {
+    const swieci = efektBroni('swiatlo');
+    this.glow.setVisible(swieci);
+    if (swieci) {
       this.glow.setPosition(this.player.x, this.player.y);
       this.glow.setAlpha(0.55 + 0.15 * Math.sin(now / 250));
       this.glow.setDepth(this.player.y - 1);
     }
-    if (fx !== 'pioruny' || now - this.lastBolt < PIORUNY.co) return;
+    if (!efektBroni('pioruny') || now - this.lastBolt < PIORUNY.co) return;
     const range = PIORUNY.zasiegM * PX_PER_M;
     // The weakest enemy in reach (so strikes finish foes off), nearest first on a tie.
     let foe: Enemy | null = null;
@@ -1696,7 +1696,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.vision.length || (ruszyl && teraz - this.wzrokAt >= FOG_ODSTEP_MS)) {
       this.wzrokAt = teraz;
       this.seenNow = new Set();
-      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, weaponEffect() === 'swiatlo' ? SWIATLO : 1, this.seenNow, session.level.tyl, this.viewCone());
+      this.vision = visionPolygon(this.city, this.explored, p.x, p.y + 2, a, efektBroni('swiatlo') ? SWIATLO : 1, this.seenNow, session.level.tyl, this.viewCone());
       for (const b of this.seenNow) {
         if (this.seenEver.has(b)) continue;
         this.seenEver.add(b);

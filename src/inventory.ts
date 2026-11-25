@@ -114,7 +114,7 @@ export function loadGear(save: {
   g.ammo = { strzaly: fill(save.strzaly, STRZALY.naStart), belty: fill(save.belty, 0), naboje: fill(save.naboje, 0) };
   // Bows and wands used to go in the second hand; now they are held in the main hand.
   const off = item(g.equip.dystans);
-  if (off && off.miejsce === 'bron' && g.bag.length < PLECAK.miejsc) {
+  if (off && off.miejsce === 'bron' && !jednoreczna(off) && g.bag.length < PLECAK.miejsc) {
     g.bag.push({ item: off.id });
     g.equip.dystans = null;
   }
@@ -248,10 +248,46 @@ export function gearLifeBonus() {
   return Object.values(gear.equip).filter((id) => item(id)?.efekt === 'zycie').length * ZYCIE_PRZEDMIOTU;
 }
 
-/** Special power of the weapon in hand (mythic items). */
+/**
+ * Dual wielding (owner, 25 Nov 2026: „zezwalaj na offhand drugiej broni jednoręcznej – 2 miecze, 2 pistolety, pistolet
+ * i tarcza; nie pokazujemy co robi, tylko dodajemy bonusy za to co druga broń robi w całości + 50% obrażeń broni z drugiej
+ * ręki”). One-handed = a melee weapon (not a tool, not the stick), a steam pistol or a wand; bows and crossbows need
+ * both hands. The second weapon works only while the main hand is one-handed too.
+ */
+export const DRUGA_REKA_UDZIAL = 0.5;
+export function jednoreczna(p: Przedmiot | undefined): boolean {
+  if (!p || p.miejsce !== 'bron' || p.narzedzie || p.pojazd || p.id === 'kijek') return false;
+  return !p.rodzaj || p.rodzaj === 'magia' || p.amunicja === 'naboje';
+}
+
+/** The weapon in the second hand when it fights along (main hand one-handed or the stick, requirements met). */
+export function bronDrugiejReki(): Przedmiot | undefined {
+  const off = item(gear.equip.dystans);
+  if (!off || off.miejsce !== 'bron' || !jednoreczna(off) || weaponRequirement(off.id)) return undefined;
+  const main = item(gear.equip.bron);
+  if (main && main.id !== 'kijek' && !jednoreczna(main)) return undefined;
+  return off;
+}
+
+/** The weapon(s) whose powers work now: the main hand, then a second-hand weapon. */
+function bronieWRekach(): string[] {
+  const off = bronDrugiejReki();
+  return [gear.equip.bron, off?.id].filter((x): x is string => !!x);
+}
+
+/** Special power of the weapon in hand (mythic items); a second-hand weapon's when the main one has none. */
 export function weaponEffect() {
-  if (weaponRequirement(gear.equip.bron) || powerRequirement(gear.equip.bron)) return undefined;
-  return item(gear.equip.bron)?.efekt;
+  for (const id of bronieWRekach()) {
+    if (weaponRequirement(id) || powerRequirement(id)) continue;
+    const e = item(id)?.efekt;
+    if (e) return e;
+  }
+  return undefined;
+}
+
+/** Does either weapon in hand have this power working now (glow from one sword, lightning from the other)? */
+export function efektBroni(e: NonNullable<Przedmiot['efekt']>) {
+  return bronieWRekach().some((id) => !weaponRequirement(id) && !powerRequirement(id) && item(id)?.efekt === e);
 }
 
 /** The skill an item's power depends on: its weapon kind; shields and other second-hand gear follow the melee skill. */
@@ -269,7 +305,11 @@ export function powerRequirement(id: string | null | undefined): string | null {
 }
 
 /** The element of the weapon in hand: an essence rubbed in wins, then the weapon's own (only while its power works). */
-export function zywiolBroni(id: string | null | undefined = gear.equip.bron): Zywiol | undefined {
+export function zywiolBroni(id?: string | null): Zywiol | undefined {
+  if (id === undefined) return zywiolJednej(gear.equip.bron) ?? zywiolJednej(bronDrugiejReki()?.id);
+  return zywiolJednej(id);
+}
+function zywiolJednej(id: string | null | undefined): Zywiol | undefined {
   const e = imbueOf(id)?.e;
   if (e?.zywiol) return e.zywiol;
   const p = item(id);
@@ -278,14 +318,22 @@ export function zywiolBroni(id: string | null | undefined = gear.equip.bron): Zy
 }
 
 /** The weapon's own special attack (Excalibur's Blask), only while its power works. */
-export function specjalnyBroni(id: string | null | undefined = gear.equip.bron): IdUmiejetnosci | undefined {
+export function specjalnyBroni(id?: string | null): IdUmiejetnosci | undefined {
+  if (id === undefined) return specjalnyJednej(gear.equip.bron) ?? specjalnyJednej(bronDrugiejReki()?.id);
+  return specjalnyJednej(id);
+}
+function specjalnyJednej(id: string | null | undefined): IdUmiejetnosci | undefined {
   const p = item(id);
   if (!p?.specjalny || weaponRequirement(id) || mocUspiona(id)) return undefined;
   return p.specjalny;
 }
 
 /** Chain lightning (Gromowładny): its numbers when the hero's magic is high enough, else undefined. */
-export function lancuchBroni(id: string | null | undefined = gear.equip.bron) {
+export function lancuchBroni(id?: string | null): Przedmiot['lancuch'] {
+  if (id === undefined) return lancuchJednej(gear.equip.bron) ?? lancuchJednej(bronDrugiejReki()?.id);
+  return lancuchJednej(id);
+}
+function lancuchJednej(id: string | null | undefined): Przedmiot['lancuch'] {
   const p = item(id);
   if (!p?.lancuch || weaponRequirement(id) || mocUspiona(id)) return undefined;
   return skillLevel('magia') >= p.lancuch.magia ? p.lancuch : undefined;
@@ -311,7 +359,17 @@ export function ustawPoziomBroni(provider: () => number) { poziomBroni = provide
 /** Without a random source return the stable mean for HUD, enemy scaling and previews. */
 export function meleeDamage(los?: () => number) {
   if (weaponRequirement(gear.equip.bron)) return 0;
-  const p = item(gear.equip.bron);
+  return ciosJednej(item(gear.equip.bron), los) + drugaRekaDodaje(los);
+}
+
+/** Half of what the second-hand weapon would deal on its own (its own skill), added to every blow and shot. */
+function drugaRekaDodaje(los?: () => number) {
+  const off = bronDrugiejReki();
+  if (!off) return 0;
+  return DRUGA_REKA_UDZIAL * (off.rodzaj ? strzalJednej(off, los) : ciosJednej(off, los));
+}
+
+function ciosJednej(p: Przedmiot | undefined, los?: () => number) {
   // A bow or wand used as a club, or a broken sword, is no better than a stick.
   if (p && !p.rodzaj && !isBroken(p.id)) {
     const damage = obrazeniaBroni(p, poziomBroni(), skillLevel('miecz') - 1, los);
@@ -324,6 +382,10 @@ export function meleeDamage(los?: () => number) {
 /** A shot of the bow / a spell of the wand in hand (a magic item in the other hand adds its power to spells). */
 export function shotDamage(weapon: Przedmiot, los?: () => number) {
   if (weaponRequirement(weapon.id)) return 0;
+  return strzalJednej(weapon, los) + (weapon.id === gear.equip.dystans ? 0 : drugaRekaDodaje(los));
+}
+
+function strzalJednej(weapon: Przedmiot, los?: () => number) {
   const skill: Umiejetnosc = weapon.rodzaj === 'magia' ? 'magia' : 'luk';
   if (!isBroken(weapon.id)) {
     const damage = obrazeniaBroni(weapon, poziomBroni(), skillLevel(skill) - 1, los);
@@ -441,7 +503,7 @@ export function rangedWeapon(): Przedmiot | null {
 export function defense() {
   // A shield in the second hand (no `rodzaj`: not a magic item) counts like armour.
   const off = item(gear.equip.dystans);
-  const shield = off && !off.rodzaj ? off.moc : 0;
+  const shield = off && off.miejsce === 'dystans' && !off.rodzaj ? off.moc : 0;
   // Talismans with the 'obrona' effect count too (Filtr aetherowy).
   const charms = TALIZMANY.reduce((sum, m) => sum + (item(gear.equip[m])?.efekt === 'obrona' ? item(gear.equip[m])!.moc : 0), 0);
   return (['zbroja', 'helm', 'buty'] as Miejsce[]).reduce((sum, m) => sum + (item(gear.equip[m])?.moc ?? 0), shield + charms);
@@ -668,6 +730,7 @@ export function canImbue(id: string | null | undefined) {
 export function fits(id: string, m: Miejsce) {
   const p = item(id);
   if (!p || p.pojazd || p.leczenie) return false;
+  if (m === 'dystans' && jednoreczna(p)) return true;
   return TALIZMANY.includes(p.miejsce) ? TALIZMANY.includes(m) : p.miejsce === m;
 }
 

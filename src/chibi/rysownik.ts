@@ -235,7 +235,8 @@ function koloryEkwipunku(eq) {
   const b = eq.bron;
   if (b) { kd.eqB = b.kolor; kd.eqB2 = b.kolor2 || '#7b4a2b'; kd.eqBz = b.zdobienie || kd.eqB2; kd.eqBk = b.krysztal || '#9fd0ff'; }
   const d = eq.druga;
-  if (d) { kd.eqD = d.kolor; kd.eqD2 = d.kolor2 || ciemniej(d.kolor); kd.eqDz = d.zdobienie || kd.eqD2; kd.eqDc = ciemniej(d.kolor, -0.1); kd.eqStrz = d.strzaly || '#efe3c8'; }
+  if (d?.typ === 'bron') { kd.eqL = d.kolor; kd.eqL2 = d.kolor2 || '#7b4a2b'; kd.eqLz = d.zdobienie || kd.eqL2; kd.eqLk = d.krysztal || '#9fd0ff'; }
+  else if (d) { kd.eqD = d.kolor; kd.eqD2 = d.kolor2 || ciemniej(d.kolor); kd.eqDz = d.zdobienie || kd.eqD2; kd.eqDc = ciemniej(d.kolor, -0.1); kd.eqStrz = d.strzaly || '#efe3c8'; }
   const z = eq.zbroja;
   if (z) { kd.eqZ = z.ksztalt === 'plaszcz' ? (z.kolor2 || '#3a2a3a') : z.kolor; kd.eqZ2 = z.kolor2 || ciemniej(z.kolor); kd.eqP = z.kolor; kd.eqPz = z.zdobienie || '#d0a548'; }
   const u = eq.buty;
@@ -276,60 +277,61 @@ function helmEq(add, h, hy, hr) {
   }
 }
 
-function bronEq(add, b, d, w, ty) {
+function bronEq(add, b, d, w, ty, lewa = false) {
+  const M = lewa ? { B: 'eqL', B2: 'eqL2', Bz: 'eqLz', Bk: 'eqLk' } : { B: 'eqB', B2: 'eqB2', Bz: 'eqBz', Bk: 'eqBk' }, sx = lewa ? -1 : 1;
   const ks = b.ksztalt, dl = b.dl || 1, sz = b.szer || 1, sw = b.poswiata ? { swieci: b.poswiata } : {};
   // Spoczynek: wielka głowa chibi zasłania wszystko, co stoi pionowo przy dłoni – broń opuszczona na bok,
   // kostur obok dłoni i wyższy od głowy, różdżka wysunięta skośnie.
   const idle = !w;
   if (!w) {
-    if (ks === 'kostur' || ks === 'galaz') { d = [d[0] + 1.5, d[1], d[2]]; w = [0, 1, 0]; }
-    else if (ks === 'rozdzka') w = n3([0.45, 1, 0.1]);
-    else w = n3([0.5, -0.8, 0.3]);
+    if (ks === 'kostur' || ks === 'galaz') { d = [d[0] + 1.5 * sx, d[1], d[2]]; w = [0, 1, 0]; }
+    else if (ks === 'rozdzka') w = n3([0.45 * sx, 1, 0.1]);
+    else w = n3([0.5 * sx, -0.8, 0.3]);
   }
   const pt = k => [d[0] + w[0] * k, d[1] + w[1] * k, d[2] + w[2] * k];
   const pr = Math.abs(w[1]) < 0.95 ? n3([w[2], 0, -w[0]]) : [1, 0, 0];
   const bok = (q, s) => [q[0] + pr[0] * s, q[1] + pr[1] * s, q[2] + pr[2] * s];
   if (ks === 'miecz' || ks === 'szabla') {
-    add(kaps(pt(-0.9), pt(0.4), 0.38), 'eqB2');
+    add(kaps(pt(-0.9), pt(0.4), 0.38), M.B2);
     const g = pt(0.6), j = 1.2 * Math.min(1.25, sz);
-    add(kaps(bok(g, -j), bok(g, j), 0.36), 'eqBz');
-    if (ks === 'miecz') add(kaps(pt(0.9), pt(0.9 + 6.3 * dl), 0.42 * sz), 'eqB', Object.assign({ cienka: 1 }, sw));
+    add(kaps(bok(g, -j), bok(g, j), 0.36), M.Bz);
+    if (ks === 'miecz') add(kaps(pt(0.9), pt(0.9 + 6.3 * dl), 0.42 * sz), M.B, Object.assign({ cienka: 1 }, sw));
     else for (let i = 0; i < 5; i++) { const a = i / 5, a1 = (i + 1) / 5;
-      add(kaps(bok(pt(0.9 + a * 5.6 * dl), a * a * 1.6), bok(pt(0.9 + a1 * 5.6 * dl), a1 * a1 * 1.6), 0.42 - a * 0.12), 'eqB', Object.assign({ cienka: 1 }, sw)); }
-    add(sph(pt(-1.05), 0.45), 'eqBz');
+      add(kaps(bok(pt(0.9 + a * 5.6 * dl), a * a * 1.6), bok(pt(0.9 + a1 * 5.6 * dl), a1 * a1 * 1.6), 0.42 - a * 0.12), M.B, Object.assign({ cienka: 1 }, sw)); }
+    add(sph(pt(-1.05), 0.45), M.Bz);
   } else if (ks === 'kostur' || ks === 'rozdzka' || ks === 'galaz') {
     const krotka = ks === 'rozdzka';
     const k0 = idle ? (krotka ? -1.3 : -(d[1] - 0.6)) : (krotka ? -1.2 : -4.5);
     const k1 = idle ? (krotka ? 4.4 : ty + 9.0 - d[1]) : (krotka ? 3.2 : 3.6);
-    add(kaps(pt(k0), pt(k1), krotka ? 0.4 : 0.48), 'eqB', { cienka: 1 });
-    if (b.kolor2 && !krotka) add(kaps(pt(-1.4), pt(1.0), 0.6), 'eqB2');
+    add(kaps(pt(k0), pt(k1), krotka ? 0.4 : 0.48), M.B, { cienka: 1 });
+    if (b.kolor2 && !krotka) add(kaps(pt(-1.4), pt(1.0), 0.6), M.B2);
     if (ks === 'galaz') {
-      add(kaps(pt(k1 - 1.7), bok(pt(k1 - 0.1), -1.6), 0.35), 'eqB');
+      add(kaps(pt(k1 - 1.7), bok(pt(k1 - 0.1), -1.6), 0.35), M.B);
       add(elip(bok(pt(k1 + 0.5), -2.3), [1.2, 0.7, 0.5]), 'lisc'); add(elip(bok(pt(k1 + 0.9), 0.9), [1.2, 0.7, 0.5]), 'lisc');
     } else if (b.krysztal) {
-      if (b.zdobienie) add(sph(pt(k1 - 0.2), 0.62), 'eqBz');
-      if (!krotka) for (const s of [-1, 1]) add(stozek(bok(pt(k1 - 0.2), s * 0.5), bok(pt(k1 + 1.6), s * 1.25), 0.38, 0.2), 'eqB');
+      if (b.zdobienie) add(sph(pt(k1 - 0.2), 0.62), M.Bz);
+      if (!krotka) for (const s of [-1, 1]) add(stozek(bok(pt(k1 - 0.2), s * 0.5), bok(pt(k1 + 1.6), s * 1.25), 0.38, 0.2), M.B);
       const r = krotka ? 0.75 : 1.05;
-      add(stozek(pt(k1 + 0.1), pt(k1 + 1.4), r * 0.45, r), 'eqBk', Object.assign({ fasety: true }, sw));
-      add(stozek(pt(k1 + 1.4), pt(k1 + (krotka ? 2.6 : 3.2)), r, 0.15), 'eqBk', Object.assign({ fasety: true }, sw));
-    } else add(sph(pt(k1 + 1.1), 1.25), 'eqBz', Object.assign({ fasety: true }, sw));
+      add(stozek(pt(k1 + 0.1), pt(k1 + 1.4), r * 0.45, r), M.Bk, Object.assign({ fasety: true }, sw));
+      add(stozek(pt(k1 + 1.4), pt(k1 + (krotka ? 2.6 : 3.2)), r, 0.15), M.Bk, Object.assign({ fasety: true }, sw));
+    } else add(sph(pt(k1 + 1.1), 1.25), M.Bz, Object.assign({ fasety: true }, sw));
   } else if (ks === 'siekiera' || ks === 'kilof') {
     const k1 = 5.5;
-    add(kaps(pt(-1.2), pt(k1), 0.36), 'eqB2', { cienka: 1 });
-    if (ks === 'siekiera') add(stozek(bok(pt(k1 - 0.6), 0.3), bok(pt(k1 - 0.9), 2.4), 0.55, 1.35), 'eqB', { fasety: true });
-    else lancuch(add, [bok(pt(k1 - 1.0), -2.8), bok(pt(k1 - 0.1), -1.3), pt(k1 + 0.2), bok(pt(k1 - 0.1), 1.3), bok(pt(k1 - 1.0), 2.8)], 0.5, 0.25, 'eqB');
+    add(kaps(pt(-1.2), pt(k1), 0.36), M.B2, { cienka: 1 });
+    if (ks === 'siekiera') add(stozek(bok(pt(k1 - 0.6), 0.3), bok(pt(k1 - 0.9), 2.4), 0.55, 1.35), M.B, { fasety: true });
+    else lancuch(add, [bok(pt(k1 - 1.0), -2.8), bok(pt(k1 - 0.1), -1.3), pt(k1 + 0.2), bok(pt(k1 - 0.1), 1.3), bok(pt(k1 - 1.0), 2.8)], 0.5, 0.25, M.B);
   } else if (ks === 'luk') {
     const cx = d[0] + 0.6, cy = d[1] + 0.6, R = 5.2 * dl;
     for (let i = 0; i < 8; i++) { const a0 = -1.25 + i * 2.5 / 8, a1 = a0 + 2.5 / 8;
-      add(kaps([cx + Math.cos(a0) * 1.9, cy + Math.sin(a0) * R, d[2]], [cx + Math.cos(a1) * 1.9, cy + Math.sin(a1) * R, d[2]], 0.42), 'eqB', { cienka: 1 }); }
+      add(kaps([cx + Math.cos(a0) * 1.9, cy + Math.sin(a0) * R, d[2]], [cx + Math.cos(a1) * 1.9, cy + Math.sin(a1) * R, d[2]], 0.42), M.B, { cienka: 1 }); }
     add(kaps([cx + Math.cos(-1.25) * 1.9, cy - Math.sin(1.25) * R, d[2]], [cx + Math.cos(1.25) * 1.9, cy + Math.sin(1.25) * R, d[2]], 0.13), 'cieciwa', { cienka: 1 });
-    if (b.zdobienie) add(sph([cx + 1.9, cy, d[2]], 0.5), 'eqBz');
+    if (b.zdobienie) add(sph([cx + 1.9, cy, d[2]], 0.5), M.Bz);
   } else if (ks === 'kusza' || ks === 'karabin') {
-    add(kaps(pt(-1.0), pt(ks === 'kusza' ? 3.8 : 3.0), 0.5), 'eqB2', { cienka: 1 });
-    if (ks === 'karabin') add(kaps(pt(3.0), pt(7.4), 0.32), 'eqB', { cienka: 1 });
-    else { add(kaps(pt(3.8), pt(5.2), 0.35), 'eqB'); add(kaps(bok(pt(4.6), -2.3), bok(pt(4.6), 2.3), 0.33), 'eqB', { cienka: 1 }); }
+    add(kaps(pt(-1.0), pt(ks === 'kusza' ? 3.8 : 3.0), 0.5), M.B2, { cienka: 1 });
+    if (ks === 'karabin') add(kaps(pt(3.0), pt(7.4), 0.32), M.B, { cienka: 1 });
+    else { add(kaps(pt(3.8), pt(5.2), 0.35), M.B); add(kaps(bok(pt(4.6), -2.3), bok(pt(4.6), 2.3), 0.33), M.B, { cienka: 1 }); }
   } else if (ks === 'pistolet') {
-    add(kaps(pt(-0.5), pt(0.8), 0.45), 'eqB2'); add(kaps(pt(0.6), pt(2.6), 0.42), 'eqB', { fasety: true });
+    add(kaps(pt(-0.5), pt(0.8), 0.45), M.B2); add(kaps(pt(0.6), pt(2.6), 0.42), M.B, { fasety: true });
   }
 }
 
@@ -344,6 +346,8 @@ function bronStrzelecka(add, b, h, r) {
 
 function drugaEq(add, dd, o, ty) {
   const ks = dd.ksztalt, sw = dd.poswiata ? { swieci: dd.poswiata } : {};
+  // druga broń jednoręczna (1.072): w lewej dłoni, odbicie lustrzane pozy prawej
+  if (dd.typ === 'bron') { const L = o._lewa || o._dlonL; if (L) bronEq(add, dd, L, undefined, ty, true); return; }
   if (ks === 'tarcza_okragla' || ks === 'tarcza_herbowa') {
     const c = [-4.6, ty - 0.2, 1.3], okr = ks === 'tarcza_okragla';
     const ksz = (cc, rr) => { const e = elip(cc, rr); return okr ? e : p => Math.max(e(p), p[1] - (cc[1] + rr[1] * 0.55)); };
@@ -443,7 +447,7 @@ function renderuj(o, yaw, faza, H) {
     const mats = probki.map(h => material(h, m));
     mats.forEach(x => ile[x] = (ile[x] || 0) + 1);
     let mat = null;
-    for (const pr of ['oko', 'biel', 'cieciwa', 'usta', 'eqHz', 'eqBz', 'eqDz', 'eqPz']) if ((ile[pr] || 0) >= 2) { mat = pr; break; }
+    for (const pr of ['oko', 'biel', 'cieciwa', 'usta', 'eqHz', 'eqBz', 'eqLz', 'eqDz', 'eqPz']) if ((ile[pr] || 0) >= 2) { mat = pr; break; }
     const cienka = probki.some(h => m.czesci[h.idx].cienka);
     if (!mat) mat = Object.keys(ile).sort((a, b) => ile[b] - ile[a])[0];
     // normalna uśredniona z próbek tego materiału
