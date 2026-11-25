@@ -30,6 +30,7 @@ export interface Trudnosc {
   opis: string;
   wiek: number;
   obrazenia: number;
+  hpWrogow: number;
   tyl: number;
   widok: { stopnie: number; ekran: boolean };
   miecz: number;
@@ -45,11 +46,11 @@ export interface Trudnosc {
 }
 
 export const TRUDNOSCI: Trudnosc[] = [
-  { nazwa: 'Dziecięcy', en: 'Kids', opis: 'Zagadki dla 5–7 lat, potwory biją 4× słabiej, widać 220° aż do brzegu ekranu i daleko za plecami, miecz zatacza 280°, potwory chodzą o połowę wolniej.', wiek: 6, obrazenia: 0.25, widok: { stopnie: 220, ekran: true }, tyl: 3.2, miecz: 280, potwory: 1, tempo: 0.5, pojedynek: 0.3, wyzwanie: 2.5, rywal: 2.2, farta: 0, serca: 5, celnosc: 15, zuzycie: false },
-  { nazwa: 'Młody', en: 'Young', opis: 'Zagadki dla 7–10 lat, potwory biją 2× słabiej, widać 200° aż do brzegu ekranu, miecz zatacza 220°.', wiek: 9, obrazenia: 0.5, widok: { stopnie: 200, ekran: true }, tyl: 1.5, miecz: 220, potwory: 1, tempo: 0.6, pojedynek: 0.5, wyzwanie: 2, rywal: 1.8, farta: 0.05, serca: 5, celnosc: 15, zuzycie: false },
-  { nazwa: 'Średni', en: 'Medium', opis: 'Zagadki dla 10+ lat, widać 200° aż do brzegu ekranu. Broń się tępi – trzeba ją naprawiać.', wiek: 12, obrazenia: 1, widok: { stopnie: 200, ekran: true }, tyl: 1.2, miecz: 0, potwory: 1, tempo: 0.7, pojedynek: 0.7, wyzwanie: 1.6, rywal: 1.5, farta: 0.08, serca: 5, celnosc: 0, zuzycie: true },
-  { nazwa: 'Wysoki', en: 'Hard', opis: 'Zagadki dla dorosłych, zwykły cios, widać 200° aż do brzegu ekranu, 3 serduszka. Broń się tępi – trzeba ją naprawiać.', wiek: 18, obrazenia: 1, widok: { stopnie: 200, ekran: true }, tyl: 1, miecz: 0, potwory: 1, tempo: 0.8, pojedynek: 1, wyzwanie: 1.35, rywal: 1.3, farta: 0.12, serca: 3, celnosc: 0, zuzycie: true },
-  { nazwa: 'Hardkor', en: 'Hardcore', opis: 'Zagadki dla dorosłych, o połowę więcej potworów, biją 2× mocniej, widać tylko 160° i bliżej, tylko 2 serduszka. Broń się tępi – trzeba ją naprawiać.', wiek: 19, obrazenia: 2, widok: { stopnie: 160, ekran: false }, tyl: 1, miecz: 0, potwory: 1.5, tempo: 0.9, pojedynek: 1.5, wyzwanie: 1.2, rywal: 1.15, farta: 0.18, serca: 2, celnosc: 0, zuzycie: true },
+  { nazwa: 'Dziecięcy', en: 'Kids', opis: 'Zagadki dla 5–7 lat, potwory biją 4× słabiej, widać 220° aż do brzegu ekranu i daleko za plecami, miecz zatacza 280°, potwory chodzą o połowę wolniej.', wiek: 6, hpWrogow: 1, obrazenia: 0.25, widok: { stopnie: 220, ekran: true }, tyl: 3.2, miecz: 280, potwory: 1, tempo: 0.5, pojedynek: 0.3, wyzwanie: 2.5, rywal: 2.2, farta: 0, serca: 5, celnosc: 15, zuzycie: false },
+  { nazwa: 'Młody', en: 'Young', opis: 'Zagadki dla 7–10 lat, potwory biją 2× słabiej, widać 200° aż do brzegu ekranu, miecz zatacza 220°.', wiek: 9, hpWrogow: 1, obrazenia: 0.5, widok: { stopnie: 200, ekran: true }, tyl: 1.5, miecz: 220, potwory: 1, tempo: 0.6, pojedynek: 0.5, wyzwanie: 2, rywal: 1.8, farta: 0.05, serca: 5, celnosc: 15, zuzycie: false },
+  { nazwa: 'Średni', en: 'Medium', opis: 'Zagadki dla 10+ lat, widać 200° aż do brzegu ekranu. Broń się tępi – trzeba ją naprawiać.', wiek: 12, hpWrogow: 2, obrazenia: 1, widok: { stopnie: 200, ekran: true }, tyl: 1.2, miecz: 0, potwory: 1, tempo: 0.7, pojedynek: 0.7, wyzwanie: 1.6, rywal: 1.5, farta: 0.08, serca: 5, celnosc: 0, zuzycie: true },
+  { nazwa: 'Wysoki', en: 'Hard', opis: 'Zagadki dla dorosłych, zwykły cios, widać 200° aż do brzegu ekranu, 3 serduszka. Broń się tępi – trzeba ją naprawiać.', wiek: 18, hpWrogow: 4, obrazenia: 1, widok: { stopnie: 200, ekran: true }, tyl: 1, miecz: 0, potwory: 1, tempo: 0.8, pojedynek: 1, wyzwanie: 1.35, rywal: 1.3, farta: 0.12, serca: 3, celnosc: 0, zuzycie: true },
+  { nazwa: 'Hardkor', en: 'Hardcore', opis: 'Zagadki dla dorosłych, o połowę więcej potworów, biją 2× mocniej, widać tylko 160° i bliżej, tylko 2 serduszka. Broń się tępi – trzeba ją naprawiać.', wiek: 19, hpWrogow: 4, obrazenia: 2, widok: { stopnie: 160, ekran: false }, tyl: 1, miecz: 0, potwory: 1.5, tempo: 0.9, pojedynek: 1.5, wyzwanie: 1.2, rywal: 1.15, farta: 0.18, serca: 2, celnosc: 0, zuzycie: true },
 ];
 
 /** Dziecięcy. */
@@ -67,9 +68,9 @@ export const WYBOR_TRUDNOSCI = {
   krotko: [
     'potwory słabe i wolne, łatwe zagadki',
     'potwory słabsze, zagadki dla 7–10-latków',
-    'zbalansowane, zagadki dla młodzieży',
-    'walka może być wyzwaniem, zagadki dla starszych',
-    'wyzwanie dla najodważniejszych!',
+    'potwory mają 2× więcej życia, zagadki dla młodzieży',
+    'potwory mają 4× więcej życia, zagadki dla starszych',
+    'potwory mają 4× więcej życia i biją 2× mocniej',
   ],
   juzDzis: 'Dziś już zmieniałeś poziom trudności. Następna zmiana – jutro.',
   zmieniony: (nazwa: string) => `⚖ Poziom trudności: ${nazwa}`,

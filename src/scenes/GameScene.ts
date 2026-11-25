@@ -1103,7 +1103,7 @@ export class GameScene extends Phaser.Scene {
       guide: (to) => this.prowadzDo(to ? { nazwa: to.nazwa, ...this.city.toLatLon(to.x, to.y), rodzaj: 'cel', km: 0 } : null),
     }) : undefined;
     if (this.city.loch?.tutorial && this.loch) for (const e of this.enemies) {
-      if (this.loch.contains(e)) { e.hp = Math.max(2, meleeDamage()*2); e.power = .5; e.temp = true; }
+      if (this.loch.contains(e)) { e.hp = Math.max(2, meleeDamage()*2) * e.mnoznikHp; e.power = .5; e.temp = true; }
     }
     const prolog = this.prolog;
     this.events.once('shutdown', () => prolog?.destroy());
@@ -2560,9 +2560,9 @@ export class GameScene extends Phaser.Scene {
     const story = s === this.story.dragonSprite;
     const g: GatunekId = s.gatunek ?? (story ? 'cien' : 'lesny');
     s.gatunek = g;
-    if (story) s.hp = Math.max(s.hp, Math.round(GameScene.SMOK_CIOSOW * meleeDamage() * (s.power ?? 1)));
+    if (story) s.hp = Math.max(s.hp, Math.round(GameScene.SMOK_CIOSOW * meleeDamage() * (s.power ?? 1) * s.mnoznikHp));
     else if (!s.getData('smokZycie')) {
-      s.hp = Math.round((GATUNKI_SMOKOW[g].zycie || 400) * (s.power ?? 1)); // 'cien' called on the test server: 400
+      s.hp = Math.round((GATUNKI_SMOKOW[g].zycie || 400) * (s.power ?? 1) * s.mnoznikHp); // 'cien' called on the test server: 400
       s.setData('smokZycie', true);
     }
     this.dragons.set(s, new SmokAI(this, s, g, this.smokHost()));
@@ -2811,7 +2811,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut') {
-    const s = new Slime(this, x, y, kind) as Enemy;
+    const s = new Slime(this, x, y, kind, session.level.hpWrogow) as Enemy;
     s.missionId = missionId;
     const w = WPLYW_NA_POTWORY[kind]?.[weather.kind];
     if (w?.sila) {
@@ -4136,6 +4136,7 @@ export class GameScene extends Phaser.Scene {
       }
       const pz = loch.plan.poziom;
       if (co === 'zejscie') {
+        if (this.zaWczesnieNaZejscie(pz + 1)) return true;
         const ukryty = pz + 1 > loch.plan.normalne;
         this.dialog({
           title: LOCH_TEKSTY.zejdzNizej,
@@ -4261,10 +4262,19 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  private zaWczesnieNaZejscie(cel: number) {
+    if (!this.loch || cel <= this.loch.plan.poziom || session.level.hpWrogow < 2) return false;
+    const poziom = poziomPostaci(session.exp), prog = POZIOMY_LOCHU.pierwszyProg;
+    if (poziom >= prog) return false;
+    this.toast(tx(`Zejście na −${cel} wymaga poziomu ${prog}. Twój poziom: ${poziom}.`,
+      `Floor −${cel} requires level ${prog}. Your level: ${poziom}.`), 3200);
+    return true;
+  }
+
   /** Down or up a level of the same dungeon (another small map: `…:p<n>`); up = arrive by that level's way down. */
   private przejdzPoziom(n: number) {
     const loch = this.loch;
-    if (!loch || this.travelling) return;
+    if (!loch || this.travelling || this.zaWczesnieNaZejscie(n)) return;
     this.travelling = true;
     const gora = n < loch.plan.poziom;
     const zUkrytego = loch.plan.ukrytyPoziom;

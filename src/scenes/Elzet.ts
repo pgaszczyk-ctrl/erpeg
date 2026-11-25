@@ -118,7 +118,7 @@ class Walka {
     // Scaled from the hero: a copy of the hero would fall after ELZET.ciosowNaKopie of his own blows.
     const r = rangedWeapon();
     const D = Math.max(1, meleeDamage(), r ? shotDamage(r) : 0);
-    this.maxHp = Math.max(4, Math.round(P.zycie * ELZET.ciosowNaKopie * D));
+    this.maxHp = Math.max(4, Math.round(P.zycie * ELZET.ciosowNaKopie * D * s.mnoznikHp));
     s.hp = this.maxHp;
     s.prog = { hp: Math.max(1, Math.round(this.maxHp * ELZET.prog)), fn: () => this.dosc() };
     // Its blow: the copy's blow (the hero's life ÷ blows to fall) × sila; difficulty's own factor is left out.

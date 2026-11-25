@@ -156,7 +156,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   modelDeathAt = -Infinity;
   modelAttack?: { clip: string; start: number; contact: number; end: number; aim: number };
 
-  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut') {
+  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut', readonly mnoznikHp = 1) {
     const k = ENEMY_KINDS[kind];
     // Wilk/warg have no art yet (łowiska test pilot): placeholder on the bandit's humanoid sheet, tinted –
     // same idiom the game already used for koziol/the grey dragon before their own art arrived.
@@ -170,7 +170,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     this.kind = k;
     this.kindId = kind;
     this.odpornosc = ODPORNOSCI[kind];
-    this.hp = k.hp;
+    this.hp = k.hp * mnoznikHp;
     this.hd = hd;
     if (detailedBlob) {
       // Keep the previous body's world width and feet/collision anchor. Static art supplied.
@@ -226,7 +226,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   makeBerserk(zycie: number, auraKolor: number, mrugMs: number, predkosc = 1) {
     this.berserk = true;
     this.pace = predkosc;
-    this.hp = Math.max(1, Math.round(this.kind.hp * zycie)); // whole blows: 3 → 2 for an imp
+    this.hp = Math.max(1, Math.round(this.kind.hp * zycie * this.mnoznikHp)); // whole blows: 3 → 2 for an imp
     const a = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
     a.setOrigin(this.originX, this.originY).setTint(auraKolor).setTintMode(Phaser.TintModes.FILL);
     a.setBlendMode(Phaser.BlendModes.ADD).setAlpha(0);
