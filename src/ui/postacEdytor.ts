@@ -2,7 +2,7 @@
 // brows) get a colour ramp around the chosen colour, the lips/blush layer a rose from the skin, the clothes and eyes
 // stay as drawn. Used by the Kufer's look tab, its daguerreotype, the HUD portrait and dialog portraits.
 import type { Look } from '../look';
-import { SKORY_51, WLOSY_51, FRYZURY, PORTRET_51, PLOTNO_51, type Plec, type Fryzura } from '../content/wygladPostaci';
+import { SKORY_51, WLOSY_51, FRYZURY, PODBRODEK_51, PLOTNO_51, type Plec, type Fryzura } from '../content/wygladPostaci';
 import { SKORY_MODUL, WLOSY_MODUL } from '../content/modul';
 
 export interface Wyglad { p: Plec; f: string; w: number; s: number }
@@ -197,13 +197,27 @@ export function portretPostaci(w: Wyglad): Promise<HTMLCanvasElement | null> {
   if (!p) {
     p = zlozPostac(w).then((cala) => {
       if (!cala) return null;
-      const { srodek, promien } = PORTRET_51[w.p];
-      const bok = Math.round(promien * 1.15);
+      // Owner, 25 Nov 2026: the face with all its hair fills the whole window (no dark margin round a small head).
+      // The square spans from the top of the hair to just under the chin, or the head's full width if wider.
+      const broda = PODBRODEK_51[w.p];
+      const d = cala.getContext('2d')!.getImageData(0, 0, cala.width, broda).data;
+      let gora = broda, lewo = cala.width, prawo = 0;
+      for (let y = 0; y < broda; y++) {
+        for (let x = 0; x < cala.width; x++) {
+          if (d[(y * cala.width + x) * 4 + 3] < 128) continue;
+          if (y < gora) gora = y;
+          if (x < lewo) lewo = x;
+          if (x > prawo) prawo = x;
+        }
+      }
+      if (prawo <= lewo) { lewo = 0; prawo = cala.width; gora = 0; }
+      const bok = Math.max(broda - gora, prawo - lewo + 1) * 1.04;
+      const sx = (lewo + prawo) / 2 - bok / 2, sy = (gora + broda) / 2 - bok / 2;
       const c = document.createElement('canvas');
       c.width = c.height = PORTRET_POSTACI_PX;
       const ctx = c.getContext('2d')!;
       ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(cala, srodek[0] - bok / 2, srodek[1] - bok * 0.52, bok, bok, 0, 0, PORTRET_POSTACI_PX, PORTRET_POSTACI_PX);
+      ctx.drawImage(cala, sx, sy, bok, bok, 0, 0, PORTRET_POSTACI_PX, PORTRET_POSTACI_PX);
       return c;
     });
     portrety.set(key, p);

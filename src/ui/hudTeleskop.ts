@@ -33,6 +33,8 @@ const C = 84;
 const RI = 56;
 const RO = 74;
 const RP = 47;
+/** The comic frame's inside (its gold rim is a 6–10 px stroke at radius 77). */
+const RK = 71;
 const CALOSC = L.start * 3 + L.ruch;
 const ZWIN_PO_MS = 4000;
 
@@ -611,9 +613,6 @@ function komiksowaOprawa(ctx: CanvasRenderingContext2D, twarz: HTMLCanvasElement
   ctx.strokeStyle = '#d5a446';
   ctx.lineWidth = 6;
   ctx.stroke();
-  osmiokat(ctx, RP + 3);
-  ctx.fillStyle = '#19171b';
-  ctx.fill();
   ctx.drawImage(twarz, 0, 0);
   ctx.fillStyle = '#19171b';
   ctx.fillRect(C - 29, C + 56, 58, 8);
@@ -639,19 +638,21 @@ function rysujZbiornik() {
   fc.globalCompositeOperation = 'source-over';
   fc.clearRect(0, 0, N, N);
   fc.save();
+  // Owner, 25 Nov 2026: in the comic frame the face fills the whole window up to the gold rim (RK), no dark ring.
+  const R = komiks ? RK : RP;
   if (komiks) {
-    osmiokat(fc, RP);
+    osmiokat(fc, R);
     fc.clip();
   }
   fc.fillStyle = '#3a2c22';
-  fc.fillRect(C - RP, C - RP, RP * 2, RP * 2);
+  fc.fillRect(C - R, C - R, R * 2, R * 2);
   if (portretObraz) {
     fc.imageSmoothingEnabled = true;
     fc.imageSmoothingQuality = 'high';
-    fc.drawImage(portretObraz, C - RP, C - RP, RP * 2, RP * 2);
+    fc.drawImage(portretObraz, C - R, C - R, R * 2, R * 2);
   } else if (glowa) {
     fc.imageSmoothingEnabled = false;
-    fc.drawImage(glowa[0], glowa[1], glowa[2], glowa[3], glowa[4], C - RP, C - RP, RP * 2, RP * 2);
+    fc.drawImage(glowa[0], glowa[1], glowa[2], glowa[3], glowa[4], C - R, C - R, R * 2, R * 2);
   }
   if (!komiks) {
     fc.globalCompositeOperation = 'destination-in';

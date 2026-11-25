@@ -83,6 +83,9 @@ export const PORTRET_51: Record<Plec, { srodek: [number, number]; promien: numbe
   m: { srodek: [384, 364], promien: 330 },
 };
 
+/** Row just under the chin in the artist's figure (the HUD/dialog portrait ends there). */
+export const PODBRODEK_51: Record<Plec, number> = { k: 512, m: 505 };
+
 export const PLOTNO_51 = { w: 768, h: 1152 };
 
 /** The clothes the chibi wears without armour (the artist's recruit outfit: linen shirt, leather trousers). */
