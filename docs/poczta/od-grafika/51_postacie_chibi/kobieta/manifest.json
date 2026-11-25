@@ -1,0 +1,137 @@
+{
+  "plec": "k",
+  "plotno": [
+    768,
+    1152
+  ],
+  "portret": {
+    "srodek": [
+      384,
+      382
+    ],
+    "promien": 382
+  },
+  "fryzury": [
+    "dlugie",
+    "loki",
+    "warkocz_dlugi",
+    "warkocz_bok",
+    "warkocze",
+    "kucyk",
+    "bob",
+    "kok",
+    "dwa_koczki",
+    "prosta_grzywka",
+    "korona_warkocz",
+    "warkoczyki_cienkie",
+    "warkocz_na_lewe_ramie"
+  ],
+  "warstwy_od_spodu": [
+    "wlosy_tyl_<fryzura>.png",
+    "skora.png",
+    "stroj.png",
+    "twarz.png",
+    "usta_policzki.png",
+    "brwi.png",
+    "wlosy_przod_<fryzura>.png"
+  ],
+  "kontur": "wbudowany_w_warstwy",
+  "warianty_twarzy": {
+    "kolor_oczu": {
+      "turkusowe": "twarz.png",
+      "zielone": "warianty_twarzy/twarz_zielona.png",
+      "piwne": "warianty_twarzy/twarz_piwna.png"
+    },
+    "wyraz": {
+      "lekki_usmiech": "usta_policzki.png",
+      "spokojny": "warianty_twarzy/usta_policzki_spokojna.png"
+    },
+    "makijaz": {
+      "naturalny": null,
+      "sliwkowy": "warianty_twarzy/makijaz_sliwkowy.png"
+    },
+    "kolejnosc": "Kolor oczu podmienia twarz.png. Wyraz podmienia usta_policzki.png. Makijaż układa się między strojem i oczami.",
+    "ksztalt": {
+      "bazowa": {
+        "nazwa": "Bazowa",
+        "skora_rekrut": "skora.png",
+        "skora_stroj_klasowy": "stroje/skora_zakryte_rece_i_stopy.png"
+      },
+      "okragla": {
+        "nazwa": "Okrągła",
+        "skora_rekrut": "warianty_twarzy/skora_okragla.png",
+        "skora_stroj_klasowy": "warianty_twarzy/skora_okragla_stroj_klasowy.png"
+      },
+      "sercowata": {
+        "nazwa": "Sercowata",
+        "skora_rekrut": "warianty_twarzy/skora_sercowata.png",
+        "skora_stroj_klasowy": "warianty_twarzy/skora_sercowata_stroj_klasowy.png"
+      }
+    }
+  },
+  "nazwy_fryzur": {
+    "dlugie": "Długie rozpuszczone",
+    "loki": "Burza loków / afro",
+    "warkocz_dlugi": "Długi warkocz",
+    "warkocz_bok": "Warkoczyk na bok",
+    "warkocze": "Dwa warkocze",
+    "kucyk": "Wysoki kucyk",
+    "bob": "Krótki bob",
+    "kok": "Wysoki kok",
+    "dwa_koczki": "Dwa plecione koczki",
+    "prosta_grzywka": "Prosta grzywka",
+    "korona_warkocz": "Korona z warkocza",
+    "warkoczyki_cienkie": "Dwa cienkie warkoczyki",
+    "warkocz_na_lewe_ramie": "Długi warkocz na ramię"
+  },
+  "fryzury_z_warstwa_tylna": [
+    "dlugie",
+    "loki",
+    "warkocz_dlugi",
+    "warkocz_bok",
+    "warkocze",
+    "kucyk",
+    "bob",
+    "warkoczyki_cienkie",
+    "warkocz_na_lewe_ramie"
+  ],
+  "stroj_domyslny": "rekrut",
+  "stroje": {
+    "rekrut": {
+      "skora": "skora.png",
+      "stroj": "stroj.png"
+    },
+    "straz_wojownik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_wojownik.png"
+    },
+    "straz_lucznik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_lucznik.png"
+    },
+    "straz_mag": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_mag.png"
+    },
+    "straz_druid": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_druid.png"
+    },
+    "niezalezny_wojownik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_wojownik.png"
+    },
+    "niezalezny_lucznik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_lucznik.png"
+    },
+    "niezalezny_mag": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_mag.png"
+    },
+    "niezalezny_druid": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_druid.png"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "plec": "m",
+  "plotno": [
+    768,
+    1152
+  ],
+  "portret": {
+    "srodek": [
+      384,
+      364
+    ],
+    "promien": 330
+  },
+  "fryzury": [
+    "zaczesane",
+    "jez",
+    "rozczochrane",
+    "kitka",
+    "loki",
+    "podgolone",
+    "przedzialek_srodek",
+    "irokez_krecony",
+    "warkoczyki_przy_skorze",
+    "irokez_spiczasty"
+  ],
+  "warstwy_od_spodu": [
+    "wlosy_tyl_<fryzura>.png",
+    "skora.png",
+    "stroj.png",
+    "twarz.png",
+    "usta_policzki.png",
+    "brwi.png",
+    "wlosy_przod_<fryzura>.png"
+  ],
+  "kontur": "wbudowany_w_warstwy",
+  "warianty_twarzy": {
+    "kolor_oczu": {
+      "turkusowe": "twarz.png",
+      "zielone": "warianty_twarzy/twarz_zielona.png",
+      "piwne": "warianty_twarzy/twarz_piwna.png"
+    },
+    "wyraz": {
+      "lekki_usmiech": "usta_policzki.png",
+      "spokojny": "warianty_twarzy/usta_policzki_spokojna.png"
+    },
+    "makijaz": {
+      "naturalny": null,
+      "sliwkowy": "warianty_twarzy/makijaz_sliwkowy.png"
+    },
+    "kolejnosc": "Kolor oczu podmienia twarz.png. Wyraz podmienia usta_policzki.png. Makijaż układa się między strojem i oczami.",
+    "ksztalt": {
+      "bazowa": {
+        "nazwa": "Bazowa",
+        "skora_rekrut": "skora.png",
+        "skora_stroj_klasowy": "stroje/skora_zakryte_rece_i_stopy.png"
+      },
+      "owalna": {
+        "nazwa": "Owalna",
+        "skora_rekrut": "warianty_twarzy/skora_owalna.png",
+        "skora_stroj_klasowy": "warianty_twarzy/skora_owalna_stroj_klasowy.png"
+      },
+      "kwadratowa": {
+        "nazwa": "Kwadratowa",
+        "skora_rekrut": "warianty_twarzy/skora_kwadratowa.png",
+        "skora_stroj_klasowy": "warianty_twarzy/skora_kwadratowa_stroj_klasowy.png"
+      }
+    }
+  },
+  "nazwy_fryzur": {
+    "zaczesane": "Krótko zaczesane",
+    "jez": "Na jeża",
+    "rozczochrane": "Rozczochrane",
+    "kitka": "Niska kitka",
+    "loki": "Krótkie loki / afro",
+    "podgolone": "Podgolone boki",
+    "przedzialek_srodek": "Przedziałek na środku",
+    "irokez_krecony": "Kręcony irokez",
+    "warkoczyki_przy_skorze": "Warkoczyki przy skórze",
+    "irokez_spiczasty": "Spiczasty irokez"
+  },
+  "fryzury_z_warstwa_tylna": [
+    "kitka"
+  ],
+  "stroj_domyslny": "rekrut",
+  "stroje": {
+    "rekrut": {
+      "skora": "skora.png",
+      "stroj": "stroj.png"
+    },
+    "straz_wojownik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_wojownik.png"
+    },
+    "straz_lucznik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_lucznik.png"
+    },
+    "straz_mag": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_mag.png"
+    },
+    "straz_druid": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/straz_druid.png"
+    },
+    "niezalezny_wojownik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_wojownik.png"
+    },
+    "niezalezny_lucznik": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_lucznik.png"
+    },
+    "niezalezny_mag": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_mag.png"
+    },
+    "niezalezny_druid": {
+      "skora": "stroje/skora_zakryte_rece_i_stopy.png",
+      "stroj": "stroje/niezalezny_druid.png"
+    }
+  }
+}
