@@ -1,0 +1,107 @@
+{
+  "swiat": {
+    "plik_rozmiar_px": [
+      4096,
+      4096
+    ],
+    "lewy_gorny_lon_lat": [
+      -180,
+      85.0511
+    ],
+    "prawy_dolny_lon_lat": [
+      180,
+      -85.0511
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  },
+  "europa": {
+    "plik_rozmiar_px": [
+      4096,
+      4072
+    ],
+    "lewy_gorny_lon_lat": [
+      -25,
+      72
+    ],
+    "prawy_dolny_lon_lat": [
+      46,
+      33
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  },
+  "azja": {
+    "plik_rozmiar_px": [
+      3778,
+      4096
+    ],
+    "lewy_gorny_lon_lat": [
+      25,
+      77
+    ],
+    "prawy_dolny_lon_lat": [
+      150,
+      -11
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  },
+  "afryka": {
+    "plik_rozmiar_px": [
+      3792,
+      4096
+    ],
+    "lewy_gorny_lon_lat": [
+      -20,
+      38
+    ],
+    "prawy_dolny_lon_lat": [
+      55,
+      -37
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  },
+  "ameryka_polnocna": {
+    "plik_rozmiar_px": [
+      4096,
+      3897
+    ],
+    "lewy_gorny_lon_lat": [
+      -170,
+      76
+    ],
+    "prawy_dolny_lon_lat": [
+      -50,
+      6
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  },
+  "ameryka_poludniowa": {
+    "plik_rozmiar_px": [
+      2540,
+      4096
+    ],
+    "lewy_gorny_lon_lat": [
+      -84,
+      14
+    ],
+    "prawy_dolny_lon_lat": [
+      -32,
+      -57
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  },
+  "australia_oceania": {
+    "plik_rozmiar_px": [
+      4096,
+      2917
+    ],
+    "lewy_gorny_lon_lat": [
+      110,
+      -5
+    ],
+    "prawy_dolny_lon_lat": [
+      180,
+      -48
+    ],
+    "rzut": "Web Mercator (EPSG:3857)"
+  }
+}
