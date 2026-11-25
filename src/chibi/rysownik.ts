@@ -33,6 +33,12 @@ const rbox = (c, hs, r, rotZ = 0) => { const cs = Math.cos(rotZ), sn = Math.sin(
   return len3(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qy, qz), 0) - r; }; };
 const cyl = (c, r, h) => p => { const d = Math.hypot(p[0] - c[0], p[2] - c[2]) - r, e = Math.abs(p[1] - c[1]) - h; return Math.min(Math.max(d, e), 0) + Math.hypot(Math.max(d, 0), Math.max(e, 0)); };
 const torusX = (c, R, r) => p => { const q = Math.hypot(p[1] - c[1], p[2] - c[2]) - R; return Math.hypot(q, p[0] - c[0]) - r; };
+// zwężający się walec od a (promień ra) do b (rb): rogi, czubki kapeluszy, kryształy (przybliżone SDF, wystarcza w tej skali)
+const stozek = (a, b, ra, rb) => p => { const pa = [p[0] - a[0], p[1] - a[1], p[2] - a[2]], ba = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+  const h = Math.max(0, Math.min(1, (pa[0] * ba[0] + pa[1] * ba[1] + pa[2] * ba[2]) / (ba[0] * ba[0] + ba[1] * ba[1] + ba[2] * ba[2])));
+  return (len3(pa[0] - ba[0] * h, pa[1] - ba[1] * h, pa[2] - ba[2] * h) - (ra + (rb - ra) * h)) * 0.9; };
+const lancuch = (add, pts, r0, r1, mat, ext) => { for (let i = 0; i + 1 < pts.length; i++) add(stozek(pts[i], pts[i + 1], r0 + (r1 - r0) * i / (pts.length - 1), r0 + (r1 - r0) * (i + 1) / (pts.length - 1)), mat, ext); };
+const ciemniej = (hex, dl = -0.14) => { const c = przesun(hexc(hex), 0, 0, dl); return '#' + c.map(v => v.toString(16).padStart(2, '0')).join(''); };
 
 
 // pozy ataków: kierunek ręki od barku (jednostkowy) i kierunek broni
@@ -68,6 +74,8 @@ function model(o, faza) {
   const nogaL = chod ? sw * (bieg ? 2.3 : 1.3) : 0, nogaP = -nogaL;
   const podL = chod ? Math.max(0, sw) * (bieg ? 1.5 : 0.7) : 0, podP = chod ? Math.max(0, -sw) * (bieg ? 1.5 : 0.7) : 0;
   const k = o.kolory;
+  const eq = o.eq || {};
+  const kd = Object.assign({}, o.kolDod || {}, koloryEkwipunku(eq));
   const hy = 12.3 + bob, hr = A ? 5.0 : 4.7; // głowa
   const ty = 6.2 + bob;
 
@@ -76,6 +84,8 @@ function model(o, faza) {
     if (A) {
       add(rbox([sx, 0.95 + dy, 0.35 + dz], [1.25, 0.95, 1.6], 0.75), 'buty');
       add(kaps([sx, 2.0 + dy, dz * 0.6], [sx * 0.9, 4.3 + bob, 0], 1.15), 'spodnie');
+      if (eq.buty?.cholewa) add(kaps([sx, 1.6 + dy, dz * 0.7], [sx * 0.95, 3.0 + dy * 0.6 + bob * 0.5, dz * 0.4], 1.3), 'buty', { fasety: true });
+      if (eq.buty?.skrzydelka) add(elip([sx * 2.4, 1.9 + dy, dz - 0.3], [0.35, 0.75, 1.1]), 'eqBuz');
     } else {
       add(rbox([sx, 0.95 + dy, 0.3 + dz], [1.35, 0.95, 1.55], 0.3), 'buty');
       add(rbox([sx * 0.92, 3.1 + dy * 0.5 + bob * 0.5, dz * 0.5], [1.25, 1.35, 1.2], 0.3), 'spodnie');
@@ -83,7 +93,9 @@ function model(o, faza) {
   }
   // tułów (z paskiem i guzikami jako wzór)
   const tulow = A ? elip([0, ty, 0], [2.8, 2.5, 2.1]) : rbox([0, ty, 0], [2.7, 2.3, 1.9], 0.55);
-  add(tulow, o.plaszcz ? 'plaszcz' : 'mundur', { wzor: 'tulow', ty });
+  const zb = eq.zbroja, matTulow = zb ? 'eqZ' : o.plaszcz ? 'plaszcz' : 'mundur';
+  add(tulow, matTulow, { wzor: 'tulow', ty, kolczuga: zb?.ksztalt === 'kolczuga' });
+  if (zb?.ksztalt === 'szata') add(A ? elip([0, ty - 2.2, 0], [3.3, 1.8, 2.5]) : rbox([0, ty - 2.2, 0], [3.2, 1.4, 2.3], 0.4), 'eqZ', { wzor: 'pola' });
   if (o.dol) add(A ? elip([0, ty - 1.9, 0], [3.4, 1.4, 2.4]) : rbox([0, ty - 1.9, 0], [3.3, 1.1, 2.2], 0.4), o.plaszcz ? 'plaszcz' : 'mundur', { wzor: 'pola' });
   // ręce
   const rekaL = chod ? -sw * (bieg ? 2.2 : 1.1) : 0, rekaP = -rekaL;
@@ -93,14 +105,15 @@ function model(o, faza) {
     const pz = o.poza ? pozaReki(o.poza, sx, ty) : null;
     if (pz) { dlon = pz.dlon; if (sx === 1) o._w = pz.w; else o._lewa = pz.dlon; }
     if (A) {
-      add(kaps(bark, [(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], 0.95), 'mundur');
-      add(kaps([(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], dlon, 0.85), o.mankiet ? 'pas' : 'mundur');
+      const rekaMat = zb?.ksztalt === 'szata' ? 'eqZ' : 'mundur';
+      add(kaps(bark, [(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], 0.95), rekaMat);
+      add(kaps([(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], dlon, 0.85), o.mankiet ? 'pas' : rekaMat);
       add(sph(dlon, 0.95), 'skora');
     } else {
       add(rbox([(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2 + 0.3, (bark[2] + dlon[2]) / 2], [0.9, 1.6, 0.9], 0.25, sx * 0.12), 'mundur');
       add(rbox(dlon, [0.95, 0.95, 0.95], 0.35), 'skora');
     }
-    if (sx === 1) o._dlon = dlon;
+    if (sx === 1) o._dlon = dlon; else o._dlonL = dlon;
   }
   // głowa
   const hc = [0, hy, 0];
@@ -109,7 +122,8 @@ function model(o, faza) {
   if (A) { add(sph([-hr * 0.98, hy - 0.4, 0], 0.8), 'skora'); add(sph([hr * 0.98, hy - 0.4, 0], 0.8), 'skora'); }
   // włosy
   const hairCut = (base, niz) => p => { const q = p[1] - hy, z = p[2]; const linia = (z > 0 ? -0.05 * hr + z * 0.55 : niz * hr + z * 0.15); return Math.max(base(p), (linia - q) * 0.8); };
-  if (!o.helm || o.helmTyp === 'kaszkiet') {
+  const kryjeWlosy = eq.helm ? (eq.helm.ksztalt === 'kopula' || eq.helm.ksztalt === 'skorzany') : (o.helm && o.helmTyp !== 'kaszkiet');
+  if (!kryjeWlosy) {
     if (A) {
       add(hairCut(sph([0, hy + 0.5, -0.35], hr + 0.5), -0.35), 'wlosy');
       // grzywka – kilka kosmyków
@@ -131,7 +145,8 @@ function model(o, faza) {
     }
   }
   // ---- warstwy ekwipunku ----
-  if (o.helm) {
+  if (eq.helm) helmEq(add, eq.helm, hy, hr);
+  else if (o.helm) {
     if (o.helmTyp === 'kaszkiet') { // czapka z daszkiem jak u strażnika (wzór 1)
       if (A) {
         add(elip([0, hy + hr * 0.7, -0.2], [hr * 1.02, hr * 0.5, hr * 1.02]), 'czapka', { wzor: 'czapka', cy: hy + hr * 0.5 });
@@ -154,17 +169,24 @@ function model(o, faza) {
   }
   if (o.peleryna) add(A ? elip([0, ty + 1.9, -0.1], [3.9, 1.5, 2.9]) : rbox([0, ty + 1.8, -0.1], [3.8, 1.2, 2.7], 0.5), o.peleryna, { wzor: o.peleryna === 'lisc' ? 'liscie' : 'zapinka' });
   if (o.szal) add(A ? elip([0, ty + 2.4, 0.1], [2.8, 0.9, 2.4]) : rbox([0, ty + 2.4, 0.1], [2.7, 0.7, 2.3], 0.35), 'szal');
-  if (o.naramiennik) add(A ? elip([3.3, ty + 2.0, 0], [1.6, 1.0, 1.6]) : rbox([3.3, ty + 1.9, 0], [1.5, 0.8, 1.5], 0.3), 'mosiadz', { fasety: !A });
+  if (zb?.ksztalt === 'plaszcz') plaszczEq(add, ty, A);
+  if (o.naramiennik || zb?.naramiennik) add(A ? elip([3.3, ty + 2.0, 0], [1.6, 1.0, 1.6]) : rbox([3.3, ty + 1.9, 0], [1.5, 0.8, 1.5], 0.3), 'mosiadz', { fasety: !A });
   if (o.kaptur) add(A ? elip([0, hy - 2.2, -hr * 0.8], [hr * 0.9, 2.0, 1.6]) : rbox([0, hy - 2.2, -hr * 0.8], [hr * 0.85, 1.7, 1.4], 0.5), o.kaptur);
-  if (o.tarcza) {
+  if (eq.druga) drugaEq(add, eq.druga, o, ty);
+  else if (o.tarcza) {
     const c = [-4.6, ty - 0.2, 1.3];
     if (A) { add(elip(c, [2.1, 2.5, 0.45]), 'mosiadz'); add(elip([c[0], c[1], c[2] + 0.35], [1.7, 2.1, 0.3]), 'stal', { wzor: 'szachy', cc: c }); }
     else { add(rbox(c, [2.0, 2.4, 0.35], 0.4), 'mosiadz'); add(rbox([c[0], c[1], c[2] + 0.3], [1.6, 2.0, 0.25], 0.3), 'stal', { wzor: 'szachy', cc: c }); }
   }
   const d = o._dlon;
-  if (o.poza && o.poza.typ === 'luk' && o._lewa) {
-    const h = o._lewa, P = f => [h[0] - Math.sin(f) * 7.0 * 0.6, h[1] + Math.sin(f) * 7.0 * 0.8, h[2] + (Math.cos(f) - 1) * 2.6 + 0.4];
-    for (let i = 0; i < 8; i++) { const f0 = -1.2 + i * 0.3, f1 = f0 + 0.3; add(kaps(P(f0), P(f1), 0.42), 'drewno', { cienka: 1 }); }
+  const eb = eq.bron, ks = eb?.ksztalt;
+  if (eb && o.poza && o.poza.typ === 'luk' && o._lewa && ks !== 'luk') bronStrzelecka(add, eb, o._lewa, d);
+  else if (eb && !(o.poza && o.poza.typ === 'luk' && o._lewa)) bronEq(add, eb, d, o._w, ty);
+  else if (o.poza && o.poza.typ === 'luk' && o._lewa) {
+    const dl = eb?.dl || 1, mb = eb ? 'eqB' : 'drewno';
+    const h = o._lewa, P = f => [h[0] - Math.sin(f) * 7.0 * 0.6 * dl, h[1] + Math.sin(f) * 7.0 * 0.8 * dl, h[2] + (Math.cos(f) - 1) * 2.6 + 0.4];
+    for (let i = 0; i < 8; i++) { const f0 = -1.2 + i * 0.3, f1 = f0 + 0.3; add(kaps(P(f0), P(f1), 0.42), mb, { cienka: 1 }); }
+    if (eb?.zdobienie) add(sph(h, 0.55), 'eqBz');
     const g = P(1.2), dd = P(-1.2), r = d; // cięciwa do prawej dłoni
     add(kaps(g, r, 0.14), 'cieciwa', { cienka: 1 }); add(kaps(dd, r, 0.14), 'cieciwa', { cienka: 1 });
     if (!o.poza.puszczona) { const czub = [h[0], h[1], h[2] + 2.8]; add(kaps(r, czub, 0.24), 'drewno', { cienka: 1 }); add(sph(czub, 0.4), 'stal');
@@ -202,7 +224,162 @@ function model(o, faza) {
       add(elip([d[0] - 2.3, ty + 7.1, d[2]], [1.2, 0.7, 0.5]), 'lisc'); add(elip([d[0] + 0.9, ty + 7.4, d[2]], [1.2, 0.7, 0.5]), 'lisc'); }
   }
   if (o.pas) czesci[czesci.findIndex(c => c.wzor === 'tulow')].skos = 1;
-  return { czesci, k, A, hy, hr, ty, kolory: o.kolDod, kolorOczu: o.kolorOczu, usta: o.ustaD, bezRumiencow: o.bezRumiencow };
+  return { czesci, k, A, hy, hr, ty, kolory: kd, kolorOczu: o.kolorOczu, usta: o.ustaD, bezRumiencow: o.bezRumiencow };
+}
+
+// ---------- ekwipunek z opisu (content/naPostaci.ts): każdy przedmiot ze swoim kształtem i kolorami ----------
+function koloryEkwipunku(eq) {
+  const kd = {};
+  const h = eq.helm;
+  if (h) { kd.eqH = h.kolor; kd.eqH2 = h.kolor2 || ciemniej(h.kolor, -0.16); kd.eqHz = h.zdobienie || ciemniej(h.kolor, -0.22); kd.eqRog = h.rogi || '#ece4d4'; kd.eqPio = h.pioro || '#efe3c8'; }
+  const b = eq.bron;
+  if (b) { kd.eqB = b.kolor; kd.eqB2 = b.kolor2 || '#7b4a2b'; kd.eqBz = b.zdobienie || kd.eqB2; kd.eqBk = b.krysztal || '#9fd0ff'; }
+  const d = eq.druga;
+  if (d) { kd.eqD = d.kolor; kd.eqD2 = d.kolor2 || ciemniej(d.kolor); kd.eqDz = d.zdobienie || kd.eqD2; kd.eqDc = ciemniej(d.kolor, -0.1); kd.eqStrz = d.strzaly || '#efe3c8'; }
+  const z = eq.zbroja;
+  if (z) { kd.eqZ = z.ksztalt === 'plaszcz' ? (z.kolor2 || '#3a2a3a') : z.kolor; kd.eqZ2 = z.kolor2 || ciemniej(z.kolor); kd.eqP = z.kolor; kd.eqPz = z.zdobienie || '#d0a548'; }
+  const u = eq.buty;
+  if (u) { kd.buty = u.kolor; kd.eqBuz = u.skrzydelka || '#efe3c8'; }
+  return kd;
+}
+
+function helmEq(add, h, hy, hr) {
+  const k = h.ksztalt || 'kopula';
+  if (k === 'kopula' || k === 'skorzany') {
+    const hc2 = [0, hy + 0.3, -0.2];
+    add(p => Math.max(sph(hc2, hr * 1.1)(p), (hy + hr * 0.48 - p[1] - Math.max(0, -p[2]) * 0.5) * 0.9), 'eqH', { wzor: k === 'kopula' ? 'pasHelmuEq' : 'szwyEq', fasety: k === 'kopula' });
+    add(cyl([0, hy + hr * 0.48, -0.2], hr * 1.13, 0.4), 'eqHz');
+    if (h.nosal) add(kaps([0, hy + hr * 0.45, hr * 1.12], [0, hy - 0.4, hr * 1.06], 0.4), 'eqH');
+    if (h.rogi) for (const sx of [-1, 1])
+      lancuch(add, [[sx * hr * 0.9, hy + hr * 0.62, -0.3], [sx * (hr + 1.4), hy + hr * 0.85, -0.4], [sx * (hr + 2.4), hy + hr + 0.8, -0.5], [sx * (hr + 2.7), hy + hr + 2.9, -0.4]], 1.05, 0.25, 'eqRog');
+  } else if (k === 'kaszkiet') {
+    add(elip([0, hy + hr * 0.7, -0.2], [hr * 1.02, hr * 0.5, hr * 1.02]), 'eqH', { wzor: 'czapkaEq', cy: hy + hr * 0.5 });
+    add(elip([0, hy + hr * 0.42, hr * 0.85], [hr * 0.75, 0.35, 1.5]), 'eqH2');
+  } else if (k === 'spiczasta') {
+    add(elip([0, hy + hr * 0.52, 0], [hr * 1.5, 0.45, hr * 1.5]), 'eqH');
+    add(cyl([0, hy + hr * 0.68, 0], hr * 0.98, 0.4), 'eqHz');
+    lancuch(add, [[0, hy + hr * 0.6, 0], [0, hy + hr + 1.8, -0.4], [0, hy + hr + 3.9, -1.3], [0.3, hy + hr + 5.0, -3.0]], hr * 0.97, 0.3, 'eqH');
+  } else if (k === 'kapelusz') {
+    add(elip([0, hy + hr * 0.5, 0.3], [hr * 1.25, 0.4, hr * 1.35]), 'eqH');
+    add(cyl([0, hy + hr * 0.62, 0], hr * 0.92, 0.35), 'eqHz');
+    lancuch(add, [[0, hy + hr * 0.6, 0.6], [0, hy + hr + 0.8, -0.4], [0, hy + hr + 1.9, -2.6]], hr * 0.9, 0.4, 'eqH');
+    if (h.pioro) lancuch(add, [[hr * 0.8, hy + hr * 0.75, -0.6], [hr * 1.05, hy + hr + 1.6, -1.8], [hr * 0.9, hy + hr + 3.4, -3.4]], 0.6, 0.15, 'eqPio');
+  } else if (k === 'korona') {
+    const cy = hy + hr * 0.82, R = hr * 0.82;
+    add(p => Math.max(Math.abs(Math.hypot(p[0], p[2] + 0.1) - R) - 0.45, Math.abs(p[1] - cy) - 0.8), 'eqH', { wzor: 'klejnotyEq', cy });
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + 0.26, x = Math.sin(a) * R, z = Math.cos(a) * R - 0.1;
+      add(stozek([x, cy + 0.6, z], [x, cy + 2.0, z], 0.55, 0.2), 'eqH'); add(sph([x, cy + 2.15, z], 0.35), 'eqH'); }
+  } else if (k === 'cylinder') {
+    add(elip([0, hy + hr * 0.55, 0], [hr * 1.3, 0.4, hr * 1.3]), 'eqH');
+    add(cyl([0, hy + hr + 0.2, -0.1], hr * 0.72, 2.2), 'eqH', { wzor: 'pasCylEq', cy: hy + hr - 2.0 });
+    add(cyl([0, hy + hr + 2.45, -0.1], hr * 0.66, 0.3), 'eqH2');
+  }
+}
+
+function bronEq(add, b, d, w, ty) {
+  const ks = b.ksztalt, dl = b.dl || 1, sz = b.szer || 1, sw = b.poswiata ? { swieci: b.poswiata } : {};
+  // Spoczynek: wielka głowa chibi zasłania wszystko, co stoi pionowo przy dłoni – broń opuszczona na bok,
+  // kostur obok dłoni i wyższy od głowy, różdżka wysunięta skośnie.
+  const idle = !w;
+  if (!w) {
+    if (ks === 'kostur' || ks === 'galaz') { d = [d[0] + 1.5, d[1], d[2]]; w = [0, 1, 0]; }
+    else if (ks === 'rozdzka') w = n3([0.45, 1, 0.1]);
+    else w = n3([0.5, -0.8, 0.3]);
+  }
+  const pt = k => [d[0] + w[0] * k, d[1] + w[1] * k, d[2] + w[2] * k];
+  const pr = Math.abs(w[1]) < 0.95 ? n3([w[2], 0, -w[0]]) : [1, 0, 0];
+  const bok = (q, s) => [q[0] + pr[0] * s, q[1] + pr[1] * s, q[2] + pr[2] * s];
+  if (ks === 'miecz' || ks === 'szabla') {
+    add(kaps(pt(-0.9), pt(0.4), 0.38), 'eqB2');
+    const g = pt(0.6), j = 1.2 * Math.min(1.25, sz);
+    add(kaps(bok(g, -j), bok(g, j), 0.36), 'eqBz');
+    if (ks === 'miecz') add(kaps(pt(0.9), pt(0.9 + 6.3 * dl), 0.42 * sz), 'eqB', Object.assign({ cienka: 1 }, sw));
+    else for (let i = 0; i < 5; i++) { const a = i / 5, a1 = (i + 1) / 5;
+      add(kaps(bok(pt(0.9 + a * 5.6 * dl), a * a * 1.6), bok(pt(0.9 + a1 * 5.6 * dl), a1 * a1 * 1.6), 0.42 - a * 0.12), 'eqB', Object.assign({ cienka: 1 }, sw)); }
+    add(sph(pt(-1.05), 0.45), 'eqBz');
+  } else if (ks === 'kostur' || ks === 'rozdzka' || ks === 'galaz') {
+    const krotka = ks === 'rozdzka';
+    const k0 = idle ? (krotka ? -1.3 : -(d[1] - 0.6)) : (krotka ? -1.2 : -4.5);
+    const k1 = idle ? (krotka ? 4.4 : ty + 9.0 - d[1]) : (krotka ? 3.2 : 3.6);
+    add(kaps(pt(k0), pt(k1), krotka ? 0.4 : 0.48), 'eqB', { cienka: 1 });
+    if (b.kolor2 && !krotka) add(kaps(pt(-1.4), pt(1.0), 0.6), 'eqB2');
+    if (ks === 'galaz') {
+      add(kaps(pt(k1 - 1.7), bok(pt(k1 - 0.1), -1.6), 0.35), 'eqB');
+      add(elip(bok(pt(k1 + 0.5), -2.3), [1.2, 0.7, 0.5]), 'lisc'); add(elip(bok(pt(k1 + 0.9), 0.9), [1.2, 0.7, 0.5]), 'lisc');
+    } else if (b.krysztal) {
+      if (b.zdobienie) add(sph(pt(k1 - 0.2), 0.62), 'eqBz');
+      if (!krotka) for (const s of [-1, 1]) add(stozek(bok(pt(k1 - 0.2), s * 0.5), bok(pt(k1 + 1.6), s * 1.25), 0.38, 0.2), 'eqB');
+      const r = krotka ? 0.75 : 1.05;
+      add(stozek(pt(k1 + 0.1), pt(k1 + 1.4), r * 0.45, r), 'eqBk', Object.assign({ fasety: true }, sw));
+      add(stozek(pt(k1 + 1.4), pt(k1 + (krotka ? 2.6 : 3.2)), r, 0.15), 'eqBk', Object.assign({ fasety: true }, sw));
+    } else add(sph(pt(k1 + 1.1), 1.25), 'eqBz', Object.assign({ fasety: true }, sw));
+  } else if (ks === 'siekiera' || ks === 'kilof') {
+    const k1 = 5.5;
+    add(kaps(pt(-1.2), pt(k1), 0.36), 'eqB2', { cienka: 1 });
+    if (ks === 'siekiera') add(stozek(bok(pt(k1 - 0.6), 0.3), bok(pt(k1 - 0.9), 2.4), 0.55, 1.35), 'eqB', { fasety: true });
+    else lancuch(add, [bok(pt(k1 - 1.0), -2.8), bok(pt(k1 - 0.1), -1.3), pt(k1 + 0.2), bok(pt(k1 - 0.1), 1.3), bok(pt(k1 - 1.0), 2.8)], 0.5, 0.25, 'eqB');
+  } else if (ks === 'luk') {
+    const cx = d[0] + 0.6, cy = d[1] + 0.6, R = 5.2 * dl;
+    for (let i = 0; i < 8; i++) { const a0 = -1.25 + i * 2.5 / 8, a1 = a0 + 2.5 / 8;
+      add(kaps([cx + Math.cos(a0) * 1.9, cy + Math.sin(a0) * R, d[2]], [cx + Math.cos(a1) * 1.9, cy + Math.sin(a1) * R, d[2]], 0.42), 'eqB', { cienka: 1 }); }
+    add(kaps([cx + Math.cos(-1.25) * 1.9, cy - Math.sin(1.25) * R, d[2]], [cx + Math.cos(1.25) * 1.9, cy + Math.sin(1.25) * R, d[2]], 0.13), 'cieciwa', { cienka: 1 });
+    if (b.zdobienie) add(sph([cx + 1.9, cy, d[2]], 0.5), 'eqBz');
+  } else if (ks === 'kusza' || ks === 'karabin') {
+    add(kaps(pt(-1.0), pt(ks === 'kusza' ? 3.8 : 3.0), 0.5), 'eqB2', { cienka: 1 });
+    if (ks === 'karabin') add(kaps(pt(3.0), pt(7.4), 0.32), 'eqB', { cienka: 1 });
+    else { add(kaps(pt(3.8), pt(5.2), 0.35), 'eqB'); add(kaps(bok(pt(4.6), -2.3), bok(pt(4.6), 2.3), 0.33), 'eqB', { cienka: 1 }); }
+  } else if (ks === 'pistolet') {
+    add(kaps(pt(-0.5), pt(0.8), 0.45), 'eqB2'); add(kaps(pt(0.6), pt(2.6), 0.42), 'eqB', { fasety: true });
+  }
+}
+
+/** Kusza, pistolet, karabin w pozie strzału (lewa ręka z przodu, prawa przy kolbie). */
+function bronStrzelecka(add, b, h, r) {
+  const ks = b.ksztalt;
+  if (ks === 'pistolet') { add(kaps([h[0], h[1] - 0.3, h[2]], [h[0], h[1] + 0.2, h[2] + 2.2], 0.45), 'eqB', { fasety: true }); return; }
+  add(kaps(r, h, 0.5), 'eqB2', { cienka: 1 });
+  add(kaps(h, [h[0], h[1], h[2] + (ks === 'karabin' ? 3.4 : 1.6)], 0.33), 'eqB', { cienka: 1 });
+  if (ks === 'kusza') add(kaps([h[0] - 2.3, h[1], h[2] + 1.2], [h[0] + 2.3, h[1], h[2] + 1.2], 0.33), 'eqB', { cienka: 1 });
+}
+
+function drugaEq(add, dd, o, ty) {
+  const ks = dd.ksztalt, sw = dd.poswiata ? { swieci: dd.poswiata } : {};
+  if (ks === 'tarcza_okragla' || ks === 'tarcza_herbowa') {
+    const c = [-4.6, ty - 0.2, 1.3], okr = ks === 'tarcza_okragla';
+    const ksz = (cc, rr) => { const e = elip(cc, rr); return okr ? e : p => Math.max(e(p), p[1] - (cc[1] + rr[1] * 0.55)); };
+    const R = okr ? [2.1, 2.5, 0.45] : [2.1, 3.0, 0.45];
+    add(ksz(c, R), 'eqD2');
+    add(ksz([c[0], c[1] + (okr ? 0 : -0.15), c[2] + 0.35], [R[0] - 0.4, R[1] - 0.45, 0.3]), 'eqD', { wzor: 'deskiEq', cc: c });
+    add(sph([c[0], c[1] - (okr ? 0 : 0.3), c[2] + 0.75], 0.6), 'eqDz', { fasety: true });
+    return;
+  }
+  if (ks === 'kolczan') {
+    const a = [-1.4, ty - 2.0, -2.75], b = [1.5, ty + 3.0, -2.75];
+    add(kaps(a, b, 1.05), 'eqD', { wzor: 'kolczanEq', a, b });
+    const os = n3([b[0] - a[0], b[1] - a[1], b[2] - a[2]]);
+    for (const [dx, dz] of [[-0.5, 0.2], [0.3, -0.3], [0.7, 0.4]]) {
+      const s0 = [b[0] + dx, b[1] - 0.4, b[2] + dz], s1 = [s0[0] + os[0] * 2.4, s0[1] + os[1] * 2.4, s0[2] + os[2] * 2.4];
+      add(kaps(s0, s1, 0.18), 'drewno', { cienka: 1 }); add(elip(s1, [0.45, 0.7, 0.3]), 'eqStrz');
+    }
+    return;
+  }
+  const L = o._lewa || o._dlonL;
+  if (!L) return;
+  if (ks === 'kula') {
+    const c = [L[0], L[1] + 1.35, L[2] + 0.3];
+    add(sph(c, 1.3), 'eqD', Object.assign({ wzor: 'polyskKuli', cc: c }, sw));
+    add(cyl([L[0], L[1] + 0.15, L[2] + 0.3], 0.75, 0.25), 'eqD2');
+  } else if (ks === 'ksiega') {
+    const c = [L[0] - 0.4, L[1] + 0.9, L[2] + 1.3];
+    add(rbox(c, [1.15, 1.5, 0.5], 0.2), 'eqD', { wzor: 'ksiegaEq', cc: c });
+  }
+}
+
+function plaszczEq(add, ty, A) {
+  const top = ty + 3.2, dol = 1.0, box = rbox([0, (top + dol) / 2, -2.55], [3.0, (top - dol) / 2, 0.45], 0.45);
+  add(p => { const g = Math.max(0, top - p[1]), hw = 3.0 + g * 0.14; return box([p[0] * 3.0 / hw, p[1], p[2] + g * 0.05]); }, 'eqP', { wzor: 'plaszczEq', dol });
+  add(A ? elip([0, ty + 2.5, -0.5], [3.3, 1.0, 2.4]) : rbox([0, ty + 2.4, -0.5], [3.2, 0.8, 2.3], 0.35), 'eqP');
+  add(sph([0, ty + 2.6, 1.7], 0.5), 'eqPz');
 }
 
 const KOLOR_MAT = k => ({
@@ -259,13 +436,14 @@ function renderuj(o, yaw, faza, H) {
       const hit = promien((px + (a + 0.5) / N - ox) / s, (oy - (py + (b + 0.5) / N)) / s);
       if (hit) probki.push(hit);
     }
-    if (probki.length < 4) { buf[py * W + px] = null; continue; }
+    // cienkie rzeczy (ostrza, drzewca, cięciwy) zostają linią 1 px, nawet gdy pokrywają tylko część piksela
+    if (probki.length < 4 && !(probki.length >= 2 && probki.some(h => m.czesci[h.idx].cienka))) { buf[py * W + px] = null; continue; }
     // materiał większościowy (oczy i drobiazgi mają pierwszeństwo)
     const ile = {};
     const mats = probki.map(h => material(h, m));
     mats.forEach(x => ile[x] = (ile[x] || 0) + 1);
     let mat = null;
-    for (const pr of ['oko', 'biel', 'cieciwa', 'usta']) if ((ile[pr] || 0) >= 2) { mat = pr; break; }
+    for (const pr of ['oko', 'biel', 'cieciwa', 'usta', 'eqHz', 'eqBz', 'eqDz', 'eqPz']) if ((ile[pr] || 0) >= 2) { mat = pr; break; }
     const cienka = probki.some(h => m.czesci[h.idx].cienka);
     if (!mat) mat = Object.keys(ile).sort((a, b) => ile[b] - ile[a])[0];
     // normalna uśredniona z próbek tego materiału
@@ -300,6 +478,21 @@ function renderuj(o, yaw, faza, H) {
     // linia wewnętrzna: sąsiad wyraźnie bliżej oka
     const skok = sas.some(q => q && q.t < b.t - 2.2 && q.czesc !== b.czesc);
     if (skok) { const c = rampa(kol[b.mat] || '#888')[0]; put(i, [Math.round((c[0] + INK[0] * 2) / 3), Math.round((c[1] + INK[1] * 2) / 3), Math.round((c[2] + INK[2] * 2) / 3)]); }
+  }
+  // Poświata: przedmioty, które świecą (ostrze, kryształ, kula), dostają jasny obrys i miękką aureolę 2 px.
+  const swieci = new Array(W * HH);
+  let jestPoswiata = false;
+  for (let i = 0; i < W * HH; i++) { const b = buf[i]; const c = b && m.czesci[b.czesc]?.swieci; if (c) { swieci[i] = c; jestPoswiata = true; } }
+  if (jestPoswiata) for (let y = 0; y < HH; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (buf[i]) continue;
+    let d = 9, c = null;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= W || yy >= HH) continue; const s2 = swieci[yy * W + xx]; if (!s2) continue;
+      const dd = Math.max(Math.abs(dx), Math.abs(dy)); if (dd < d) { d = dd; c = s2; } }
+    if (!c) continue;
+    const g = hexc(c);
+    if (px[i * 4 + 3] === 255) { if (d === 1) put(i, [Math.round((INK[0] + g[0]) / 2), Math.round((INK[1] + g[1]) / 2), Math.round((INK[2] + g[2]) / 2)]); }
+    else put(i, g, 120);
   }
   // Oczy: dwa czyste piksele 1×2 tam, gdzie oko wypada na twarzy (próbkowanie dawało plamy i nierówne oczy);
   // tylko gdy ta strona twarzy patrzy w oko kamery i piksel należy do głowy (nie zasłania go hełm ani włosy).
@@ -354,6 +547,7 @@ function material(h, m) {
     if (y > -1.55 && y < -0.65) return Math.abs(p[0]) < 0.7 && p[2] > 0 ? 'mosiadz' : 'pas';
     if (m.A && p[2] > 1.5 && Math.abs(p[0] - 0.9) < 0.35 && (Math.abs(y - 0.6) < 0.35 || Math.abs(y - 1.7) < 0.35)) return 'mosiadz';
     if (p[1] > cz.ty + 2.1 && Math.abs(p[0]) < 1.6 && p[2] > 0.4) return 'mosiadz'; // stójka
+    if (cz.kolczuga && Math.floor((p[1] - cz.ty) * 1.25 + 20) % 2) return 'eqZ2'; // rzędy kółek kolczugi
   }
   if (cz.wzor === 'czapka' && p[1] < cz.cy + 0.9 && p[1] > cz.cy - 0.1) return 'mosiadz';
   if (cz.wzor === 'brzuch' && p[1] < cz.by - 1.2) return 'futroJasne';
@@ -365,6 +559,21 @@ function material(h, m) {
   if (cz.wzor === 'polysk' && p[1] > cz.glowa[1] + 2.2 && p[0] < -1 && p[0] > -3.2 && p[2] > 0) return 'blysk';
   if (cz.wzor === 'nity' && p[2] > 1.6 && (Math.abs(p[1] - cz.ty - 1.8) < 0.35 || Math.abs(p[1] - cz.ty + 1.8) < 0.35) && Math.abs(((p[0] + 10) % 1.6) - 0.8) < 0.35) return 'zelazo';
   if (cz.wzor === 'pasHelmu' && Math.abs(p[0]) < 0.75 && p[1] > m.hy + 0.3) return 'mosiadz';
+  if (cz.wzor === 'pasHelmuEq' && Math.abs(p[0]) < 0.75 && p[1] > m.hy + 0.3) return 'eqHz';
+  if (cz.wzor === 'szwyEq' && Math.abs(p[0]) < 0.45 && p[1] > m.hy + 0.3) return 'eqHz';
+  if (cz.wzor === 'czapkaEq' && p[1] < cz.cy + 0.9 && p[1] > cz.cy - 0.1) return 'eqHz';
+  if (cz.wzor === 'pasCylEq' && p[1] < cz.cy + 0.9) return 'eqHz';
+  if (cz.wzor === 'klejnotyEq' && p[2] > 0 && Math.abs(p[1] - cz.cy) < 0.4 && Math.abs(Math.sin(Math.atan2(p[0], p[2]) * 3)) < 0.3) return 'eqHz';
+  if (cz.wzor === 'deskiEq' && Math.floor((p[0] - cz.cc[0] + 10) / 1.2) % 2) return 'eqDc';
+  if (cz.wzor === 'polyskKuli' && p[0] - cz.cc[0] < -0.35 && p[1] - cz.cc[1] > 0.35) return 'biel';
+  if (cz.wzor === 'ksiegaEq') { const x = p[0] - cz.cc[0], y = p[1] - cz.cc[1], z = p[2] - cz.cc[2];
+    if (Math.abs(y) > 1.15 && Math.abs(x) > 0.8) return 'eqDz';
+    if (x > 0.95 && Math.abs(z) < 0.4) return 'eqD2';
+    if (z > 0.3 && Math.abs(y) < 0.45 && Math.abs(x) < 0.45) return 'eqDz'; }
+  if (cz.wzor === 'kolczanEq') { const a = cz.a, b = cz.b, ba = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const t = ((p[0] - a[0]) * ba[0] + (p[1] - a[1]) * ba[1] + (p[2] - a[2]) * ba[2]) / (ba[0] * ba[0] + ba[1] * ba[1] + ba[2] * ba[2]);
+    if (t > 0.84 || t < 0.1 || Math.abs(t - 0.5) < 0.06) return 'eqD2'; }
+  if (cz.wzor === 'plaszczEq' && p[1] < cz.dol + 0.8) return 'eqPz';
   if (cz.wzor === 'zapinka' && Math.abs(p[0]) < 0.6 && p[2] > 1.5) return 'mosiadz';
   if (cz.wzor === 'szachy') { const x = p[0] - cz.cc[0], y = p[1] - cz.cc[1]; if ((x < 0) !== (y > 0)) return 'stalCiemna'; }
   if (cz.wzor === 'liscie') { const a = Math.atan2(p[0], p[2]); if (Math.sin(a * 7) > 0.5 && p[1] < m.ty + 1.6) return 'lisc'; }

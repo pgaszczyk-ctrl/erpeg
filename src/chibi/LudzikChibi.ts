@@ -16,6 +16,16 @@ import { testVehicle, hasTestVehicle } from '../testTransport';
 import { koloryZWygladu } from '../przebarwienie3d';
 import { SKORY_MODUL, WLOSY_MODUL, UBRANIA_MODUL } from '../content/modul';
 import { czubek, kula, E } from './rysownik';
+import { opisNaPostaci, type NaPostaci } from '../content/naPostaci';
+
+/** The renderer's equipment layers: the worn items' looks by body place. */
+function wygladEkwipunku(equip: Record<string, string | null>): Partial<Record<'helm' | 'bron' | 'druga' | 'zbroja' | 'buty', NaPostaci>> {
+  const out: Partial<Record<'helm' | 'bron' | 'druga' | 'zbroja' | 'buty', NaPostaci>> = {};
+  const ze = (id: string | null | undefined) => opisNaPostaci(id, item(id ?? '')?.baza);
+  const pary: [keyof typeof out, string | null | undefined][] = [['helm', equip.helm], ['bron', equip.bron], ['druga', equip.dystans], ['zbroja', equip.zbroja], ['buty', equip.buty]];
+  for (const [miejsce, id] of pary) { const o = ze(id); if (o) out[miejsce] = o; }
+  return out;
+}
 
 export const CHIBI = {
   /** Height in world px (owner: „ludzik 20 pixeli super”). */
@@ -194,12 +204,16 @@ export class LudzikChibi {
     };
     if ((session.look.guard3d ?? session.look.modul?.p) === 'k') o.plec = 'k';
     const bron = gear.equip.bron ? item(gear.equip.bron) : undefined;
+    // Each worn item's own look (content/naPostaci.ts); an item without one falls back to the generic picture.
+    const eq = wygladEkwipunku(gear.equip);
+    if (Object.keys(eq).length) o.eq = eq;
     const helm = gear.equip.helm;
-    if (helm) { o.helm = 1; o.helmTyp = /helm/.test(helm) ? 'kopula' : 'kaszkiet'; }
-    if (gear.equip.zbroja) o.naramiennik = 1;
-    if (gear.equip.dystans && /tarcza/.test(gear.equip.dystans)) o.tarcza = 1;
+    if (helm && !eq.helm) { o.helm = 1; o.helmTyp = /helm/.test(helm) ? 'kopula' : 'kaszkiet'; }
+    if (gear.equip.zbroja && !eq.zbroja) o.naramiennik = 1;
+    if (gear.equip.dystans && /tarcza/.test(gear.equip.dystans) && !eq.druga) o.tarcza = 1;
+    if (eq.druga?.ksztalt === 'kolczan') o.pas = 1;
     if (bron?.rodzaj === 'luk') { o.bron = 'luk'; o.pas = 1; }
-    else if (bron?.rodzaj === 'magia') { o.bron = 'kostur'; o.peleryna = 'niebieska'; }
+    else if (bron?.rodzaj === 'magia') { o.bron = 'kostur'; if (eq.zbroja?.ksztalt !== 'plaszcz') o.peleryna = 'niebieska'; }
     else if (gear.equip.bron === 'kijek' || !gear.equip.bron) o.bron = 'galaz';
     else if (/szabla|karabela/.test(gear.equip.bron)) o.bron = 'szabla';
     else o.bron = 'miecz';

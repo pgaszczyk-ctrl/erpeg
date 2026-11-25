@@ -281,7 +281,8 @@ export function shotDamage(weapon: Przedmiot, los?: () => number) {
     if (damage !== null) return damage;
   }
   const off = item(gear.equip.dystans);
-  const extra = skill === 'magia' && off?.rodzaj === 'magia' ? off.moc : 0;
+  // A magic item adds to spells, a quiver (second hand, rodzaj 'luk') to bow shots.
+  const extra = off?.miejsce === 'dystans' && off.rodzaj === skill ? off.moc : 0;
   return skillLevel(skill) + WALKA.zaMoc * ((isBroken(weapon.id) ? 1 : weapon.moc) + extra);
 }
 

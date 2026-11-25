@@ -13,7 +13,7 @@ import { OSTROSC } from '../screen';
 import { loadHdSprites, createHdSprites } from '../sprites';
 import { MAMY, SLUPY_SZYLDOW } from '../content/swiat';
 import { LADOWANIE, LADOWANIE_CO_MS } from '../content/ladowanie';
-import { bootImageUrl } from '../bootImages';
+import { bootImageUrl, MINIATURY_ZIEMI } from '../bootImages';
 import { beginMapIntro, showLoginMap, loadingMapError, demoMapAtOnce, demoIntro, revealLoadedGame } from '../ui/loadingMap';
 import { dreamPlaces, dreamMap, wczytajTargi } from '../demo';
 import { demoStartForm } from '../ui/demoStart';
@@ -62,6 +62,8 @@ export class BootScene extends Phaser.Scene {
     for (const id of [...ITEM_PICTURES, ...ITEM_VARIANTS]) this.load.image(`item-${id}`, bootImageUrl(phaserItemUrl(id)));
     // A potion lying on the ground (loot pops out instead of going straight to the purse).
     this.load.image('item-mikstura', bootImageUrl(phaserItemUrl('mikstura')));
+    // Gear lying on the ground: code-made pixel miniatures of the artist's pictures (world pixel density).
+    for (const id of MINIATURY_ZIEMI) this.load.image(`ziemia-${id}`, bootImageUrl(`items/ziemia/${id}.png`));
     // The glass sword shattering (ikony12 B animation): 4 frames of 64×64 side by side, played once.
     this.load.spritesheet('szklo-peka', bootImageUrl('items/szklany_miecz_peka.png'), { frameWidth: 64, frameHeight: 64 });
     loadHdSprites(this);

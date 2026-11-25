@@ -735,7 +735,7 @@ function statRows(id: string): [string, string][] {
   }
   const what = it.miejsce === 'bron'
     ? (it.rodzaj === 'magia' ? 'Moc czarów' : it.rodzaj ? 'Atak strzałem' : it.narzedzie ? 'Atak (narzędzie)' : 'Atak')
-    : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : 'Pancerz') : 'Pancerz';
+    : it.miejsce === 'dystans' ? (it.rodzaj === 'magia' ? 'Moc czarów' : it.rodzaj === 'luk' ? 'Moc strzał' : 'Pancerz') : 'Pancerz';
   const out: [string, string][] = [[what, what === 'Pancerz' ? String(it.moc) : `+${it.moc}`]];
   const worn = item(gear.equip[it.miejsce]);
   if (worn && worn.id !== id && (worn.rodzaj ?? '') === (it.rodzaj ?? '')) {
@@ -789,7 +789,7 @@ function itemCard(id: string) {
     list.push(['Atak specjalny', umiejetnoscOId(specjalnyZEkwipunku(k, druga)).nazwa]);
   } else if (it?.miejsce === 'dystans') {
     const reka = gear.equip.bron ? skillOfItem(gear.equip.bron) : null;
-    const z = it.rodzaj === 'magia' ? 'magia' : 'miecz';
+    const z = it.rodzaj === 'magia' ? 'magia' : it.rodzaj === 'luk' ? 'luk' : 'miecz';
     if (z === 'miecz' || !reka || reka === z) list.push(['Atak specjalny', umiejetnoscOId(specjalnyZEkwipunku(z, id)).nazwa]);
   }
   // The item's own power: from skill N (red until then).

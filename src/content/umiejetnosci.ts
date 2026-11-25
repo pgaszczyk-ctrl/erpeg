@@ -44,8 +44,8 @@ export function specjalnyZEkwipunku(bron: Umiejetnosc, drugaReka: string | null 
   const druga = drugaReka ?? '';
   if (bron === 'miecz') return druga.startsWith('tarcza_') ? 'tarcza' : 'zamach';
   if (bron === 'luk') return 'przebicie';
-  if (druga === 'kula') return 'wachlarz';
-  if (druga === 'ksiega') return 'mocny_czar';
+  if (druga.startsWith('kula')) return 'wachlarz';
+  if (druga.startsWith('ksiega')) return 'mocny_czar';
   return 'krag';
 }
 

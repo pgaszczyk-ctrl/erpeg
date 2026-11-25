@@ -5,6 +5,7 @@ import { stanGry } from '../stanGry';
 import { pipe, brzdek, upadekLupu, fanfaraLupu, skrzyniaOtwiera } from '../sfx';
 import { przygotujTekstury as przygotujLup, grudkaKlucz, podzielZloto, wyrzuc, miejsceObok, animujLup, pokazFx, dodajBlysk, dodajPoswiate, LUP_FX } from '../lup/lupFx';
 import { RZADKOSCI, rzadkoscPrzedmiotu } from '../content/rzadkosc';
+import { opisNaPostaci } from '../content/naPostaci';
 import { Zloza, type Zloze } from './Zloza';
 import { GORNICTWO } from '../content/sklepy';
 import { landingPanorama } from '../artillery/panorama';
@@ -3734,12 +3735,18 @@ export class GameScene extends Phaser.Scene {
     przygotujLup(this);
     const it = PRZEDMIOTY.find((p) => p.id === id);
     if (!it) return;
-    const key = itemTexture(id) ?? TEX.questItem;
+    // The code-made pixel miniature (1 texture px = ½ map px, like the world); the shrunk icon only as a fallback.
+    const mini = this.textures.exists(`ziemia-${id}`) ? `ziemia-${id}` : it.baza && this.textures.exists(`ziemia-${it.baza}`) ? `ziemia-${it.baza}` : null;
+    const key = mini ?? itemTexture(id) ?? TEX.questItem;
     const item = this.add.image(x, y, key).setDepth(y).setOrigin(0.5, 0.75);
-    item.setDisplaySize(10, 10);
+    if (mini) { this.textures.get(mini).setFilter(Phaser.Textures.FilterMode.NEAREST); item.setScale(0.5); }
+    else item.setDisplaySize(10, 10);
     const rz = RZADKOSCI[rzadkoscPrzedmiotu(id)];
     item.setData('kind', `item:${id}`).setData('rz', rz.poziom);
     dodajPoswiate(this, item, rz);
+    // An item that glows on the hero (Świetlisty miecz…) glows on the ground too, even when it is common.
+    const sw = opisNaPostaci(id, it.baza)?.poswiata;
+    if (sw && rz.poziom <= 0) dodajPoswiate(this, item, { kolor: parseInt(sw.slice(1), 16), poziom: 1, slup: false });
     if (rz.poziom >= 2) dodajBlysk(this, item);
     this.wyrzucLup(item, od ?? { x, y }, opozn, false);
     this.time.delayedCall(opozn + 520, () => {
@@ -7066,7 +7073,7 @@ export class GameScene extends Phaser.Scene {
   private offers(where: 'sklep' | 'biblioteka') {
     const out: Przedmiot[] = [];
     const groups: [Przedmiot['miejsce'], Przedmiot['rodzaj']?][] =
-      where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['zbroja'], ['helm'], ['buty']];
+      where === 'biblioteka' ? [['bron', 'magia'], ['dystans', 'magia'], ['helm']] : [['bron'], ['bron', 'luk'], ['dystans'], ['dystans', 'luk'], ['zbroja'], ['helm'], ['buty']];
     for (const [miejsce, rodzaj] of groups) {
       const all = PRZEDMIOTY.filter((p) => (!p.baza || p.baza === p.id) && p.miejsce === miejsce && p.rodzaj === rodzaj && p.cena > 0 && (p.gdzie ?? 'sklep') === where && !p.szklany && !p.narzedzie);
       if (miejsce === 'helm') {
@@ -7085,7 +7092,7 @@ export class GameScene extends Phaser.Scene {
 
   private label(p: Przedmiot) {
     if (p.pojazd) return `${p.nazwa} – ${p.cenaDiamenty ? `${p.cenaDiamenty} 💎` : `${this.cenaDla(p)} monet`} (+${Math.round((POJAZDY[p.pojazd].szybkosc - 1) * 100)}% prędkości)`;
-    const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : `pancerz ${p.moc}`;
+    const what = p.miejsce === 'bron' ? `obrażenia ${p.moc}` : p.rodzaj === 'magia' ? `czary +${p.moc}` : p.rodzaj === 'luk' ? `strzały +${p.moc}` : `pancerz ${p.moc}`;
     return `${p.nazwa} – ${this.cenaDla(p)} monet (${what})`;
   }
 
