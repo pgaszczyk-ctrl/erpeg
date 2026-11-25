@@ -4085,10 +4085,6 @@ export class GameScene extends Phaser.Scene {
     if (this.lochy) {
       const w = exact ?? this.lochy.przy(hit.x, hit.y + FEET.dy) ?? this.lochy.przy(this.player.x, this.player.y) ?? this.lochy.przy(this.player.x, this.player.y + FEET.dy);
       if (!w) return false;
-      if (this.inCombat()) {
-        this.toast(LOCH_TEKSTY.wWalce, 1800);
-        return true;
-      }
       const opis = LOCHY[w.rodzaj];
       this.dialog({
         title: w.misja?.nazwa ? `🕯 ${w.misja.nazwa}` : `🕯 ${opis.nazwa}${w.przy ? ` – ${w.przy}` : ''}`,
@@ -4102,10 +4098,7 @@ export class GameScene extends Phaser.Scene {
     if (!loch) return false;
     const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
     if (co === 'schody' || co === 'zejscie') {
-      if (this.inCombat()) {
-        this.toast(LOCH_TEKSTY.wWalce, 1800);
-        return true;
-      }
+      // No combat lock on the stairs (owner, 25 Nov 2026: „ma być tak, że można uciekać, kiedy się chce”).
       const pz = loch.plan.poziom;
       if (co === 'zejscie') {
         const ukryty = pz + 1 > loch.plan.normalne;

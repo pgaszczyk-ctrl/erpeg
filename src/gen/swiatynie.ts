@@ -102,7 +102,7 @@ export function swiatyniaNaDachu(obraz: Obraz, pierscien: number[], rodzaj: Swia
 }
 
 /** Roof-forms of the same generator for other buildings (library spiral tower, observatory, town-hall clock, antenna). */
-export type FormaObrotowa = 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'dzwonnica' | 'wiezyczka';
+export type FormaObrotowa = 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'dzwonnica' | 'wiezyczka' | 'brama';
 
 /** Body for those: its own walls, a flat plate under the roof form, nothing poking through it. */
 export function opcjeObrotowe(op: OpcjeBudynku, forma: FormaObrotowa): OpcjeBudynku {

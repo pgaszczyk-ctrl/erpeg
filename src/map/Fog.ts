@@ -394,7 +394,13 @@ export class FogView {
     mc.lineWidth = (2 * MGLA.odScian) / FOG_RES;
     for (const b of buildings) {
       const h = this.podZiemia ? 0 : wallHeight(b) * (WALLS_UP ? -1 : 1);
-      for (const dy of [0, h / 2, h]) {
+      // A tower or dome over the roof (b.dachWys) is uncovered up to its tip, in steps no taller than 8 px.
+      const kroki = [0, h / 2, h];
+      if (!this.podZiemia && b.dachWys) {
+        const d = b.dachWys * (WALLS_UP ? -1 : 1), n = Math.ceil(b.dachWys / 8);
+        for (let k = 1; k <= n; k++) kroki.push(h + (d * k) / n);
+      }
+      for (const dy of kroki) {
         const dx = dy * WALL_SKEW;
         mc.beginPath();
         for (const r of b.rings) {

@@ -1,4 +1,7 @@
 import { makieta, PUNKT_MAKIETY, rysowanaMakieta, tablicaMakiety } from '../ui/makieta';
+import { wymiaryDachu, type RodzajDachu } from '../gen/dachySwiatyn';
+/** Roof forms that stand as towers/domes over the building (gen/dachySwiatyn.ts). */
+const FORMY_WIEZ = new Set<string>(['biblioteka', 'obserwatorium', 'ratusz', 'antena', 'dzwonnica', 'wiezyczka', 'brama']);
 import { stylRegionu } from '../content/styleRegionow';
 import { krajWPunkcie } from '../kraj';
 /** Countries whose churches are Orthodox (onion domes). */
@@ -536,6 +539,8 @@ export class MapRenderer {
         if (k) this.wazne.push({ p, k });
       }
     }
+    // Landmarks drawn by code over their own outline (Brama Krakowska, owner 25 Nov 2026).
+    if (b.name === 'Brama Krakowska' && m.id === 'lublin') return 'brama';
     if (!b.open) {
       const w = this.wazne.find((x) => x.p.building === b);
       // A railway station's glass hall only on a roughly rectangular building (the vault follows its long side).
@@ -980,6 +985,13 @@ export class MapRenderer {
         swiatynia: this.swiatyniaBudynku(b),
         forma: this.formaBudynku(b, k.poziomy),
       };
+    });
+    // Tower/dome forms rise far above the walls: remember how far, so the fog of war uncovers them whole.
+    budynki.forEach((bd, i) => {
+      const b = buildings[i];
+      if (b.dachWys !== undefined) return;
+      const f = bd.forma as RodzajDachu | undefined;
+      b.dachWys = f && FORMY_WIEZ.has(f) ? (() => { const { rKolo, H } = wymiaryDachu(bd.r, f); return (H + rKolo * 0.6 + 12) / G; })() : 0;
     });
     const G2 = GEN_DOTS;
     const rury: Rura09[] = [];

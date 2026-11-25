@@ -1160,6 +1160,9 @@ export class LochWnetrze {
     if (this.h.progress && !this.h.progress.killed.includes(i)) this.h.progress.killed.push(i);
     const k = this.lokatorzy[i].komnata;
     const komnataPusta = !this.lokatorzy.some((l, j) => l.komnata === k && !this.stan.zabici.has(j));
+    // Owner (25 Nov 2026): „strażnik pokonany” / „loch oczyszczony” only when a quest (mission dungeon, the prologue) is behind it.
+    const zadanie = !!lochSesja.misja || !!this.plan.tutorial;
+    if (!zadanie) return true;
     if (this.plan.komnaty[k].skarb && komnataPusta) this.h.toast(LOCH_TEKSTY.straznikPokonany, 3200);
     else if (!this.zostalo && !this.stan.ogloszony) {
       this.stan.ogloszony = true;

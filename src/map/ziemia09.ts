@@ -218,7 +218,8 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   // Dach i ściana z listy regionu (Polska, północ, Śródziemnomorze, kraje suche, Azja, Afryka, Ameryka Łacińska).
   const R = stylPoId(b.region);
   const dach = b.hl ? materialZKoloru(b.hl[0], 'dachowka') : losuj(R.dachy, u);
-  const sciana = b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(R.sciany, v);
+  // Brama Krakowska: gothic brick walls under its code-drawn tower (owner, 25 Nov 2026).
+  const sciana = b.forma === 'brama' ? 'cegla' : b.hl ? materialZKoloru(b.hl[1], 'gladki') : losuj(R.sciany, v);
   const plaski = !b.hl && hash(b.seed, 11, 7) < R.plaskie ? true : undefined;
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
@@ -228,7 +229,7 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   else {
     const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk,
       // Ivy on old walls (owner, 20 Nov 2026: „może bluszcz”): some houses in temperate regions, most libraries/town halls.
-      bluszcz: (b.forma === 'biblioteka' || b.forma === 'ratusz' || b.forma === 'obserwatorium') ? 0.55 : (R.id === 'umiarkowany' || R.id === 'polnoc' || R.id === 'balkany') && hash(b.seed, 21, 5) < 0.13 ? 0.45 : 0 };
+      bluszcz: b.forma === 'brama' ? 0 : (b.forma === 'biblioteka' || b.forma === 'ratusz' || b.forma === 'obserwatorium') ? 0.55 : (R.id === 'umiarkowany' || R.id === 'polnoc' || R.id === 'balkany') && hash(b.seed, 21, 5) < 0.13 ? 0.45 : 0 };
     const obrot = b.forma && OBROTOWE.has(b.forma) ? b.forma as FormaObrotowa : undefined;
     const ksztalt = b.forma && !obrot ? b.forma as FormaKsztaltu : undefined;
     // An irregular or big building keeps its ordinary roof; the form stands only on its most regular part.
@@ -261,7 +262,7 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   return { obraz: gotowy.obraz, x0: gotowy.x0 + dx, y0: gotowy.y0 + dy, para: gotowy.para.map((z) => ({ ...z, x: z.x + dx, y: z.y + dy })) };
 }
 
-const OBROTOWE = new Set(['biblioteka', 'obserwatorium', 'ratusz', 'antena', 'dzwonnica', 'wiezyczka']);
+const OBROTOWE = new Set(['biblioteka', 'obserwatorium', 'ratusz', 'antena', 'dzwonnica', 'wiezyczka', 'brama']);
 
 /** Przechył ścian w generatorze (domyślny `skos` budynku, WALL_SKEW). */
 const SKOS = 0.35;

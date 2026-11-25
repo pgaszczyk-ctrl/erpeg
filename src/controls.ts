@@ -15,6 +15,11 @@ import { live } from './walka/live';
 import { naEkranie } from './obrot';
 
 export const JOY_RADIUS = 56;
+/**
+ * Joystick response (owner, 25 Nov 2026: „zwiększ czułość, działa topornie”): a tiny dead zone, then full speed
+ * already at JOY_PELNA of the rim (it used to need the very rim) with an eased ramp, so a short push walks briskly.
+ */
+export const JOY_MARTWA = 4, JOY_PELNA = 0.5;
 
 /** Explicit interaction input, shared by E, the HUD and object clicks. */
 let interakcja: { x: number; y: number; target?: WorldInteraction | null } | null = null;
@@ -275,8 +280,11 @@ export function installTouchControls(el: HTMLElement) {
     }
     touchInput.joyX = touchInput.joyOriginX + dx;
     touchInput.joyY = touchInput.joyOriginY + dy;
-    touchInput.x = dx / JOY_RADIUS;
-    touchInput.y = dy / JOY_RADIUS;
+    const d = Math.hypot(dx, dy), pelna = JOY_RADIUS * JOY_PELNA;
+    const u = Math.min(1, Math.max(0, (d - JOY_MARTWA) / (pelna - JOY_MARTWA)));
+    const sila = d > 0 ? Math.sqrt(u) / d : 0; // sqrt: half-way to the full-speed ring already gives ~70 %
+    touchInput.x = dx * sila;
+    touchInput.y = dy * sila;
     activity.last = performance.now();
   };
 

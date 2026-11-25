@@ -70,6 +70,8 @@ export interface Building extends Box {
   door?: { x: number; y: number };
   /** A small shed or garage (world maps): drawn, but doesn't stop the hero or shots. */
   open?: boolean;
+  /** Height of a tower/dome roof form over the walls (map px, set by MapRenderer): the fog shows it whole. */
+  dachWys?: number;
   /** A stadium's gate cut through its stands from the south: its two outer corners. */
   brama?: { x0: number; x1: number; y0: number; y1: number };
   /** The stadium's bowl (its hole before the gate was cut). */

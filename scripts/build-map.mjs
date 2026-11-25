@@ -231,6 +231,31 @@ const address = (t) => {
   return street && num ? `${street} ${num}` : null;
 };
 
+/** Longest "tunnel" that may still be a gate under a building (m). */
+const TUNEL_JAKO_PRZEJSCIE_M = 45;
+const tuneleKandydaci = [];
+/** Every vertex of a street-level road/path (lon,lat as written in the data). */
+const wezlyUlic = new Set();
+/**
+ * A passage line reaches PRZEDLUZ_M past both ends: the grown, merged and turned blocks (G8) can stick out a few
+ * metres over the street beyond where OSM ends the passage, which closed the gate (owner, 25 Nov 2026).
+ */
+const PRZEDLUZ_M = 3;
+function przedluz(c) {
+  if (c.length < 2) return c;
+  const ext = (a, b) => {
+    const dx = (a[0] - b[0]) * M_PER_DEG_LON, dy = (a[1] - b[1]) * M_PER_DEG_LAT, d = Math.hypot(dx, dy);
+    if (d < 0.01) return a;
+    return [a[0] + (dx / d) * PRZEDLUZ_M / M_PER_DEG_LON, a[1] + (dy / d) * PRZEDLUZ_M / M_PER_DEG_LAT];
+  };
+  return [ext(c[0], c[1]), ...c.slice(1, -1), ext(c[c.length - 1], c[c.length - 2])];
+}
+function dlugoscM(c) {
+  let d = 0;
+  for (let i = 1; i < c.length; i++) d += Math.hypot((c[i][0] - c[i - 1][0]) * M_PER_DEG_LON, (c[i][1] - c[i - 1][1]) * M_PER_DEG_LAT);
+  return d;
+}
+
 for (const f of features) {
   const t = f.properties || {};
   const g = f.geometry;
@@ -284,11 +309,22 @@ for (const f of features) {
     // mess at game scale: the road itself is drawn wide enough instead.
     if (t.footway === 'sidewalk' || t.footway === 'crossing' || t.path === 'sidewalk' || t.cycleway === 'crossing') continue;
     const cls = ROAD[t.highway];
+    if (!cls) continue;
+    // A short "tunnel" is often a gate under a building tagged as a tunnel (ul. Gruella under Wieża Trynitarska is
+    // tunnel=yes, layer=-1; owner, 25 Nov 2026: „koło katedry nie da się przejść”): kept for later, it becomes a
+    // passage when both its ends join street-level ways (garage ramps and the underground route don't).
+    if (t.tunnel === 'yes' || t.tunnel === 'culvert') {
+      if (t.tunnel === 'yes' && g.type === 'LineString' && dlugoscM(g.coordinates) <= TUNEL_JAKO_PRZEJSCIE_M && !(t.access === 'private' && cls === 'service'))
+        tuneleKandydaci.push({ kind: cls, coords: g.coordinates, name: t.name || null });
+      continue;
+    }
     // Private service roads are dropped, except gateways through buildings (owner 7.10.2026: „prześwity w kamienicach”).
-    if (!cls || t.tunnel === 'yes' || (t.access === 'private' && cls === 'service' && t.tunnel !== 'building_passage')) continue;
-    const l = encode(g.coordinates, false);
+    if (t.access === 'private' && cls === 'service' && t.tunnel !== 'building_passage') continue;
+    const pass = t.tunnel === 'building_passage' || t.covered === 'yes' ? 1 : 0;
+    const l = encode(pass && g.type === 'LineString' ? przedluz(g.coordinates) : g.coordinates, false);
     if (!l) continue;
-    lines.push({ kind: cls, pts: l, bridge: t.bridge && t.bridge !== 'no' ? 1 : 0, pass: t.tunnel === 'building_passage' || t.covered === 'yes' ? 1 : 0, name: t.name || null });
+    if (g.type === 'LineString') for (const c of g.coordinates) wezlyUlic.add(`${c[0]},${c[1]}`);
+    lines.push({ kind: cls, pts: l, bridge: t.bridge && t.bridge !== 'no' ? 1 : 0, pass, name: t.name || null });
     continue;
   }
 
@@ -313,6 +349,20 @@ for (const f of features) {
     const rings = areaRings();
     if (rings.length) areas.push({ kind, rings });
   }
+}
+
+// Short tunnels joined to the streets at both ends: gates under buildings, walkable like building passages.
+{
+  let ile = 0;
+  for (const k of tuneleKandydaci) {
+    const a = k.coords[0], b = k.coords[k.coords.length - 1];
+    if (!wezlyUlic.has(`${a[0]},${a[1]}`) || !wezlyUlic.has(`${b[0]},${b[1]}`)) continue;
+    const l = encode(przedluz(k.coords), false);
+    if (!l) continue;
+    lines.push({ kind: k.kind, pts: l, bridge: 0, pass: 1, name: k.name });
+    ile++;
+  }
+  console.log(`tunnels kept as passages: ${ile} of ${tuneleKandydaci.length}`);
 }
 
 // ---------------------------------------------------------------- give address nodes to buildings

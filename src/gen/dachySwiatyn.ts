@@ -8,7 +8,7 @@
 // z hełmem), antena (maszt z cewką na płaskim dachu wieżowca). Bez DOM-u.
 import { type Obraz, ustaw, hex, OBRYS, hash } from './wspolne';
 
-export type RodzajDachu = 'cerkiew' | 'meczet' | 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'wiezyczka' | 'dzwonnica';
+export type RodzajDachu = 'cerkiew' | 'meczet' | 'biblioteka' | 'obserwatorium' | 'ratusz' | 'antena' | 'wiezyczka' | 'dzwonnica' | 'brama';
 
 const P = (a: string[]) => a.map(hex);
 const BLACHY: Record<string, number[]> = {
@@ -30,7 +30,7 @@ const CEGLA = P(['#4e2723', '#6e362c', '#8a4836', '#a5644a', '#bc7c5c']);
 const OKNO = hex('#2c2c3a');
 const TARCZA = hex('#f4efe0');
 
-type Strefa = 'polac' | 'beben' | 'kopula' | 'spirala' | 'zegar' | 'helm' | 'maszt' | 'kula' | 'dzwon';
+type Strefa = 'polac' | 'beben' | 'kopula' | 'spirala' | 'zegar' | 'helm' | 'maszt' | 'kula' | 'dzwon' | 'osmiobok' | 'latarnia';
 interface Przekroj { s: number; k: number; z: Strefa }
 interface Forma {
   /** Height of the whole roof in radii of the roof's equal-area circle. */
@@ -134,6 +134,24 @@ const FORMY: Record<RodzajDachu, Forma> = {
       if (t < 0.46) return { s: 0.48, k: 0, z: 'dzwon' };
       if (t < 0.5) return { s: lerp(0.48, 0.62, (t - 0.46) / 0.04), k: 0, z: 'helm' };
       return { s: 0.62 * (1 - (t - 0.5) / 0.5), k: 0.15, z: 'helm' };
+    },
+  },
+  // Brama Krakowska in Lublin, drawn by code (owner, 25 Nov 2026: „usuń sprita, narysuj kodem po swojemu”): over the
+  // gothic brick gate tower (the building's own walls, forced to brick) a short tiled skirt, the white octagonal
+  // baroque storey with a brass steam clock facing south, a patinated bulb helmet, an open lantern, a small bulb and
+  // the iron spire with a gilded ball.
+  brama: {
+    wys: 3.0, rMaks: 30, szczyt: 'iglica', polacDo: 0.06,
+    polac: () => BLACHY.dachowka,
+    kopula: () => BLACHY.patyna,
+    profil: (t) => {
+      if (t < 0.06) return { s: lerp(1, 0.84, t / 0.06), k: lerp(0, 0.45, t / 0.06), z: 'polac' };
+      if (t < 0.42) return { s: 0.82, k: 0.45, z: 'osmiobok' };
+      if (t < 0.445) return { s: lerp(0.86, 0.88, (t - 0.42) / 0.025), k: 0.7, z: 'helm' };
+      if (t < 0.62) { const u = (t - 0.445) / 0.175; return { s: 0.26 + 0.46 * Math.sin(Math.PI * (0.4 + 0.6 * u)), k: 1, z: 'helm' }; }
+      if (t < 0.71) return { s: 0.24, k: 1, z: 'latarnia' };
+      if (t < 0.8) { const u = (t - 0.71) / 0.09; return { s: 0.12 + 0.18 * Math.sin(Math.PI * Math.min(1, u * 0.9 + 0.1)), k: 1, z: 'helm' }; }
+      return { s: 0.1 * Math.pow(1 - (t - 0.8) / 0.2, 1.3), k: 1, z: 'helm' };
     },
   },
   // Tower block: on its flat roof an iron mast wound with a brass coil, a brass ball on top.
@@ -261,6 +279,22 @@ export function dachSwiatyni(o: Obraz, pierscien: number[], rodzaj: RodzajDachu,
           const u = (kat - 0.25) / 0.07, v = (t - 0.5) / 0.065, r2 = u * u + v * v;
           if (r2 < 1) kolor[id] = r2 > 0.62 ? ton(BLACHY.mosiadz) : (Math.abs(u) < 0.14 && v > -0.05) || (Math.abs(v) < 0.14 && u > -0.05 && u < 0.55) ? OBRYS : TARCZA;
           else kolor[id] = ton(CEGLA, jas * 0.9);
+          break;
+        }
+        case 'osmiobok': {
+          // White plaster with darker pilasters on the octagon's corners, a brass band at the cornice, and on the
+          // southern face a big brass-rimmed clock (dark hands) with a round window above it.
+          const fa = kat * 8, kraw = Math.abs(fa - Math.round(fa)) < 0.06;
+          const u = (kat - 0.25) / 0.075, v = (t - 0.24) / 0.09, r2 = u * u + v * v;
+          if (r2 < 1) { kolor[id] = r2 > 0.6 ? ton(BLACHY.mosiadz, jas + 0.2) : (Math.abs(u) < 0.13 && v < 0.05) || (Math.abs(v) < 0.13 && u > -0.05 && u < 0.6) ? OBRYS : TARCZA; break; }
+          const okno = Math.abs(((fa + 0.5) % 1) - 0.5) < 0.13 && Math.abs(t - 0.24) < 0.05 && Math.abs(kat - 0.25) > 0.09;
+          kolor[id] = t > 0.405 ? ton(BLACHY.mosiadz, jas + 0.1) : t < 0.075 ? ton(TYNK, jas * 0.8 - 0.25) : okno ? OKNO : kraw ? ton(TYNK, jas * 0.9 - 0.3) : ton(TYNK, jas * 0.9 + 0.15);
+          break;
+        }
+        case 'latarnia': {
+          // Open lantern: patinated posts with dark arched openings between them.
+          const fa = (kat * 8) % 1, otwor = Math.abs(fa - 0.5) < 0.28 && t > 0.62 && t < 0.685;
+          kolor[id] = otwor ? OKNO : ton(BLACHY.patyna, jas);
           break;
         }
         case 'maszt': {

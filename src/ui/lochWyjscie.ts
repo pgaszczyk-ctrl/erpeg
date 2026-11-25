@@ -14,6 +14,9 @@ export function pasekWyjsciaZLochu(wyjdz: () => void) {
         touch-action:manipulation; opacity:0; pointer-events:none;
         transition:opacity .9s ease, transform .9s ease; }
       #loch-wyjscie.on { opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+      /* Owner (25 Nov 2026: „świeci po oczach”): dimmed 3 s after it appears, bright again under a finger/mouse. */
+      #loch-wyjscie.on.cichy { opacity:.38; transition:opacity 1.2s ease, transform .9s ease; }
+      #loch-wyjscie.on.cichy:hover, #loch-wyjscie.on.cichy:focus-visible, #loch-wyjscie.on.cichy:active { opacity:1; transition:opacity .15s; }
       #loch-wyjscie[hidden] { display:none; }
       #loch-wyjscie:focus-visible { outline:3px solid #fff3ce; outline-offset:3px; }
       #loch-wyjscie:active { background:#e1b968; }
@@ -33,15 +36,18 @@ export function pasekWyjsciaZLochu(wyjdz: () => void) {
   button.addEventListener('keydown', e => e.stopPropagation());
   button.addEventListener('click', e => { e.stopPropagation(); wyjdz(); });
   document.body.append(button);
+  let przygas: ReturnType<typeof setTimeout> | undefined;
   return {
     // Fades in (owner, 28 Oct 2026: „pojawić się fade-inem, a nie nagle”).
     ustawOczyszczony: (oczyszczony: boolean) => {
-      if (!oczyszczony) { button.classList.remove('on'); button.hidden = true; return; }
+      if (!oczyszczony) { clearTimeout(przygas); button.classList.remove('on', 'cichy'); button.hidden = true; return; }
       if (!button.hidden) return;
       button.hidden = false;
       void button.offsetWidth; // start the transition from the hidden state
       requestAnimationFrame(() => button.classList.add('on'));
+      clearTimeout(przygas);
+      przygas = setTimeout(() => button.classList.add('cichy'), 900 + 3000);
     },
-    usun: () => button.remove(),
+    usun: () => { clearTimeout(przygas); button.remove(); },
   };
 }

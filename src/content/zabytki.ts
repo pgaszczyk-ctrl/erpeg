@@ -42,18 +42,7 @@ export const ZABYTKI: Zabytek[] = [
     sciany: 16,
     przeswit: 0.35,
   },
-  {
-    // Brama Krakowska jako steampunkowa rotunda (zamówienie 19, paczka „rotunda_v3” 7.10.2026): prosty pionowy korpus,
-    // więc obraz nie leży na skośnym szkielecie – dół podstawy (50, 176) stoi na dole okręgu obrysu (41, 119).
-    id: 'brama_krakowska',
-    mapa: 'lublin',
-    budynek: 'Brama Krakowska',
-    plik: 'swiat/zabytki/brama_krakowska.png',
-    naMapie: [15067, 10420],
-    przesun: [-9, -57],
-    sciany: 0,
-    przeswit: 0.35,
-  },
+  // Brama Krakowska: no artist picture any more – drawn by code as a roof form ('brama', gen/dachySwiatyn.ts; owner 25 Nov 2026).
   {
     // Targi Lublin (Dworcowa 11), hale A, B, C (paczka „targi_lublin_i_smok” 7.10.2026): obraz dokładnie na masce szkieletu
     // (ściany w dół o 16 px i w prawo o 0,35 – podniesiony jak zamek); na dachu rzeźba smoka na złotej kości D20

@@ -41,6 +41,9 @@ import { showCodeOverlay } from '../ui/codeCard';
 import { OSTROSC, poziomPrzyblizenia } from '../screen';
 import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 
+/** The skill bar is half see-through (owner, 25 Nov 2026). */
+const PASEK_SKILLA_ALFA = 0.5;
+
 /** Font of the dialogs (index.html loads it from Google Fonts; BootScene waits for it). */
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
@@ -312,7 +315,7 @@ export class UIScene extends Phaser.Scene {
     const full = 70 * this.ui;
     this.skillFill.setSize(Math.max(2 * this.ui, full * (p.max ? 1 : p.into / p.need)), this.skillFill.height);
     this.tweens.killTweensOf(this.skillBar);
-    this.skillBar.setAlpha(1);
+    this.skillBar.setAlpha(PASEK_SKILLA_ALFA);
     this.skillHide?.remove();
     this.skillHide = this.time.delayedCall(2500, () => this.tweens.add({ targets: this.skillBar, alpha: 0, duration: 500 }));
     // At higher levels one hit moves the bar by a fraction of a pixel (bug report 23: "the bar stands still"):
@@ -323,6 +326,7 @@ export class UIScene extends Phaser.Scene {
       .text(b.x + 35 * this.ui + 4, b.y, `+${p.gain}`, { fontFamily: 'monospace', fontSize: `${8 * this.ui}px`, color: '#f7c531', stroke: '#1e1a24', strokeThickness: 3 })
       .setOrigin(0, 0.5)
       .setDepth(6)
+      .setAlpha(PASEK_SKILLA_ALFA)
       .setResolution(OSTROSC);
     this.tweens.add({ targets: t, y: t.y - 10 * this.ui, alpha: 0, duration: 900, onComplete: () => t.destroy() });
   }
@@ -338,7 +342,8 @@ export class UIScene extends Phaser.Scene {
     const wrap = Math.min(width - 40, 520);
     this.goalText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.2);
     this.toastText.setWordWrapWidth(wrap).setPosition(width / 2, height * 0.3);
-    this.skillBar.setPosition(width / 2, height * 0.6);
+    // Bottom middle, between the joystick and the attack buttons (owner, 25 Nov 2026: it covered the view at 60 %).
+    this.skillBar.setPosition(width / 2, height - 16 * this.ui - 10);
 
     const r = JOY_RADIUS;
     // Live mode (fixed joystick): further in from the screen's edge, where the thumb rests (owner, 26 Oct 2026).
