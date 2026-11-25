@@ -11,7 +11,7 @@ import { tx as txt } from '../i18n';
 
 type VT = import('@mapbox/vector-tile').VectorTile;
 type Pt = Float64Array; // x0, y0, x1, y1… in world units (0..1 = whole Web Mercator world)
-type Napis = { x: number; y: number; t: string; r: number; stolica: boolean };
+type Napis = { x: number; y: number; t: string; r: number; kraj: boolean; stolica: boolean };
 type Poziom = { z: number; ziemia: Pt[][]; woda: Pt[][]; rzeki: Pt[]; ziel: Pt[][]; miasto: Pt[][]; drogi: Record<string, Pt[]>; granice: Pt[]; napisy: Napis[]; kafle: [number, number, boolean][]; gotowe: boolean; alfa: number };
 
 /** Tunables. Spans are the screen's width in km. */
@@ -59,6 +59,7 @@ class Okolica {
   private kmNaJednostke: number;
   private t0 = 0; private raf = 0; private zamkniete = false;
   private startKm = OKOLICA.odKm;
+  private endKm = OKOLICA.doKm;
   /** Resolved when the coarsest level is in (the canvas can be shown). */
   readonly gotowa: Promise<boolean>;
 
@@ -141,14 +142,15 @@ class Okolica {
       const nazwa = String((pl ? pr['name:pl'] : pr['name:en']) ?? pr.name ?? '');
       if (!q || !nazwa) return;
       const rank = Number(pr.population_rank ?? 0) + (k === 'country' ? 20 : 0);
-      p.napisy.push({ x: (tx + q.x / e) / n, y: (ty + q.y / e) / n, t: k === 'country' ? nazwa.toUpperCase() : nazwa, r: rank, stolica: !!pr.capital });
+      p.napisy.push({ x: (tx + q.x / e) / n, y: (ty + q.y / e) / n, t: k === 'country' ? nazwa.toUpperCase() : nazwa, r: rank, kraj: k === 'country', stolica: !!pr.capital });
     });
     p.napisy.sort((a, b) => b.r - a.r);
   }
 
   /** Begin the zoom at `odKm` across the screen (where the poster leaves off). */
-  start(odKm = OKOLICA.odKm) {
+  start(odKm = OKOLICA.odKm, doKm = OKOLICA.doKm) {
     this.startKm = odKm;
+    this.endKm = doKm;
     this.t0 = performance.now();
     cancelAnimationFrame(this.raf);
     const krok = () => { if (this.zamkniete) return; this.rysuj(); this.raf = requestAnimationFrame(krok); };
@@ -157,10 +159,10 @@ class Okolica {
 
   /** Current screen width in km: geometric zoom, quick at first, settling at the end. */
   private km(now: number) {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return Math.max(OKOLICA.doKm, 40);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return Math.max(this.endKm, 40);
     const t = Math.min(1, (now - this.t0) / OKOLICA.czasMs);
     const u = 1 - (1 - t) ** 2.4;
-    return this.startKm * (OKOLICA.doKm / this.startKm) ** u;
+    return this.startKm * (this.endKm / this.startKm) ** u;
   }
 
   private rysuj() {
@@ -221,12 +223,14 @@ class Okolica {
       }
       wypelnij(p.ziemia, K.lad);
       wypelnij(p.ziel, K.ziel);
-      wypelnij(p.miasto, K.miasto);
+      if (this.endKm === OKOLICA.doKm) wypelnij(p.miasto, K.miasto);
       wypelnij(p.woda, K.morze);
       linia(p.ziemia.flat(), K.brzeg, 0.8);
       linia(p.rzeki, K.woda, p.z >= 8 ? 1.4 : 0.8);
       linia(p.granice, K.granica, 1.1, [5, 4]);
-      for (const k of Object.keys(SZEROKOSC_DROGI)) if (p.drogi[k]) linia(p.drogi[k], k === 'highway' ? K.autostrada : K.droga, SZEROKOSC_DROGI[k]);
+      if (this.endKm === OKOLICA.doKm) {
+        for (const k of Object.keys(SZEROKOSC_DROGI)) if (p.drogi[k]) linia(p.drogi[k], k === 'highway' ? K.autostrada : K.droga, SZEROKOSC_DROGI[k]);
+      }
       g.restore();
     }
     // Names: from the most visible level, biggest first, no overlaps.
@@ -236,6 +240,7 @@ class Okolica {
       g.textAlign = 'center'; g.textBaseline = 'middle';
       let ile = 0;
       for (const n of zrodlo.napisy) {
+        if (this.endKm !== OKOLICA.doKm && !n.kraj) continue;
         if (ile > 14) break;
         const x = n.x * s + ox, y = n.y * s + oy;
         if (x < 0 || y < 0 || x > c.width || y > c.height) continue;

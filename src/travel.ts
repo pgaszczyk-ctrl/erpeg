@@ -267,7 +267,10 @@ export async function enterWorld(game: Phaser.Game) {
   const start = a?.enemies?.length && (a.m ?? 'lublin') === city.id && !session.immortal
     ? a : session.arrive ?? { x: session.startX, y: session.startY };
   const ll = city.toLatLon(start.x, start.y);
-  if (intro) flyToGameLocation(ll.lat, ll.lon);
+  if (intro) flyToGameLocation(ll.lat, ll.lon, async () => {
+    const { portretPostaci, wygladGracza } = await import('./ui/postacEdytor');
+    return portretPostaci(wygladGracza(session.look, session.name));
+  });
   await prepareMap(city);
   // A far city's platform could be an island between tracks (saved before this was checked): walk-out spot.
   if (at && !back && worldOrigin(city.id) && session.arrive) session.arrive = city.reachableNear(session.arrive.x, session.arrive.y);

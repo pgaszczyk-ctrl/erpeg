@@ -2,6 +2,7 @@ import { punktNaMapieWczytywania } from '../content/mapaWczytywania';
 import { tx } from '../i18n';
 import { resetTouch, resetKeys } from '../controls';
 import { przygotujOkolice, zamknijOkolice } from './loadingOkolica';
+import { hasPaintedCountry, prepareLoadingAtlas } from './loadingAtlas';
 
 // Ekran pozostaje nad grą aż do narysowania pierwszego widoku. Oglądanie
 // animacji i przygotowanie terenu biegną równolegle.
@@ -10,6 +11,8 @@ let point: { x: number; y: number } | null = null;
 let finished = false;
 let menu: HTMLElement | null = null;
 let poster: HTMLImageElement | null = null;
+let atlas: ReturnType<typeof prepareLoadingAtlas> | null = null;
+let atlasFlight: Promise<void> | null = null;
 let resize: (() => void) | null = null;
 const EUROPE = { x: 655 / 1280, y: 211 / 720 };
 
@@ -37,6 +40,9 @@ function stopMedia() {
   drift = null;
   poster?.remove();
   poster = null;
+  atlas?.close();
+  atlas = null;
+  atlasFlight = null;
   zamknijOkolice();
 }
 
@@ -63,6 +69,7 @@ export function showLoginMap() {
   };
   window.addEventListener('resize', resize);
   preparePoster(r);
+  atlas = prepareLoadingAtlas(r);
 }
 
 function preparePoster(r: HTMLElement) {
@@ -105,11 +112,12 @@ const posterScale = (r: HTMLElement) => initialScale(r) * (portrait(r) ? 1.6 : 3
 const kmNaEkranie = (r: HTMLElement, scale: number, lat: number) => (r.clientWidth / scale) * (360 / 1152) * 111.32 * Math.cos((lat * Math.PI) / 180);
 
 /** When the poster's zoom ends and the drawn map is in, cross-fade to it and keep zooming there. */
-function przejdzDoOkolicy(r: HTMLElement, lat: number, lon: number, lot: Promise<unknown>, scale: number) {
+function przejdzDoOkolicy(r: HTMLElement, lat: number, lon: number, lot: Promise<unknown>, scale: number, countryView = false) {
   const ok = przygotujOkolice(r, lat, lon);
   void Promise.all([ok.gotowa, lot.catch(() => {})]).then(([jest]) => {
     if (!jest || finished || r.hidden || r.dataset.phase === 'error') return;
-    ok.start(Math.max(800, kmNaEkranie(r, scale, lat)));
+    const end = 1300 * Math.min(1, r.clientWidth / r.clientHeight);
+    ok.start(Math.max(countryView ? end : 800, kmNaEkranie(r, scale, lat)), countryView ? end : undefined);
     requestAnimationFrame(() => ok.canvas.classList.add('on'));
   });
 }
@@ -151,9 +159,31 @@ function flightFrames(r: HTMLElement) {
 }
 
 /** The destination is resolved by travel.ts from this character's real save. */
-export function flyToGameLocation(lat: number, lon: number) {
+export function flyToGameLocation(lat: number, lon: number, portrait?: () => Promise<HTMLCanvasElement | null>) {
   const r = root();
   if (!r || r.hidden || finished || r.dataset.phase === 'error' || !loadingGame()) return;
+  const currentAtlas = atlas;
+  if (currentAtlas && hasPaintedCountry(lat, lon)) {
+    r.dataset.phase = 'pan';
+    atlasFlight = (async () => {
+      // Slow or missing images should fall back before they can hold up entry.
+      const ready = await Promise.race([currentAtlas.ready, new Promise<false>((resolve) => setTimeout(() => resolve(false), 400))]);
+      if (atlas !== currentAtlas) return;
+      if (!ready) {
+        currentAtlas.hide();
+        flyWithRegionalMap(r, lat, lon);
+        return;
+      }
+      await currentAtlas.play(lat, lon, reduced(), portrait);
+      if (atlas === currentAtlas && r.dataset.phase === 'pan') r.dataset.phase = 'waiting';
+    })();
+    return;
+  }
+  currentAtlas?.hide();
+  flyWithRegionalMap(r, lat, lon);
+}
+
+function flyWithRegionalMap(r: HTMLElement, lat: number, lon: number) {
   point = punktNaMapieWczytywania(lat, lon);
   r.style.setProperty('--target-x', String(point.x));
   r.style.setProperty('--target-y', String(point.y));
@@ -161,14 +191,14 @@ export function flyToGameLocation(lat: number, lon: number) {
   if (reduced()) {
     plate.style.transform = frame(r, point, posterScale(r), true);
     r.dataset.phase = 'waiting';
-    przejdzDoOkolicy(r, lat, lon, Promise.resolve(), posterScale(r));
+    przejdzDoOkolicy(r, lat, lon, Promise.resolve(), posterScale(r), true);
     return;
   }
   r.dataset.phase = 'pan';
   // Let the map move while the real world is being prepared. Reveal never waits for the zoom.
   const current = plate.animate(flightFrames(r), { duration: 1600, easing: 'linear', fill: 'forwards' });
   flight = current;
-  przejdzDoOkolicy(r, lat, lon, current.finished, posterScale(r));
+  przejdzDoOkolicy(r, lat, lon, current.finished, posterScale(r), true);
   void current.finished.then(() => {
     if (flight === current && r.dataset.phase === 'pan') r.dataset.phase = 'waiting';
   }, () => {});
@@ -311,6 +341,9 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
 export async function revealLoadedGame() {
   const r = root();
   if (!r || r.hidden || finished || r.dataset.phase === 'error') return;
+  const pending = atlasFlight;
+  if (pending) await pending;
+  if (pending !== atlasFlight || r.hidden || finished || !loadingGame()) return;
   r.dataset.phase = 'revealing';
   resetTouch();
   await r.animate([{ opacity: 1 }, { opacity: 0 }], { duration: reduced() ? 100 : 250, fill: 'forwards' }).finished.catch(() => {});
