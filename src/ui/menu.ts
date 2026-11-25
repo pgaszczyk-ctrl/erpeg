@@ -21,6 +21,7 @@ import { showLoginMap, beginMapIntro } from './loadingMap';
 import { przedWejsciem, anulujWejscie } from './poziomo';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
+import { losowyWyglad } from './postacEdytor';
 import { wyborPlci, BRAK_PLCI } from './wyborPlci';
 import { losowaNazwaPostaci, MAKS_NAZWY_POSTACI } from '../content/tytulyPostaci';
 import { przygotujMiasta, znajdzMiejsceStartu, type MiejsceStartu } from '../miastaStartu';
@@ -239,7 +240,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           const p0 = plec.plec();
           if (!p0) throw new Error(BRAK_PLCI());
           // Every hero starts as a young guard; the gender is the player's (owner, 22 Nov 2026), the rest is drawn.
-          const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0 };
+          const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0, wyg: losowyWyglad(p0) };
           const place = poDemo ? PO_DEMO_START.nazwa : start.value.trim() || DEFAULT_START;
           let p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? (geoSwiat ? null : city.findAnyStart(place, DEFAULT_START));
           let gdzie: MiejsceStartu | null = poDemo ? null : geoSwiat;

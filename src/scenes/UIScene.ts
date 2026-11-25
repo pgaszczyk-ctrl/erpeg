@@ -21,7 +21,6 @@ const STRZALKI_ZADAN = { promien: 0.3 };
 import { OWOCE, type Owoc } from '../content/sklepy';
 import { mountHud, unmountHud, setHud, showHud, hudPickup, setHudAvatar, setHudPortrait, hudZoom, setHudVehicles, teleskop } from '../ui/hud';
 import { hasTestVehicle, testVehicle, setTestVehicle } from '../testTransport';
-import { heroPortrait } from '../sprites';
 import { PORTRETY_POSTACI } from '../content/portrety';
 import { MIESZKANCY_HD, STALE_HD } from '../content/wyglad';
 /** Sheet id (`hd-<id>`) → its file name, so a portrait may be named after either. */
@@ -45,7 +44,7 @@ import { loadingMapVisible, loadingGame } from '../ui/loadingMap';
 export const DIALOG_FONT = '"Alegreya Sans", "Trebuchet MS", sans-serif';
 import { session } from '../quests';
 import { offline } from '../api';
-import { modulGracza, modulPortret, modulKlucz, PORTRET_PX } from '../ui/modulPostac';
+import { wygladGracza, portretPostaci, kluczWygladu, PORTRET_POSTACI_PX } from '../ui/postacEdytor';
 
 /** The telescopic HUD's first menu line: the character sheet. */
 
@@ -417,24 +416,13 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's head and shoulders (standing, facing us) in the HUD's avatar frame. */
   private heroAvatar() {
-    // A modular hero (owner, 20 Oct 2026): the portrait is its head; older characters keep their hero's.
-    if (session.look.modul) {
-      const ml = modulGracza(session.look, session.name);
-      void modulPortret(ml).then((c) => {
-        if (modulKlucz(modulGracza(session.look, session.name)) !== modulKlucz(ml)) return;
-        setHudPortrait(c.toDataURL());
-        setHudAvatar(c, 0, 0, PORTRET_PX, PORTRET_PX);
-      });
-      return;
-    }
-    const hd = heroPortrait();
-    const tex = hd && this.textures.exists(hd.key) ? this.textures.get(hd.key) : null;
-    const fr = tex?.has('down-1') ? tex.get('down-1') : null;
-    // The 25 heroes' painted portraits (public/portrety/bohater_NN.webp, also used in dialogs).
-    const m = hd && /lista([a-y])$/.exec(hd.key);
-    setHudPortrait(m ? `${import.meta.env.BASE_URL || '/'}portrety/bohater_${String(m[1].charCodeAt(0) - 96).padStart(2, '0')}.webp` : null);
-    if (!tex || !fr) return setHudAvatar(null);
-    setHudAvatar(tex.getSourceImage() as CanvasImageSource, fr.cutX + 14, fr.cutY + 5, 36, 36);
+    // The editor figure (pack 51, ui/postacEdytor.ts): its head and shoulders for every character.
+    const wy = wygladGracza(session.look, session.name);
+    void portretPostaci(wy).then((c) => {
+      if (!c || kluczWygladu(wygladGracza(session.look, session.name)) !== kluczWygladu(wy)) return;
+      setHudPortrait(c.toDataURL());
+      setHudAvatar(c, 0, 0, PORTRET_POSTACI_PX, PORTRET_POSTACI_PX);
+    });
   }
 
   /** "+1 marchewka", "+12 złota" by the HUD when something new is in the backpack or the purse. */
@@ -642,30 +630,16 @@ export class UIScene extends Phaser.Scene {
 
   /** The hero's dialog portrait (public/portrety/bohater_NN.webp for the 25 heroes); loads it on first use. */
   private portretBohatera(gotowy?: () => void): string | null {
-    if (session.look.modul) {
-      const ml = modulGracza(session.look, session.name);
-      const key = `portret-modul-${modulKlucz(ml)}`;
-      if (this.textures.exists(key)) return key;
-      if (!this.portretLaduje.has(key)) {
-        this.portretLaduje.add(key);
-        void modulPortret(ml).then((c) => {
-          if (!this.textures.exists(key)) this.textures.addCanvas(key, c);
-          gotowy?.();
-        });
-      }
-      return null;
-    }
-    const hp = heroPortrait();
-    const m = hp && /lista([a-y])$/.exec(hp.key);
-    if (!m) return null;
-    const n = m[1].charCodeAt(0) - 96;
-    const key = `portret-bohater-${n}`;
+    const wy = wygladGracza(session.look, session.name);
+    const key = `portret-wyg-${kluczWygladu(wy)}`;
     if (this.textures.exists(key)) return key;
     if (!this.portretLaduje.has(key)) {
       this.portretLaduje.add(key);
-      this.load.image(key, `portrety/bohater_${String(n).padStart(2, '0')}.webp`);
-      if (gotowy) this.load.once(`filecomplete-image-${key}`, gotowy);
-      this.load.start();
+      void portretPostaci(wy).then((c) => {
+        this.portretLaduje.delete(key);
+        if (c && !this.textures.exists(key)) this.textures.addCanvas(key, c);
+        if (c) gotowy?.();
+      });
     }
     return null;
   }

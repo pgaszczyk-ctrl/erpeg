@@ -57,6 +57,45 @@ function pozaReki(pz, sx, ty) {
 }
 function kula(pz, ty = 6.2) { const r = pozaReki(pz, 1, ty); const d = r.dlon, w = r.w; return [d[0] + w[0] * 4.7, d[1] + w[1] * 4.7, d[2] + w[2] * 4.7]; }
 function czubek(pz, ty = 6.2) { const r = pozaReki(pz, 1, ty); const d = r.dlon, w = r.w; return [d[0] + w[0] * 7.2, d[1] + w[1] * 7.2, d[2] + w[2] * 7.2]; }
+// Hairstyles from the look editor (content/wygladPostaci.ts FryzuraChibi): simple shapes that read at 20 px.
+function fryzuraChibi(f, add, hairCut, hy, hr) {
+  const czepek = (r = 0.5, niz = -0.35) => add(hairCut(sph([0, hy + 0.5, -0.35], hr + r), niz), 'wlosy');
+  const grzywka = () => {
+    add(elip([-1.4, hy + hr * 0.62, hr * 0.62], [2.2, 1.1, 1.2]), 'wlosy');
+    add(elip([1.6, hy + hr * 0.68, hr * 0.5], [1.8, 1.0, 1.2]), 'wlosy');
+  };
+  const warkocz = (sx, dl) => {
+    add(kaps([sx * hr * 0.82, hy - 0.5, -0.8], [sx * hr * 0.9, hy - dl, -0.4], 0.95), 'wlosy', { warkocz: 1 });
+    add(sph([sx * hr * 0.9, hy - dl - 0.3, -0.4], 0.75), 'mosiadz');
+  };
+  if (f === 'afro') { add(hairCut(sph([0, hy + 1.1, -0.9], hr + 1.6), -0.15), 'wlosy'); return; }
+  if (f === 'irokez') {
+    add(hairCut(sph([0, hy + 0.3, -0.35], hr + 0.15), -0.1), 'wlosy');
+    for (let i = 0; i < 5; i++) { const z = 2.2 - i * 1.3; add(elip([0, hy + hr + 0.4 - Math.abs(i - 1.5) * 0.25, z], [0.9, 1.5, 0.9]), 'wlosy'); }
+    return;
+  }
+  if (f === 'jez') {
+    add(hairCut(sph([0, hy + 0.4, -0.35], hr + 0.3), -0.2), 'wlosy');
+    for (const [x, z] of [[-2, 1.5], [0, 2.2], [2, 1.5], [-1.2, -0.8], [1.2, -0.8]]) add(elip([x, hy + hr + 0.15, z], [1.0, 0.7, 1.0]), 'wlosy');
+    return;
+  }
+  czepek();
+  grzywka();
+  if (f === 'dlugie') {
+    add(elip([0, hy - 2.4, -hr * 0.8], [hr * 0.95, 3.4, 1.6]), 'wlosy');
+    for (const sx of [-1, 1]) add(kaps([sx * hr * 0.85, hy, -0.4], [sx * hr * 0.95, hy - 4.6, -0.6], 1.15), 'wlosy');
+  } else if (f === 'bob') {
+    add(elip([0, hy - 1.0, -hr * 0.75], [hr * 1.0, 2.4, 1.6]), 'wlosy');
+    for (const sx of [-1, 1]) add(kaps([sx * hr * 0.85, hy + 0.5, -0.3], [sx * hr * 0.92, hy - 2.4, 0.1], 1.1), 'wlosy');
+  } else if (f === 'warkocz') { warkocz(-1, 4.6); add(elip([0, hy - 1.4, -hr * 0.85], [hr * 0.85, 2.0, 1.4]), 'wlosy'); }
+  else if (f === 'warkocze') { warkocz(-1, 4.2); warkocz(1, 4.2); }
+  else if (f === 'kucyk') {
+    add(sph([0, hy + hr * 0.55, -hr * 0.95], 1.2), 'wlosy');
+    add(kaps([0, hy + hr * 0.45, -hr * 1.15], [0, hy - 3.6, -hr * 1.25], 1.05), 'wlosy', { warkocz: 1 });
+  } else if (f === 'kok') add(sph([0, hy + hr + 0.6, -hr * 0.35], 1.9), 'wlosy');
+  else if (f === 'koczki') for (const sx of [-1, 1]) add(sph([sx * hr * 0.78, hy + hr * 0.98, -0.5], 1.7), 'wlosy');
+}
+
 // ---------- model postaci ----------
 // jednostki: piksele świata przy wysokości 20; y w górę, z do patrzącego, postać patrzy w +z
 function model(o, faza) {
@@ -94,7 +133,7 @@ function model(o, faza) {
     if (pz) { dlon = pz.dlon; if (sx === 1) o._w = pz.w; else o._lewa = pz.dlon; }
     if (A) {
       add(kaps(bark, [(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], 0.95), 'mundur');
-      add(kaps([(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], dlon, 0.85), o.mankiet ? 'pas' : 'mundur');
+      add(kaps([(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2, (bark[2] + dlon[2]) / 2], dlon, 0.85), o.mankiet ? 'pas' : o.podwiniete ? 'skora' : 'mundur');
       add(sph(dlon, 0.95), 'skora');
     } else {
       add(rbox([(bark[0] + dlon[0]) / 2, (bark[1] + dlon[1]) / 2 + 0.3, (bark[2] + dlon[2]) / 2], [0.9, 1.6, 0.9], 0.25, sx * 0.12), 'mundur');
@@ -110,7 +149,8 @@ function model(o, faza) {
   // włosy
   const hairCut = (base, niz) => p => { const q = p[1] - hy, z = p[2]; const linia = (z > 0 ? -0.05 * hr + z * 0.55 : niz * hr + z * 0.15); return Math.max(base(p), (linia - q) * 0.8); };
   if (!o.helm || o.helmTyp === 'kaszkiet') {
-    if (A) {
+    if (A && o.fryz) fryzuraChibi(o.fryz, add, hairCut, hy, hr);
+    else if (A) {
       add(hairCut(sph([0, hy + 0.5, -0.35], hr + 0.5), -0.35), 'wlosy');
       // grzywka – kilka kosmyków
       add(elip([-1.4, hy + hr * 0.62, hr * 0.62], [2.2, 1.1, 1.2]), 'wlosy');

@@ -27,6 +27,8 @@ import { OSIAGNIECIA } from '../content/osiagniecia';
 import { MISJE } from '../content/fabula';
 import { prettyCode, shareCode, linkToAccount } from './codeCard';
 import { pokazGdzieKliknac } from './samouczek';
+import { wygladGracza, zlozPostac, losowyWyglad, fryzura as fryzuraWyg, type Wyglad } from './postacEdytor';
+import { FRYZURY, SKORY_51, WLOSY_51 } from '../content/wygladPostaci';
 
 /**
  * The character's code and, until it is done, linking it to an account (owner, 18 Oct 2026: the HUD portrait opens
@@ -98,13 +100,13 @@ function kodPostaci() {
 
 let open: HTMLDivElement | null = null;
 
-type Page = 'kufer' | 'postac' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
+type Page = 'kufer' | 'postac' | 'wyglad' | 'stan' | 'zasoby' | 'zadania' | 'ksiega';
 /** Narrow screens (the trunk's three columns would stack): each column gets a tab of its own. */
 const narrow = () => window.matchMedia('(max-width: 960px)').matches;
 const pages = (): [Page, string, string][] =>
   narrow()
-    ? [['postac', '🎒', 'Postać'], ['stan', '⚙️', 'Statystyki'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
-    : [['kufer', '🧳', 'Kufer'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
+    ? [['postac', '🎒', 'Postać'], ['wyglad', '✂️', 'Wygląd'], ['stan', '⚙️', 'Statystyki'], ['zadania', '📜', 'Dziennik'], ['ksiega', '📖', 'Księga']]
+    : [['kufer', '🧳', 'Kufer'], ['wyglad', '✂️', 'Wygląd'], ['zadania', '📜', 'Dziennik zadań'], ['ksiega', '📖', 'Księga osiągnięć']];
 /** The same page on the current screen width (Kufer ↔ Postać/Stan/Zasoby). */
 // Owner, 27 Oct 2026: Statystyki and Zasoby left too much empty room as separate tabs – on narrow
 // screens they share one tab, side by side when there is room (`.k-cols2`), else one under the other.
@@ -146,6 +148,10 @@ export function closeCharacter() {
   if (historyEntry) {
     historyEntry = false;
     history.back();
+  }
+  if (wygladZmieniony) {
+    wygladZmieniony = false;
+    void saveNow(hpPrzyZamknieciu()).catch(() => { /* saved with the next save point */ });
   }
   const c = closed;
   closed = null;
@@ -207,6 +213,84 @@ function el(tag: string, cls = '', text = '') {
   return e;
 }
 
+// ---------------------------------------------------------------- the editor figure (pack 51)
+/** The look was changed in this opening of the trunk (saved quietly when it closes). */
+let wygladZmieniony = false;
+let hpPrzyZamknieciu = () => session.hp;
+
+/** The hero's big figure (recoloured artist's layers) drawn into a canvas inside `box`. */
+function wstawPostac(box: HTMLElement, w: Wyglad = wygladGracza(session.look, session.name)) {
+  const c = document.createElement('canvas');
+  c.className = 'k-wyg-plotno';
+  c.width = 384;
+  c.height = 576;
+  c.setAttribute('role', 'img');
+  c.setAttribute('aria-label', tx('Twoja postać', 'Your character'));
+  box.classList.add('k-dag-modul');
+  box.append(c);
+  void zlozPostac(w).then((cala) => {
+    if (!cala || !c.isConnected) return;
+    const ctx = c.getContext('2d')!;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.drawImage(cala, 0, 0, c.width, c.height);
+  });
+  return true;
+}
+
+/** Saves the editor's choice in the look (also the copy the test server keeps for saving) and redraws the hero. */
+function ustawWyglad(w: Wyglad) {
+  const wyg = { f: w.f, w: w.w, s: w.s };
+  session.look = { ...session.look, wyg };
+  session.productionLook = { ...session.productionLook, wyg };
+  wygladZmieniony = true;
+  (window as unknown as { __game?: { events: { emit: (e: string) => void } } }).__game?.events.emit('hero-look');
+}
+
+/** The „Wygląd” tab: the big figure and three choices (hairstyle, hair colour, skin) plus a random draw. */
+function stronaWygladu(render: () => void) {
+  const s = el('section', 'k-well k-wyg');
+  s.append(el('div', 'k-plate', tx('Wygląd', 'Look')));
+  const w = wygladGracza(session.look, session.name);
+  const row = el('div', 'k-wyg-row');
+  const ramka = el('div', 'k-wyg-ramka');
+  wstawPostac(ramka, w);
+  const ster = el('div', 'k-wyg-ster');
+  const fr = FRYZURY[w.p];
+  const wybor = (nazwa: string, wartosc: string, probka: string | null, krok: (d: number) => Wyglad, cls: string) => {
+    const r = el('div', `k-wyg-wybor ${cls}`);
+    const lewo = el('button', 'c-btn k-wyg-strz', '◀') as HTMLButtonElement;
+    const prawo = el('button', 'c-btn k-wyg-strz', '▶') as HTMLButtonElement;
+    lewo.type = prawo.type = 'button';
+    lewo.setAttribute('aria-label', `${nazwa}: ${tx('poprzedni', 'previous')}`);
+    prawo.setAttribute('aria-label', `${nazwa}: ${tx('następny', 'next')}`);
+    lewo.onclick = () => { ustawWyglad(krok(-1)); render(); };
+    prawo.onclick = () => { ustawWyglad(krok(1)); render(); };
+    const srodek = el('div', 'k-wyg-opis');
+    srodek.append(el('div', 'k-wyg-nazwa', nazwa));
+    const v = el('div', 'k-wyg-wart');
+    if (probka) { const p = el('span', 'k-wyg-probka'); p.style.background = probka; v.append(p); }
+    v.append(document.createTextNode(wartosc));
+    srodek.append(v);
+    r.append(lewo, srodek, prawo);
+    return r;
+  };
+  const kolo = (i: number, d: number, n: number) => (i + d + n) % n;
+  const fi = Math.max(0, fr.findIndex((x) => x.id === w.f));
+  ster.append(
+    wybor(tx('Fryzura', 'Hairstyle'), fryzuraWyg(w.p, w.f).nazwa(), null, (d) => ({ ...w, f: fr[kolo(fi, d, fr.length)].id }), 'k-wyg-fryzura'),
+    wybor(tx('Kolor włosów', 'Hair colour'), WLOSY_51[w.w].nazwa(), WLOSY_51[w.w].hex, (d) => ({ ...w, w: kolo(w.w, d, WLOSY_51.length) }), 'k-wyg-wlosy'),
+    wybor(tx('Kolor skóry', 'Skin colour'), SKORY_51[w.s].nazwa(), SKORY_51[w.s].hex, (d) => ({ ...w, s: kolo(w.s, d, SKORY_51.length) }), 'k-wyg-skora'),
+  );
+  const los = el('button', 'c-btn k-wyg-los', tx('🎲 Losuj', '🎲 Random')) as HTMLButtonElement;
+  los.type = 'button';
+  los.onclick = () => { ustawWyglad({ p: w.p, ...losowyWyglad(w.p) }); render(); };
+  ster.append(los, el('div', 'k-sub k-wyg-uwaga', tx('Zbroja i hełm zakryją strój i włosy w świecie gry.', 'Armour and helmets cover the clothes and hair in the world.')));
+  row.append(ramka, ster);
+  s.append(row);
+  return s;
+}
+
 /** Digits on drums like an old till; leading zeros dimmed. */
 function drums(n: number, width: number) {
   const s = String(Math.max(0, Math.floor(n)));
@@ -239,6 +323,8 @@ function skillOfItem(id: string | null): Umiejetnosc | null {
 
 function show(host: CharacterHost) {
   let hp = host.hp;
+  wygladZmieniony = false;
+  hpPrzyZamknieciu = () => hp;
   const { maxHp, onChange, eat, tent } = host;
   const scrollTo = host.page === 'gold' ? 'k-zasoby' : null;
   closed = host.onClose ?? null;
@@ -312,7 +398,9 @@ function show(host: CharacterHost) {
   const dagerotyp = () => {
     const frame = el('div', 'k-dag');
     const pic = el('div', 'k-dag-pic');
-    if (NOWE_POSTACIE) {
+    if (NOWE_POSTACIE && wstawPostac(pic)) {
+      // the editor figure (pack 51) – drawn in wstawPostac
+    } else if (NOWE_POSTACIE) {
       // The standing frame facing us (column 2, row 1 of the artist's 3×3 sheet).
       const hero = el('div', 'k-dag-hero');
       // Modular heroes show their real colours: no sepia (41-G003 – it changed the skin/hair the player picked).
@@ -649,6 +737,7 @@ function show(host: CharacterHost) {
       t.type = 'button';
       t.append(el('span', 'k-tab-ic', icon), el('span', 'k-tab-l', label));
       t.setAttribute('aria-pressed', String(id === page));
+      t.dataset.strona = id;
       t.onclick = () => {
         page = id;
         render();
@@ -661,6 +750,7 @@ function show(host: CharacterHost) {
       cols.append(sectionPostac(), sectionStan(), sectionZasoby());
       body.append(cols);
     } else if (page === 'postac') body.append(sectionPostac());
+    else if (page === 'wyglad') { dispose?.(); dispose = null; body.append(stronaWygladu(render)); }
     else {
       dispose?.();
       dispose = null;
@@ -680,20 +770,42 @@ function show(host: CharacterHost) {
 
   render();
   if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ block: 'start' });
-  pokazKodRaz(render);
+  if (!pokazKodRaz(render)) pokazWygladRaz();
+}
+
+/**
+ * Owner, 25 Nov 2026: a new character's look is random; the first time the trunk opens, the „Wygląd” tab lights
+ * up so the player learns where to change the hairstyle and colours.
+ */
+function pokazWygladRaz() {
+  if (session.immortal || page === 'wyglad') return;
+  const klucz = 'exp-wyglad-pokazany:' + session.name.toLowerCase();
+  try {
+    if (localStorage.getItem(klucz)) return;
+    localStorage.setItem(klucz, '1');
+  } catch { return; }
+  window.setTimeout(() => {
+    const tab = open?.querySelector<HTMLButtonElement>('.k-tab[data-strona="wyglad"]');
+    if (!open || !tab) return;
+    const zamknij = pokazGdzieKliknac('#character .k-tab[data-strona="wyglad"]',
+      tx('Tu zmienisz wygląd postaci: fryzurę, kolor włosów i kolor skóry.', 'Change your character\'s look here: hairstyle, hair colour and skin colour.'),
+      () => { zamknij(); zamknijPokaz = null; tab.click(); },
+      () => { zamknij(); zamknijPokaz = null; });
+    zamknijPokaz = zamknij;
+  }, 350);
 }
 
 /**
  * Owner, 26 Oct 2026: the first time a character without an account opens the trunk, everything goes dark but the
  * button that shows and sends the code – one may play without signing in, but must keep the code somewhere.
  */
-function pokazKodRaz(render: () => void) {
-  if (session.konto || !session.idik || session.immortal) return;
+function pokazKodRaz(render: () => void): boolean {
+  if (session.konto || !session.idik || session.immortal) return false;
   const klucz = POKAZANY_KOD + session.name.toLowerCase();
   try {
-    if (localStorage.getItem(klucz)) return;
+    if (localStorage.getItem(klucz)) return false;
     localStorage.setItem(klucz, '1');
-  } catch { /* no storage: show it every time is worse than never – skip */ return; }
+  } catch { /* no storage: show it every time is worse than never – skip */ return false; }
   if (narrow() && page !== 'stan') {
     page = 'stan';
     render();
@@ -708,6 +820,7 @@ function pokazKodRaz(render: () => void) {
       () => { zamknij(); zamknijPokaz = null; });
     zamknijPokaz = zamknij;
   }, 350);
+  return true;
 }
 
 /** A label/value list, one stat per row (the shop's item card uses the same pattern: `dl.s26-stats`). */

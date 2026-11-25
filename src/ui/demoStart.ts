@@ -11,6 +11,7 @@ import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
+import { losowyWyglad } from './postacEdytor';
 import { wyborPlci, BRAK_PLCI } from './wyborPlci';
 
 // The QR demo's own start screen (owner, 18 Oct 2026: many visitors from the flyers, nobody made a character):
@@ -92,7 +93,7 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       const label = go.textContent;
       go.textContent = 'Chwileczkę…';
       try {
-        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0 };
+        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0, wyg: losowyWyglad(p0) };
         const p = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
         const r = await api.createCharacter(imie, PO_DEMO_START.nazwa, p.x, p.y, PX_PER_M, TRUDNOSCI[DOMYSLNA_TRUDNOSC].wiek, look);
         rememberTestLook(look, r.player.name);

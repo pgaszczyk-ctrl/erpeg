@@ -13,8 +13,8 @@ import { SKALA_POSTACI } from '../skala';
 import { session } from '../quests';
 import { gear, item } from '../inventory';
 import { testVehicle, hasTestVehicle } from '../testTransport';
-import { koloryZWygladu } from '../przebarwienie3d';
-import { SKORY_MODUL, WLOSY_MODUL, UBRANIA_MODUL } from '../content/modul';
+import { SKORY_51, WLOSY_51, STROJ_CHIBI } from '../content/wygladPostaci';
+import { wygladGracza, fryzura } from '../ui/postacEdytor';
 import { czubek, kula, E } from './rysownik';
 
 export const CHIBI = {
@@ -47,8 +47,6 @@ export function chibi(): boolean {
   return true;
 }
 
-type Rgb = [number, number, number];
-const hex = (c: Rgb, k = 1) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v * k))).toString(16).padStart(2, '0')).join('');
 const PZ_ZAMACH = Array.from({ length: 15 }, (_, i) => +(-0.9 + 0.3 * i).toFixed(2));
 const PZ_CIOS = Array.from({ length: 11 }, (_, i) => +(-0.9 + 0.3 * i).toFixed(2));
 const najbl = (l: number[], a: number) => l.reduce((b, x) => (Math.abs(x - a) < Math.abs(b - a) ? x : b), l[0]);
@@ -185,12 +183,13 @@ export class LudzikChibi {
 
   /** What the hero wears, as the renderer's outfit (from the equipment and the look's colours). */
   private ubierz() {
-    const k = koloryZWygladu(session.look.modul, session.name);
-    const S = SKORY_MODUL[k.s % SKORY_MODUL.length] as Rgb, W = WLOSY_MODUL[k.w % WLOSY_MODUL.length] as Rgb;
-    const U = UBRANIA_MODUL[k.u % UBRANIA_MODUL.length] as Rgb, U2 = UBRANIA_MODUL[k.u2 % UBRANIA_MODUL.length] as Rgb;
+    // The editor's look (pack 51): skin, hair colour and hairstyle; the clothes are always the recruit's linen
+    // shirt and leather trousers (owner, 25 Nov 2026).
+    const wy = wygladGracza(session.look, session.name);
     const o: Record<string, unknown> = {
       styl: 'A',
-      kolory: { skora: hex(S, 0.95), wlosy: hex(W), mundur: hex(U, 0.82), spodnie: hex(U2, 0.7) },
+      kolory: { skora: SKORY_51[wy.s].hex, wlosy: WLOSY_51[wy.w].hex, mundur: STROJ_CHIBI.koszula, spodnie: STROJ_CHIBI.spodnie },
+      fryz: fryzura(wy.p, wy.f).chibi,
     };
     if ((session.look.guard3d ?? session.look.modul?.p) === 'k') o.plec = 'k';
     const bron = gear.equip.bron ? item(gear.equip.bron) : undefined;
@@ -203,7 +202,8 @@ export class LudzikChibi {
     else if (gear.equip.bron === 'kijek' || !gear.equip.bron) o.bron = 'galaz';
     else if (/szabla|karabela/.test(gear.equip.bron)) o.bron = 'szabla';
     else o.bron = 'miecz';
-    o.mankiet = 1;
+    // armour: leather cuffs; the plain linen shirt has its sleeves rolled up (bare forearms, as the artist drew)
+    if (gear.equip.zbroja) o.mankiet = 1; else o.podwiniete = 1;
     const s = JSON.stringify(o);
     if (s === this.stroj) return false;
     this.stroj = s;

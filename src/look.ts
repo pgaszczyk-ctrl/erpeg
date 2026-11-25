@@ -22,6 +22,8 @@ export interface Look {
   postac?: number;
   /** The modular hero picked at creation (head + body + colours, ui/modulPostac.ts; test server, front picture only so far). */
   modul?: ModulLook;
+  /** The look from the editor (content/wygladPostaci.ts, ui/postacEdytor.ts): hairstyle id, hair and skin colour. */
+  wyg?: { f: string; w: number; s: number };
 }
 
 export const HEADS = () => [tx('Kwadratowa', 'Square'), tx('Okrągła', 'Round'), tx('Pociągła', 'Long')];
@@ -34,7 +36,7 @@ export const CLOTHES = ['#3fa34d', '#3f7fd8', '#e43b44', '#f7c531', '#7a5ab8', '
 
 export const DEFAULT_LOOK: Look = { head: 0, build: 1, outfit: 0, hair: 1, skin: 0, hairColor: 0, top: 0, bottom: 7 };
 
-const LIMITS: Record<Exclude<keyof Look, 'postac' | 'modul' | 'guard3d'>, number> = {
+const LIMITS: Record<Exclude<keyof Look, 'postac' | 'modul' | 'guard3d' | 'wyg'>, number> = {
   head: 3, build: 4, outfit: 6, hair: 6, skin: SKINS.length, hairColor: HAIR_COLORS.length, top: CLOTHES.length, bottom: CLOTHES.length,
 };
 
@@ -52,6 +54,11 @@ export function cleanLook(v: unknown): Look {
     if (typeof p === 'number' && Number.isInteger(p) && p >= 0 && p < 100) out.postac = p;
     const mod = cleanModul((v as Record<string, unknown>).modul);
     if (mod) out.modul = mod;
+    const w = (v as Record<string, unknown>).wyg as Record<string, unknown> | undefined;
+    if (w && typeof w === 'object' && typeof w.f === 'string' && /^[a-z_]{1,40}$/.test(w.f)) {
+      const n = (x: unknown, max: number) => (typeof x === 'number' && Number.isInteger(x) && x >= 0 && x < max ? x : 0);
+      out.wyg = { f: w.f, w: n(w.w, 32), s: n(w.s, 32) };
+    }
   }
   return out;
 }
