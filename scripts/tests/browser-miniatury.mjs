@@ -40,7 +40,7 @@ try {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${URL0}?lang=pl&ostrosc=1&live=0`);
   await page.getByRole('button', { name: 'Nowa postać' }).click();
-  await page.getByPlaceholder('np. Zbyszko').fill('Zbyszko');
+  await page.getByPlaceholder(/np\. (Zbyszko|Dobrawa)/).fill('Zbyszko');
   await page.getByText('Mężczyzna', { exact: false }).first().click();
   await page.getByRole('button', { name: 'Stwórz postać' }).click();
   await page.waitForFunction(() => window.__game?.scene.isActive('game') && window.__game.scene.getScene('game').firstViewReady?.(), null, { timeout: 120000 });

@@ -47,14 +47,13 @@ try{for(const mobile of [false,true]){
   // Wand alone: Krąg mocy; wand + orb: Fala ognia.
   reset();gear.equip.bron='rozdzka';out.rozdzka=s.umiejetnosc().id;a=spawn(14);b=spawn(-14,5);fire();out.krag=[a.hp<10000,b.hp<10000];
   gear.equip.dystans='kula';out.kula=s.umiejetnosc().id;gear.equip.dystans=null;
-  // Mythic sword: wieldable at skill 3, its lightning waits for skill 5.
-  gear.equip.bron='gromowladny';gear.skills.miecz=lv(3);
-  out.mitycznyDmg=s.meleeDamageProbe?.()??null;
+  // Mythic sword: wieldable at skill 3, its light waits for skill 5.
+  gear.equip.bron='swietlisty';gear.skills.miecz=lv(3);
   return out;});
  // Item power gate via the card in the Kufer.
  await page.evaluate(()=>{window.__game.scene.resume('game');window.__game.scene.getScene('ui').openCharacter('eq');});
  await page.waitForSelector('#character',{timeout:10000});
- await page.evaluate(()=>{const c=[...document.querySelectorAll('#character .c-slot, #character [data-slot]')].find(el=>el.querySelector('img')?.src.includes('gromowladny'));c?.click();});
+ await page.evaluate(()=>{const c=[...document.querySelectorAll('#character .c-slot, #character [data-slot]')].find(el=>el.querySelector('img')?.src.includes('swietlisty'));c?.click();});
  await page.waitForTimeout(500);
  const karta=await page.evaluate(()=>[...document.querySelectorAll('#character .c-stat')].map(e=>({t:e.textContent.trim(),brak:e.classList.contains('brak')})));
  await page.screenshot({path:`work/specjalne/${mobile?'telefon':'komputer'}-karta.png`});
@@ -63,7 +62,7 @@ try{for(const mobile of [false,true]){
  assert.equal(r.tarcza,'tarcza');assert.deepEqual(r.tarczaHit.slice(0,2),[true,false]);
  assert.equal(r.luk,'przebicie');assert.deepEqual(r.przebicie,[true,true,true,false],'pierces 2 more, stops at the 4th');
  assert.equal(r.rozdzka,'krag');assert.deepEqual(r.krag,[true,true]);assert.equal(r.kula,'wachlarz');
- const moc=karta.find(k=>/Moc:/.test(k.t));assert(moc&&moc.brak,'power row red below skill 5: '+JSON.stringify(karta));
+ const moc=karta.find(k=>/Moc od/.test(k.t));assert(moc&&moc.brak,'power row red below skill 5: '+JSON.stringify(karta));
  assert(karta.some(k=>/Atak specjalny/.test(k.t)),'special row on the card');
  assert.deepEqual(errors,[]);
  await context.close();

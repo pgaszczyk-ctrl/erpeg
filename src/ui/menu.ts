@@ -22,7 +22,7 @@ import { przedWejsciem, anulujWejscie } from './poziomo';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
 import { wyborPlci, BRAK_PLCI } from './wyborPlci';
-import { losoweImie } from '../content/imiona';
+import { losowaNazwaPostaci, MAKS_NAZWY_POSTACI } from '../content/tytulyPostaci';
 import { przygotujMiasta, znajdzMiejsceStartu, type MiejsceStartu } from '../miastaStartu';
 import { getMap, nameWorldMap } from '../travel';
 import { worldMapId } from '../map/worldRules';
@@ -161,11 +161,11 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     const newCharacter = () => {
       let poDemo = false;
       try { poDemo = localStorage.getItem(PO_DEMO_KLUCZ) === '1'; } catch { /* no storage: the normal form */ }
-      const name = input({ maxLength: 20, placeholder: 'np. Zbyszko' });
+      const name = input({ maxLength: MAKS_NAZWY_POSTACI, placeholder: tx('np. Dobrawa Łaskawa', 'e.g. John the Builder') });
       // A ready name (owner, 8 Nov 2026): the player may keep it or type their own.
-      name.value = losoweImie();
+      name.value = losowaNazwaPostaci();
       name.addEventListener('focus', () => name.select(), { once: true });
-      const plec = wyborPlci(name);
+      const plec = wyborPlci(name, losowaNazwaPostaci);
       const start = input({ placeholder: tx('np. Zamkowa 9, Lublin albo Paryż', 'e.g. Zamkowa 9, Lublin or Paris') });
       przygotujMiasta();
       // "📍": the phone's location as the start, if the game has a map of it.
@@ -230,9 +230,12 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           : button('👤 Zaloguj się, żeby przypisać postać do konta', () => signInThen(err, showLink)));
       };
       showLink();
-      const go: HTMLButtonElement = button('Stwórz postać', () =>
+      const go: HTMLButtonElement = button(tx('Stwórz postać', 'Create character'), () =>
         busy(go, err, async () => {
-          if (name.value.trim().length < 2) throw new Error('Imię musi mieć co najmniej 2 znaki.');
+          const nazwa = name.value.trim();
+          if (nazwa.length < 2 || nazwa.length > MAKS_NAZWY_POSTACI) {
+            throw new Error(tx('Imię musi mieć od 2 do 40 znaków.', 'The name must be 2 to 40 characters long.'));
+          }
           const p0 = plec.plec();
           if (!p0) throw new Error(BRAK_PLCI());
           // Every hero starts as a young guard; the gender is the player's (owner, 22 Nov 2026), the rest is drawn.
@@ -254,7 +257,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           // Home is always on the Lublin map (only Lublin has one): a world start keeps the default home.
           if (!p) p = city.findStart(DEFAULT_START)!;
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
-          const r = await api.createCharacter(name.value.trim(), place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
+          const r = await api.createCharacter(nazwa, place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
           if (!poDemo) r.newCharacter = true;
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
           if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
@@ -263,8 +266,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           await play(r, gdzie);
         }), 'm-primary');
       screen(
-        el('h2', {}, ['Nowa postać']),
-        field('Imię', name, '⚠ Imienia nie można później zmienić.'),
+        el('h2', {}, [tx('Nowa postać', 'New character')]),
+        field(tx('Imię', 'Name'), name, tx('⚠ Imienia nie można później zmienić.', '⚠ You can’t change the name later.')),
         plec.el,
         // After the demo the adventure starts in front of Targi Lublin: no address to choose (owner 7.10.2026).
         poDemo
@@ -364,7 +367,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
 
     const load = (prefill?: { name: string; code: string }, prefillError?: string) => {
       // A real form with username/password fields, so the browser offers to remember them.
-      const name = input({ maxLength: 20, value: prefill?.name ?? '', name: 'username', autocomplete: 'username' });
+      const name = input({ maxLength: MAKS_NAZWY_POSTACI, value: prefill?.name ?? '', name: 'username', autocomplete: 'username' });
       const code = input({
         maxLength: 9, placeholder: '8 znaków', className: 'm-upper', value: prefill?.code ?? '',
         type: 'password', name: 'password', autocomplete: 'current-password',

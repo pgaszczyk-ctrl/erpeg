@@ -22,7 +22,8 @@ export const ITEM_PICTURES = [
 ];
 // Vehicle pictures already load with MATERIAL_PICTURES; recognise them as backpack/shop items.
 // (Order 45 D gave the recruit kit its own pictures; no stand-ins left.)
-const QUEST_PICTURES: Record<string, string> = {};
+// Excalibur borrows the glowing sword's picture until the artist draws its own icon.
+const QUEST_PICTURES: Record<string, string> = { excalibur: 'swietlisty' };
 const pictureBase = (id: string) => QUEST_PICTURES[id] ?? PRZEDMIOTY.find(p => p.id === id)?.baza ?? id;
 const HAVE = new Set([...ITEM_PICTURES, 'rower', 'hulajnoga_parowa', 'kilof']);
 

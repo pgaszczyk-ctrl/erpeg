@@ -19,9 +19,10 @@ const obrazek = (id) => ['items_hd', 'items/duze', 'items', 'proby31', 'sklepy']
 const braki = { postac: [], ziemia: [], obrazek: [] };
 for (const w of wpisy) {
   if (w.pojazd) continue;
+  // the look on the hero needs no picture; the ground miniature is computed from one
+  if (MIEJSCA_NA_POSTACI.includes(w.miejsce) && !NA_POSTACI[w.id]) braki.postac.push(w.id);
   if (!obrazek(w.id)) { braki.obrazek.push(w.id); continue; }
   if (!jest(`items/ziemia/${w.id}.png`)) braki.ziemia.push(w.id);
-  if (MIEJSCA_NA_POSTACI.includes(w.miejsce) && !NA_POSTACI[w.id]) braki.postac.push(w.id);
 }
 // Opisy bez przedmiotu (literówka w id).
 const ids = new Set(wpisy.map((w) => w.id));

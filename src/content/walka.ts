@@ -102,4 +102,6 @@ export const WALKA_SPECJALNE = {
   tarcza: { zasieg: 1.2, katStopnie: 100, mnoznik: 0.6, ogluszenieMs: 1200 },
   /** Krąg mocy: reach (× the sword's) all round, damage share of a spell. */
   krag: { zasieg: 1.8, mnoznik: 0.9 },
+  /** Blask Excalibura: reach all round, damage share of a blow (light element), how long the survivors are blinded. */
+  blask: { zasieg: 1.8, mnoznik: 1.1, oslepienieMs: 900 },
 };

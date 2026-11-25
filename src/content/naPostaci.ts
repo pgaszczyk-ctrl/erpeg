@@ -63,6 +63,7 @@ export const NA_POSTACI: Record<string, NaPostaci> = {
   karabela_damascenska: { typ: 'bron', ksztalt: 'szabla', kolor: '#c9ccd4', kolor2: '#5b3620', zdobienie: MOSIADZ, dl: 1.05 },
   szklany_miecz: { typ: 'bron', ksztalt: 'miecz', kolor: '#8fe6f2', kolor2: '#5b3620', zdobienie: MOSIADZ },
   swietlisty: { typ: 'bron', ksztalt: 'miecz', kolor: '#86e6ff', kolor2: DREWNO, zdobienie: ZLOTO, poswiata: '#8fe8ff', szer: 1.15, dl: 1.05 },
+  excalibur: { typ: 'bron', ksztalt: 'miecz', kolor: '#eef3ff', kolor2: '#2c3566', zdobienie: ZLOTO, poswiata: '#fff2b8', szer: 1.2, dl: 1.15 },
   gromowladny: { typ: 'bron', ksztalt: 'miecz', kolor: '#9aa3ae', kolor2: '#6a4024', zdobienie: ZLOTO, poswiata: '#ffe066' },
   luk_rekruta: { typ: 'bron', ksztalt: 'luk', kolor: '#8a5530' },
   luk: { typ: 'bron', ksztalt: 'luk', kolor: DREWNO },

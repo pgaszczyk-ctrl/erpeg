@@ -1,5 +1,5 @@
 import { profesja } from './content/profesje';
-import { ustawPoziomBroni } from './inventory';
+import { ustawPoziomBroni, ustawPoziomPostaci } from './inventory';
 import { zapamietajPostac } from './pamiecPostaci';
 import { effectiveStage } from './content/questy/progress';
 import { sesjaWygasla, toWygasla } from './sesja';
@@ -249,6 +249,7 @@ export const poczatekSesji = { t: 0, exp: 0, earned: 0, kills: 0 };
 
 export function startSession(r: LoginResult, remember = true) {
   ustawPoziomBroni(() => poziomPostaci(session.exp));
+  ustawPoziomPostaci(() => poziomPostaci(session.exp));
   const p = r.player;
   queueMicrotask(() => Object.assign(poczatekSesji, { t: Date.now(), exp: session.exp, earned: session.stats.earned, kills: Object.values(session.stats.kills).reduce((a, b) => a + b, 0) }));
   setLanguage(p.save.language);

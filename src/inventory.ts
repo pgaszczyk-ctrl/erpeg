@@ -7,6 +7,8 @@ import {
 } from './content/przedmioty';
 import { OWOCE, GRUPY, type Grupa, type Owoc } from './content/sklepy';
 import { esencja } from './content/esencje';
+import type { Zywiol } from './content/zywioly';
+import type { IdUmiejetnosci } from './content/umiejetnosci';
 import { ZUZYCIE, STRZALY, AMUNICJA, type Amunicja } from './content/zuzycie';
 
 // The character's things: equipped items, a 5-slot backpack, skill practice
@@ -141,10 +143,21 @@ export function skillLevel(skill: Umiejetnosc) {
   return l;
 }
 
-/** A weapon's own skill requirement, shared by click, drag, loot and combat. */
+/** The character's level for item requirements (set by GameScene; 1 until then). */
+let poziomPostaciFn = () => 1;
+export function ustawPoziomPostaci(fn: () => number) { poziomPostaciFn = fn; }
+export const poziomTeraz = () => poziomPostaciFn();
+
+/**
+ * An item's requirements, shared by click, drag, loot and combat: the character's level (`wymaganyPoziom`, any item)
+ * and, for weapons, the weapon skill (owner, 25 Nov 2026: „niektóre przedmioty nie mogą być użyte, jeśli brakuje
+ * krzepy”). Null = it can be used.
+ */
 export function weaponRequirement(id: string | null | undefined): string | null {
   const p = item(id);
-  if (!p || p.miejsce !== 'bron') return null;
+  if (!p) return null;
+  if (p.wymaganyPoziom && poziomPostaciFn() < p.wymaganyPoziom) return `Wymaga poziomu postaci: ${p.wymaganyPoziom}`;
+  if (p.miejsce !== 'bron') return null;
   const skill: Umiejetnosc = p.rodzaj === 'magia' ? 'magia' : p.rodzaj === 'luk' ? 'luk' : 'miecz';
   const required = p.wymaganySkill ?? 1;
   return skillLevel(skill) < required ? `Wymaga ${UMIEJETNOSCI[skill].dopelniacz}: ${required}` : null;
@@ -250,9 +263,45 @@ export function powerSkill(id: string | null | undefined): Umiejetnosc {
 /** Why an item's own power (efekt) is still asleep: its skill below `mocWymaga`. Null = it works. */
 export function powerRequirement(id: string | null | undefined): string | null {
   const p = item(id);
-  if (!p?.efekt || !p.mocWymaga) return null;
+  if (!p?.mocWymaga || !(p.efekt || p.zywiol || p.specjalny)) return null;
   const skill = powerSkill(id);
   return skillLevel(skill) < p.mocWymaga ? `Moc przedmiotu – wymaga ${UMIEJETNOSCI[skill].dopelniacz}: ${p.mocWymaga}` : null;
+}
+
+/** The element of the weapon in hand: an essence rubbed in wins, then the weapon's own (only while its power works). */
+export function zywiolBroni(id: string | null | undefined = gear.equip.bron): Zywiol | undefined {
+  const e = imbueOf(id)?.e;
+  if (e?.zywiol) return e.zywiol;
+  const p = item(id);
+  if (!p?.zywiol || weaponRequirement(id) || mocUspiona(id)) return undefined;
+  return p.zywiol;
+}
+
+/** The weapon's own special attack (Excalibur's Blask), only while its power works. */
+export function specjalnyBroni(id: string | null | undefined = gear.equip.bron): IdUmiejetnosci | undefined {
+  const p = item(id);
+  if (!p?.specjalny || weaponRequirement(id) || mocUspiona(id)) return undefined;
+  return p.specjalny;
+}
+
+/** Chain lightning (Gromowładny): its numbers when the hero's magic is high enough, else undefined. */
+export function lancuchBroni(id: string | null | undefined = gear.equip.bron) {
+  const p = item(id);
+  if (!p?.lancuch || weaponRequirement(id) || mocUspiona(id)) return undefined;
+  return skillLevel('magia') >= p.lancuch.magia ? p.lancuch : undefined;
+}
+
+/** Why chain lightning sleeps (magic too low). */
+export function lancuchWymaga(id: string | null | undefined): string | null {
+  const p = item(id);
+  if (!p?.lancuch) return null;
+  return skillLevel('magia') < p.lancuch.magia ? `Łańcuch piorunów – wymaga ${UMIEJETNOSCI.magia.dopelniacz}: ${p.lancuch.magia}` : null;
+}
+
+/** The item's power sleeps: its skill is below `mocWymaga` (an item without `efekt` may still have one). */
+function mocUspiona(id: string | null | undefined) {
+  const p = item(id);
+  return !!p?.mocWymaga && skillLevel(powerSkill(id)) < p.mocWymaga;
 }
 
 /** A blow of the weapon in hand: skill level + WALKA.zaMoc × its power (content/walka.ts). */

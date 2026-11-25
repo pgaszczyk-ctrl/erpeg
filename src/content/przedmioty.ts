@@ -12,6 +12,8 @@ export type Miejsce = 'bron' | 'dystans' | 'zbroja' | 'helm' | 'buty' | 'amulet'
 /** Trzy miejsca na talizmany (przedmioty z miejsce: 'talizman' idą do pierwszego wolnego). */
 export const TALIZMANY: Miejsce[] = ['talizman', 'talizman2', 'talizman3'];
 import type { Amunicja } from './zuzycie';
+import type { Zywiol } from './zywioly';
+import type { IdUmiejetnosci } from './umiejetnosci';
 import { POJAZDY } from './sklepy';
 import { WYTWORCY } from './wytworcy';
 
@@ -56,6 +58,14 @@ export interface Przedmiot {
    * worn from skill 1.
    */
   mocWymaga?: number;
+  /** Minimum character level to wear it at all (owner, 25 Nov 2026: Excalibur from level 10, Gromowładny from 8). */
+  wymaganyPoziom?: number;
+  /** The weapon's element (content/zywioly.ts) – works only from `mocWymaga`, like its other powers. */
+  zywiol?: Zywiol;
+  /** The weapon's own special attack (instead of the one from the second hand) – also from `mocWymaga`. */
+  specjalny?: IdUmiejetnosci;
+  /** Chain lightning on a landed blow when the hero's magic reaches `magia`: chance, extra jumps, damage share per jump. */
+  lancuch?: { magia: number; szansa: number; skoki: number; mnoznik: number; zasiegW: number };
   /** Przedmiot fabularny (np. pączek dla herszta): nic nie daje, służy do misji. */
   fabularny?: boolean;
   /** Prepared food: heals this many hearts, after potions and edible harvests. */
@@ -135,10 +145,15 @@ export const PRZEDMIOTY: Przedmiot[] = [
   { id: 'zelazne_buty', nazwa: 'Żelazne buty', miejsce: 'buty', moc: 2, cena: 4400 },
   // Mityczne: nie ma ich w sklepach, dostaje się je za tajne hasło (np. z ulotki
   // w prawdziwym miejscu). Hasła i nagrody ustawia się w panelu admina.
-  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 9, cena: 0, efekt: 'swiatlo', mocWymaga: 5, opis: 'Świeci – widzisz o połowę dalej.' },
+  { id: 'swietlisty', nazwa: 'Świetlisty miecz', miejsce: 'bron', moc: 9, cena: 0, efekt: 'swiatlo', zywiol: 'swiatlo', mocWymaga: 5, opis: 'Świeci – widzisz o połowę dalej, a jego ciosy palą nieumarłych światłem.' },
+  // Unique weapons are to be per country (owner: Excalibur only in England) – how it is found comes later.
+  { id: 'excalibur', nazwa: 'Excalibur', miejsce: 'bron', moc: 17, cena: 0, wymaganyPoziom: 10, efekt: 'swiatlo', zywiol: 'swiatlo', specjalny: 'blask', mocWymaga: 7,
+    opis: 'Miecz z jeziora. Udźwigniesz go od 10. poziomu i krzepy 5; od krzepy 7 budzi się jego światło i Blask Excalibura.' },
   // Talizmany (miejsce na szyi): tylko w nagrodę za misje.
   { id: 'podkowa_szczescia', nazwa: 'Podkowa Szczęścia', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szczescie', opis: 'Dopóki ją nosisz, każdy potwór i każda rozbita banda dają 10% więcej monet.' },
-  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 7, cena: 0, efekt: 'pioruny', mocWymaga: 5, opis: 'Sam razi piorunami wrogów w pobliżu.' },
+  { id: 'gromowladny', nazwa: 'Gromowładny miecz', miejsce: 'bron', moc: 10, cena: 0, wymaganyPoziom: 8, efekt: 'pioruny', zywiol: 'piorun',
+    lancuch: { magia: 3, szansa: 0.25, skoki: 3, mnoznik: 0.6, zasiegW: 3 },
+    opis: 'Od 8. poziomu i krzepy 6: sam razi piorunami wrogów w pobliżu, a jego ciosy niosą piorun. Kto zna magię (3), temu cios czasem skacze łańcuchem po kilku wrogach.' },
   // „Serce Zębatka” (owner's quest chain, 6 Oct 2026): rewards of its missions, made in the admin panel.
   { id: 'gwizdek_maszynisty', nazwa: 'Gwizdek Maszynisty', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Mosiężny gwizdek z parowozu. Noszony jako talizman: chodzisz o 4% szybciej.' },
   { id: 'kluczyk_nakrecacz', nazwa: 'Kluczyk Nakręcacz', miejsce: 'talizman', moc: 0, cena: 0, efekt: 'szybkosc', opis: 'Kluczyk do nakręcania mechanizmów. Noszony jako talizman: chodzisz o 4% szybciej.' },
@@ -171,7 +186,7 @@ const WYMAGANIA_BRONI: Record<string, number> = {
   zelazny: 3, miecz_mosiezny: 4, stalowy: 5, szabla_hartowana: 8, rycerski: 10,
   karabela_damascenska: 12, szklany_miecz: 10, siekiera: 1,
   luk: 1, luk_refleksyjny: 5, dlugi_luk: 7, kusza: 10, pistolet_parowy: 12,
-  rozdzka: 1, kostur_krysztalowy: 4, swietlisty: 1, gromowladny: 1, karabin_trybunal: 12,
+  rozdzka: 1, kostur_krysztalowy: 4, swietlisty: 1, gromowladny: 6, excalibur: 5, karabin_trybunal: 12,
 };
 for (const p of PRZEDMIOTY) if (p.miejsce === 'bron') p.wymaganySkill = WYMAGANIA_BRONI[p.id] ?? 1;
 

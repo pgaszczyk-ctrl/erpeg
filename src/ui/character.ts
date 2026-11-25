@@ -1,5 +1,6 @@
 import { PROFESJE, PROFESJA, profesja } from '../content/profesje';
 import { specjalnyZEkwipunku, umiejetnoscOId } from '../content/umiejetnosci';
+import { ZYWIOLY } from '../content/zywioly';
 import { przewijanieDotykiem } from './przewijanie';
 import { naEkranie } from '../obrot';
 import { collectStoryItems } from '../prolog/rewards';
@@ -13,7 +14,7 @@ import { slotCell, slotDrag, slotLabel, slotIcon, qualityDots } from './slots';
 import { itemLargeUrl, rzeczUrl, itemAssetUrl } from './itemIcon';
 import { poziomPostaci, czescPremii, szybkoscPostaci, expNaPoziom, MAKS_POZIOM_POSTACI, PREMIA_POZIOMU } from '../content/historia';
 import {
-  gear, item, weaponRequirement, powerRequirement, powerSkill, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
+  gear, item, weaponRequirement, powerRequirement, powerSkill, specjalnyBroni, zywiolBroni, lancuchWymaga, poziomTeraz, totalFruit, goodsLabel, availableSkills, skillProgress, skillLevel, cooldown, hitChance, defense, equipFromBag, unequip, dropFromBag, moveThing, imbueOf, condition, goodsByKind, ownedAmmo,
 } from '../inventory';
 import { session, stanOsiagniec, saveNow, poczatekSesji } from '../quests';
 import { AMUNICJA } from '../content/zuzycie';
@@ -778,29 +779,39 @@ function itemCard(id: string) {
   card.append(head);
   const list: ([string, string] | [string, string, string])[] = statRows(id);
   const k = skillOfItem(id);
+  // Unmet requirement = the row itself in red (owner, 3 Nov 2026: no "za niski poziom" sentence).
+  if (it?.wymaganyPoziom) list.push(['Wymaga poziomu:', String(it.wymaganyPoziom), ...(poziomTeraz() < it.wymaganyPoziom ? ['brak'] : [])] as [string, string] | [string, string, string]);
   if (k && it?.miejsce === 'bron') {
-    // Unmet requirement = the row itself in red (owner, 3 Nov 2026: no "za niski poziom" sentence).
-    list.push([`Wymaga ${UMIEJETNOSCI[k].dopelniacz}:`, String(it.wymaganySkill ?? 1), ...(weaponRequirement(id) ? ['brak'] : [])] as [string, string] | [string, string, string]);
+    const n = it.wymaganySkill ?? 1;
+    list.push([`Wymaga ${UMIEJETNOSCI[k].dopelniacz}:`, String(n), ...(skillLevel(k) < n ? ['brak'] : [])] as [string, string] | [string, string, string]);
   }
   // The special attack comes from the equipment (owner, 24 Nov 2026): what this item gives, or – for the weapon in
   // hand – what the hand + second hand give together right now.
   if (it?.miejsce === 'bron' && k) {
     const druga = gear.equip.bron === id ? gear.equip.dystans : null;
-    list.push(['Atak specjalny', umiejetnoscOId(specjalnyZEkwipunku(k, druga)).nazwa]);
+    list.push(['Atak specjalny', umiejetnoscOId(specjalnyBroni(id) ?? specjalnyZEkwipunku(k, druga)).nazwa]);
   } else if (it?.miejsce === 'dystans') {
     const reka = gear.equip.bron ? skillOfItem(gear.equip.bron) : null;
     const z = it.rodzaj === 'magia' ? 'magia' : it.rodzaj === 'luk' ? 'luk' : 'miecz';
     if (z === 'miecz' || !reka || reka === z) list.push(['Atak specjalny', umiejetnoscOId(specjalnyZEkwipunku(z, id)).nazwa]);
   }
-  // The item's own power: from skill N (red until then).
-  if (it?.efekt && it.mocWymaga) {
+  // The item's own power (glow, lightning, the blows' element, its own special): from skill N (red until then).
+  const moce = [
+    ...(it?.efekt && MOCE[it.efekt] ? [MOCE[it.efekt]] : []),
+    ...(it?.zywiol ? [`ciosy: ${ZYWIOLY[it.zywiol].ikona} ${ZYWIOLY[it.zywiol].nazwa.toLowerCase()}`] : []),
+    ...(it?.specjalny ? [umiejetnoscOId(it.specjalny).nazwa] : []),
+  ];
+  if (it && moce.length && it.miejsce !== 'talizman' && (it.mocWymaga || it.zywiol || it.efekt === 'pioruny' || it.efekt === 'swiatlo')) {
     const ps = powerSkill(id);
-    list.push([`Moc: ${MOCE[it.efekt] ?? it.efekt}`, `od ${UMIEJETNOSCI[ps].dopelniacz} ${it.mocWymaga}`, ...(powerRequirement(id) ? ['brak'] : [])] as [string, string, string] | [string, string]);
+    list.push([it.mocWymaga ? `Moc od ${UMIEJETNOSCI[ps].dopelniacz} ${it.mocWymaga}` : 'Moc', moce.join(' · '), ...(powerRequirement(id) ? ['brak'] : [])] as [string, string, string] | [string, string]);
   }
+  if (it?.lancuch) list.push([`Łańcuch piorunów od ${UMIEJETNOSCI.magia.dopelniacz} ${it.lancuch.magia}`, `${Math.round(it.lancuch.szansa * 100)}% ciosów`, ...(lancuchWymaga(id) ? ['brak'] : [])] as [string, string, string] | [string, string]);
   const w = wearRow(id);
   if (w) list.push(w);
   const imb = imbueOf(id);
   if (imb) list.push([`${imb.e.ikona} ${imb.e.nazwa}`, `jeszcze ${imb.minutes} min`]);
+  // What the blows carry right now (essence, else the weapon's own power), for the weapon in hand.
+  if (it?.miejsce === 'bron' && gear.equip.bron === id) { const z = zywiolBroni(id) ?? (it.rodzaj === 'magia' ? 'magia' : 'fizyczny'); list.push(['Żywioł ciosów', `${ZYWIOLY[z].ikona} ${ZYWIOLY[z].nazwa}`]); }
   if (list.length) card.append(rows(list));
   if (it?.opis) card.append(el('div', 'c-card-desc', it.opis));
   if (it?.leczenie) card.append(el('div', 'c-card-desc', `Leczy: +${it.leczenie} ${it.leczenie === 1 ? 'serce' : it.leczenie < 5 ? 'serca' : 'serc'}. Zużywane po miksturach i jadalnych zbiorach.`));
@@ -808,7 +819,7 @@ function itemCard(id: string) {
 }
 
 /** Names of item powers on the item card. */
-const MOCE: Record<string, string> = { swiatlo: 'światło', pioruny: 'pioruny', szczescie: 'szczęście', szybkosc: 'szybkość', zycie: 'życie', celnosc: 'celność', obrona: 'obrona' };
+const MOCE: Record<string, string> = { swiatlo: 'świeci (widać dalej)', pioruny: 'pioruny', szczescie: 'szczęście', szybkosc: 'szybkość', zycie: 'życie', celnosc: 'celność', obrona: 'obrona' };
 
 /**
  * A brass slider along the trunk's right edge (owner, 6 Oct 2026: on a phone, swiping the trunk
