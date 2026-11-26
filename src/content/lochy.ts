@@ -152,8 +152,6 @@ export const POZIOMY_LOCHU = {
   maks: 5,
   /** Potwory: życie i ciosy × (1 + mocNaPoziom × (poziom − 1)); ukryty jeszcze × mocUkrytego. */
   mocNaPoziom: 0.2,
-  /** Od średniej trudności pierwsze zejście w głąb wymaga poziomu bohatera 5. */
-  pierwszyProg: 5,
   mocUkrytego: 1.4,
   /** Skrzynia: złoto i EXP × (1 + nagrodaNaPoziom × (poziom − 1)). */
   nagrodaNaPoziom: 0.25,
@@ -239,6 +237,7 @@ export const LOCH_TEKSTY = {
   zejdzPytanie: (n: number, ukryty: boolean) => ukryty
     ? tx(`Za gruzem ciemne schody prowadzą jeszcze niżej – na poziom -${n}. Tu chyba nikt nie schodził od wieków…\n\nZejść?`, `Behind the rubble, dark stairs lead even deeper – to level -${n}. Nobody seems to have gone down here for ages…\n\nGo down?`)
     : tx(`Schody prowadzą głębiej, na poziom -${n}. Im niżej, tym groźniej – i tym bogatsza skrzynia na dnie.\n\nZejść?`, `The stairs lead deeper, to level -${n}. The lower you go, the more dangerous it gets – and the richer the chest at the bottom.\n\nGo down?`),
+  get ryzykoZejscia() { return tx('\n\nPotwory mogą Cię zaatakować od razu po zejściu.', '\n\nMonsters can attack as soon as you go down.'); },
   get schodzeNizej() { return tx('⬇ Schodzę', '⬇ Go down'); },
   get wyzej() { return tx('⬆ Schody w górę', '⬆ Stairs up'); },
   wyzejPytanie: (n: number) => n > 0 ? tx(`Wrócić na poziom -${n}?`, `Go back up to level -${n}?`) : tx('Wyjść na powierzchnię?', 'Go up to the surface?'),
