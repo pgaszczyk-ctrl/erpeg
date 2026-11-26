@@ -163,24 +163,33 @@ export function flyToGameLocation(lat: number, lon: number, portrait?: () => Pro
   const r = root();
   if (!r || r.hidden || finished || r.dataset.phase === 'error' || !loadingGame()) return;
   const currentAtlas = atlas;
-  if (currentAtlas && hasPaintedCountry(lat, lon)) {
-    r.dataset.phase = 'pan';
-    atlasFlight = (async () => {
-      // Slow or missing images should fall back before they can hold up entry.
-      const ready = await Promise.race([currentAtlas.ready, new Promise<false>((resolve) => setTimeout(() => resolve(false), 400))]);
+  if (!currentAtlas) {
+    flyWithRegionalMap(r, lat, lon);
+    return;
+  }
+
+  r.dataset.phase = 'pan';
+  atlasFlight = (async () => {
+    const withTimeout = <T>(ready: Promise<T>, ms: number) =>
+      Promise.race([ready.catch(() => null), new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
+    const painted = hasPaintedCountry(lat, lon) && await withTimeout(currentAtlas.ready, 400);
+    if (atlas !== currentAtlas) return;
+    if (painted) {
+      await currentAtlas.play(lat, lon, reduced(), portrait);
+    } else {
+      // The compact overview is bundled with the game. It doesn't wait for the
+      // world tile server which may still be preparing the actual terrain.
+      const region = await withTimeout(Promise.all([import('./loadingAtlasRegion'), currentAtlas.worldReady]), 1600);
       if (atlas !== currentAtlas) return;
-      if (!ready) {
+      if (!region || !region[1]) {
         currentAtlas.hide();
         flyWithRegionalMap(r, lat, lon);
         return;
       }
-      await currentAtlas.play(lat, lon, reduced(), portrait);
-      if (atlas === currentAtlas && r.dataset.phase === 'pan') r.dataset.phase = 'waiting';
-    })();
-    return;
-  }
-  currentAtlas?.hide();
-  flyWithRegionalMap(r, lat, lon);
+      await currentAtlas.playRegion(region[0].prepareAtlasRegion(lat, lon), lat, lon, reduced(), portrait);
+    }
+    if (atlas === currentAtlas && r.dataset.phase === 'pan') r.dataset.phase = 'waiting';
+  })();
 }
 
 function flyWithRegionalMap(r: HTMLElement, lat: number, lon: number) {

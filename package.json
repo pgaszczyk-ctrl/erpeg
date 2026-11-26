@@ -23,11 +23,14 @@
     "phaser": "^4.2.1",
     "pmtiles": "^4.5.0",
     "qrcode": "^1.5.4",
-    "three": "0.186.1"
+    "three": "0.186.1",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.6",
     "@types/three": "0.186.0",
+    "@types/topojson-client": "^3.1.5",
     "clipper-lib": "^6.4.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"
