@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-26 — spokojniejszy bruk na TEST
+
+- `src/gen/podloze.ts`: kamienie 8 × 6 zamiast 5 × 4 pikseli generatora, łagodniejsze fugi, jeden odcień na kamień i mniej obliczeń podczas rysowania. Wzór jest wspólny dla sąsiednich fragmentów, także przy ujemnych współrzędnych.
+- Kompilacje `npm run build` i `VITE_TEST=1 npx vite build` przeszły. Playwright zweryfikował paletę skompilowanego renderera i zapisał zrzuty przy szerokości 390 i 1200 px. Pełny lokalny spacer po mapie utknął na przygotowywaniu widoku. Wrażenia w ruchu i FPS wymagają sprawdzenia na urządzeniu.
+
 ## 2026-11-26 — produkcja 1.079
 
 - Wydanie bohatera chibi w 24 px na produkcję. W porównaniu z 1.078 kod gry obejmuje zmianę rysowania chibi i numer wersji.
