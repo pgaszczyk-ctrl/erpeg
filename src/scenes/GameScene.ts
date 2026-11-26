@@ -460,6 +460,11 @@ export class GameScene extends Phaser.Scene {
   private noHurtUntil = 0;
   /** A fresh start (login, resurrection, the power stone): enemies can't hurt for OCHRONA_MS; the hero blinks. */
   private protectUntil = 0;
+  private schodzenieDoLochu = false;
+
+  private ochronaPoZejsciu() {
+    return trudnoscZWieku(session.age) === 0;
+  }
 
   /** Back from another tab (powrot.ts): a moment's grace before enemies may hit. */
   poPowrocie() {
@@ -805,7 +810,8 @@ export class GameScene extends Phaser.Scene {
     this.harvests = [];
     this.folkQuest = null;
     this.noHurtUntil = 0;
-    this.protectUntil = -1; // set on the first frame (unless the character must linger)
+    this.protectUntil = this.schodzenieDoLochu && !this.ochronaPoZejsciu() ? 0 : -1;
+    this.schodzenieDoLochu = false;
     this.challenge = null;
     this.duelHp = null;
     this.duelCarry = 0;
@@ -4130,17 +4136,12 @@ export class GameScene extends Phaser.Scene {
     if (!loch) return false;
     const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
     if (co === 'schody' || co === 'zejscie') {
-      if (this.inCombat()) {
-        this.toast(LOCH_TEKSTY.wWalce, 1800);
-        return true;
-      }
       const pz = loch.plan.poziom;
       if (co === 'zejscie') {
-        if (this.zaWczesnieNaZejscie(pz + 1)) return true;
         const ukryty = pz + 1 > loch.plan.normalne;
         this.dialog({
           title: LOCH_TEKSTY.zejdzNizej,
-          text: LOCH_TEKSTY.zejdzPytanie(pz + 1, ukryty),
+          text: LOCH_TEKSTY.zejdzPytanie(pz + 1, ukryty) + (this.ochronaPoZejsciu() ? '' : LOCH_TEKSTY.ryzykoZejscia),
           buttons: [LOCH_TEKSTY.schodzeNizej, LOCH_TEKSTY.zostaje],
           zamknij: 1,
           onChoose: (i) => { if (i === 0) this.przejdzPoziom(pz + 1); },
@@ -4205,6 +4206,7 @@ export class GameScene extends Phaser.Scene {
         const plan = city.loch!;
         session.arrive = { x: (plan.start.x + 0.5) * plan.T, y: (plan.start.y + 0.5) * plan.T };
         session.hp = this.player.hp;
+        this.schodzenieDoLochu = true;
         this.game.registry.set('city', city);
         this.scene.stop('ui');
         this.scene.restart();
@@ -4262,19 +4264,10 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private zaWczesnieNaZejscie(cel: number) {
-    if (!this.loch || cel <= this.loch.plan.poziom || session.level.hpWrogow < 2) return false;
-    const poziom = poziomPostaci(session.exp), prog = POZIOMY_LOCHU.pierwszyProg;
-    if (poziom >= prog) return false;
-    this.toast(tx(`Zejście na −${cel} wymaga poziomu ${prog}. Twój poziom: ${poziom}.`,
-      `Floor −${cel} requires level ${prog}. Your level: ${poziom}.`), 3200);
-    return true;
-  }
-
   /** Down or up a level of the same dungeon (another small map: `…:p<n>`); up = arrive by that level's way down. */
   private przejdzPoziom(n: number) {
     const loch = this.loch;
-    if (!loch || this.travelling || this.zaWczesnieNaZejscie(n)) return;
+    if (!loch || this.travelling) return;
     this.travelling = true;
     const gora = n < loch.plan.poziom;
     const zUkrytego = loch.plan.ukrytyPoziom;
@@ -4294,6 +4287,7 @@ export class GameScene extends Phaser.Scene {
         }
         session.arrive = { x: (at.x + 0.5) * p.T, y: (at.y + 0.5) * p.T };
         session.hp = this.player.hp;
+        this.schodzenieDoLochu = !gora;
         this.game.registry.set('city', city);
         this.scene.stop('ui');
         this.scene.restart();
