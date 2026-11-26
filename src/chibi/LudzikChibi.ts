@@ -28,8 +28,8 @@ function wygladEkwipunku(equip: Record<string, string | null>): Partial<Record<'
 }
 
 export const CHIBI = {
-  /** Height in world px (owner: „ludzik 20 pixeli super”). */
-  wysokosc: 20,
+  /** Height in world px. */
+  wysokosc: 24,
   katy: 64,
   /** Walking cycles per map px walked (like the 3D hero: ≈ 2.4 cycles/s at 70 km/h). */
   cyklNaPx: 0.064,

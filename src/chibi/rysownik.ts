@@ -437,8 +437,12 @@ const KOLOR_MAT = k => ({
 // zwraca {w, h, px: Uint8ClampedArray, ox, oy} – stopy w (ox, oy)
 function renderuj(o, yaw, faza, H) {
   const s = H / 20;
-  const W = Math.ceil(H * 1.7) + 4, HH = Math.ceil(H * 1.4) + 4;
-  const ox = W / 2, oy = HH - 3;
+  // Leave room for tall gear and for boots/weapon glow beyond the foot anchor.
+  const margines = !o.stwor && H > 20 ? 4 : 0;
+  // A lowered blade and its glow can extend several pixels below the feet.
+  const dol = margines ? 10 : 0;
+  const W = Math.ceil(H * 1.7) + 4 + 2 * margines, HH = Math.ceil(H * 1.4) + 4 + margines + dol;
+  const ox = W / 2, oy = HH - 3 - dol;
   const m = o.stwor ? modelStwora(Object.assign({}, o), faza) : model(Object.assign({}, o), faza);
   const kol = Object.assign(KOLOR_MAT(m.k), m.kolory || {});
   const cy = Math.cos(yaw), sy = Math.sin(yaw);
