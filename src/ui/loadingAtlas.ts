@@ -24,7 +24,7 @@ export function hasPaintedCountry(lat: number, lon: number) {
 }
 
 const art = (name: string) => new URL(`loading36/atlas/${name}.webp`, document.baseURI).href;
-const DURATION = 2200;
+const DURATION = 6600;
 type Portrait = () => Promise<HTMLCanvasElement | null>;
 type Region = ReturnType<typeof prepareAtlasRegion>;
 
@@ -36,10 +36,13 @@ const cloudSweep = (start: number, middle: number, end: number): Keyframe[] => [
   { offset: middle, opacity: .96, transform: 'translateX(0%)' },
   { offset: end, opacity: 0, transform: 'translateX(45%)' },
 ];
-const key = (offset: number, opacity: number, scale: number, target: Point = { x: 0.5, y: 0.5 }): Keyframe => ({
-  offset, opacity,
-  transform: `translate(${(0.5 - target.x) * scale * 100}%, ${(0.5 - target.y) * scale * 100}%) scale(${scale})`,
-});
+const key = (offset: number, opacity: number, scale: number, target: Point = { x: 0.5, y: 0.5 }): Keyframe => {
+  // Pan only inside the extra area revealed by scaling; even an edge-of-world
+  // destination must leave all four viewport corners covered.
+  const room = (scale - 1) / 2;
+  const shift = (value: number) => Math.max(-room, Math.min(room, (.5 - value) * scale)) * 100;
+  return { offset, opacity, transform: `translate(${shift(target.x)}%, ${shift(target.y)}%) scale(${scale})` };
+};
 
 export function prepareLoadingAtlas(host: HTMLElement) {
   const element = document.createElement('div');
@@ -63,6 +66,24 @@ export function prepareLoadingAtlas(host: HTMLElement) {
     if (ready) element.classList.add('on');
   });
   const ready = Promise.all(sheets.map((layer) => layer.ready)).then((layers) => layers.every(Boolean));
+  let terrainReady = false;
+  let pacing = 0;
+  function pace(clock: Animation) {
+    let lastRate = 1;
+    const tracks = element.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming().duration === DURATION);
+    const adjust = () => {
+      const progress = Number(clock.currentTime ?? 0) / DURATION;
+      const rate = terrainReady ? 1 : Math.max(.001, Math.min(1, (1 - progress) / .32));
+      if (Math.abs(rate - lastRate) > .001) {
+        for (const track of tracks) track.updatePlaybackRate(rate);
+        lastRate = rate;
+      }
+      if (!terrainReady && progress < 1) pacing = requestAnimationFrame(adjust);
+    };
+    adjust();
+    return done(clock);
+  }
+
   let closeRegion: (() => void) | undefined;
 
   const clouds = document.createElement('div');
@@ -84,8 +105,10 @@ export function prepareLoadingAtlas(host: HTMLElement) {
   return {
     ready,
     worldReady: world.ready,
+    terrainReady: () => { terrainReady = true; },
     hide: () => { element.hidden = true; },
     close: () => {
+      cancelAnimationFrame(pacing);
       closeRegion?.();
       for (const animation of element.getAnimations({ subtree: true })) animation.cancel();
       element.remove();
@@ -103,11 +126,11 @@ export function prepareLoadingAtlas(host: HTMLElement) {
 
       const europeOnWorld = { x: 0.51, y: 0.29 };
       const polandOnEurope = { x: 0.55, y: 0.54 };
-      animate(world.sheet, [key(0, 1, 1), key(.15, 1, 1.06), key(.34, 1, 1.62, europeOnWorld), key(.49, 1, 2.1, europeOnWorld), key(1, 1, 2.1, europeOnWorld)]);
-      animate(europe.sheet, [key(0, 0, 1), key(.25, 0, 1), key(.46, 1, 1.08), key(.62, 1, 1.35, polandOnEurope), key(.81, 1, 1.9, polandOnEurope), key(1, 1, 1.9, polandOnEurope)]);
-      animate(poland.sheet, [key(0, 0, 1), key(.62, 0, 1), key(.82, 1, 1), key(1, 1, 1)]);
+      animate(world.sheet, [key(0, 1, 1), key(.15, 1, 1.06), key(.34, 1, 1.32, europeOnWorld), key(.46, 1, 1.52, europeOnWorld), key(.49, 0, 1.55, europeOnWorld), key(1, 0, 1.55, europeOnWorld)]);
+      animate(europe.sheet, [key(0, 0, 1), key(.25, 0, 1), key(.46, 1, 1.08), key(.62, 1, 1.35, polandOnEurope), key(.82, 1, 1.52, polandOnEurope), key(.84, 0, 1.52, polandOnEurope), key(1, 0, 1.52, polandOnEurope)]);
+      animate(poland.sheet, [key(0, 0, 1), key(.62, 0, 1), key(.82, 1, 1.025), key(1, 1, 1.07)]);
       animate(clouds, [...cloudSweep(0, .34, .53), ...cloudSweep(.61, .73, .9)]);
-      return done(animate(marker, [
+      return pace(animate(marker, [
         { offset: 0, opacity: 0 }, { offset: .81, opacity: 0 },
         { offset: .95, opacity: 1 }, { offset: 1, opacity: 1 },
       ]));
@@ -151,7 +174,7 @@ export function prepareLoadingAtlas(host: HTMLElement) {
         if (progress < 1) raf = requestAnimationFrame(tick);
       };
       raf = requestAnimationFrame(tick);
-      return done(motion);
+      return pace(motion);
     },
   };
 }

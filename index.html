@@ -26,17 +26,20 @@
       canvas { display: block; image-rendering: pixelated; }
 
       /* The tiny blurred map appears before the game bundle finishes loading. */
-      #loading-map { position: fixed; inset: 0; z-index: 8; overflow: hidden; background: #2d190f; touch-action: none; }
+      #loading-map { position: fixed; inset: 0; z-index: 8; container-type: size; overflow: hidden; background: #2d190f; touch-action: none; }
       #loading-map[hidden] { display: none; }
-      .lm-soft { position: absolute; inset: -30px; width: calc(100% + 60px); height: calc(100% + 60px); object-fit: cover;
-        filter: blur(20px) brightness(.68); }
+      /* The opening and each painted sheet share a centred, proportional cover crop. */
+      .lm-soft, .lm-atlas-sheet { position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+        width: max(100cqw, calc(100cqh * var(--sheet-ratio, 2.11))); height: auto;
+        aspect-ratio: var(--sheet-ratio, 2.11); }
+      .lm-soft { height: max(100cqh, calc(100cqw / 2.11)); }
       .lm-plate { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; margin-left: -640px; margin-top: -360px; opacity: 0; transition: opacity .45s; transform-origin: center; will-change: transform, opacity; }
       .lm-plate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
       .lm-atlas { position: absolute; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; background: #342a20; }
       .lm-atlas.on { opacity: 1; transition: opacity .25s; }
       .lm-atlas[hidden] { display: none; }
       .lm-atlas-region { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: auto; }
-      .lm-atlas-sheet { position: absolute; inset: 0; margin: auto; width: min(100%, 177.78dvh); height: min(56.25vw, 100dvh); opacity: 0; }
+      .lm-atlas-sheet { opacity: 0; }
       .lm-atlas-sheet[data-sheet="world"] { opacity: 1; }
       .lm-atlas-sheet > img:first-child { display: block; width: 100%; height: 100%; }
       .lm-atlas-marker { position: absolute; width: clamp(29px, 4.5%, 56px); aspect-ratio: 1; object-fit: cover;
@@ -46,7 +49,7 @@
         background: radial-gradient(ellipse at 35% 32%, #fff1dc 0 14%, transparent 43%),
           radial-gradient(ellipse at 64% 56%, #fff0d7 0 17%, transparent 45%),
           radial-gradient(ellipse at 41% 70%, #fbe6c6 0 13%, transparent 42%); }
-      @media (orientation: portrait) { .lm-soft { object-position: 51.2% 29.3%; transform: scale(1.8); transform-origin: 51.2% 29.3%; } }
+      .lm-atlas-sheet[data-sheet="poland"] { --sheet-ratio: 2.087; }
       .lm-okolica { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity .7s; pointer-events: none; }
       .lm-okolica.on { opacity: 1; }
       .lm-shade { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse, transparent 30%, rgba(22,11,5,.5)); }
@@ -648,7 +651,7 @@
   <body>
     <div id="game"></div>
     <div id="loading-map" data-phase="boot" aria-label="Wczytywanie gry" aria-busy="true">
-      <img class="lm-soft" src="./loading36/map-preview.webp" alt="" fetchpriority="high" />
+      <img class="lm-soft" src="./loading36/atlas/world.webp" alt="" fetchpriority="high" />
       <div class="lm-plate" aria-hidden="true"></div>
       <div class="lm-shade"></div>
       <div class="lm-lamp" aria-hidden="true"></div>

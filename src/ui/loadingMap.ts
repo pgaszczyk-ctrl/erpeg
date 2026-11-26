@@ -172,7 +172,7 @@ export function flyToGameLocation(lat: number, lon: number, portrait?: () => Pro
   atlasFlight = (async () => {
     const withTimeout = <T>(ready: Promise<T>, ms: number) =>
       Promise.race([ready.catch(() => null), new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
-    const painted = hasPaintedCountry(lat, lon) && await withTimeout(currentAtlas.ready, 400);
+    const painted = hasPaintedCountry(lat, lon) && await withTimeout(currentAtlas.ready, 2200);
     if (atlas !== currentAtlas) return;
     if (painted) {
       await currentAtlas.play(lat, lon, reduced(), portrait);
@@ -350,6 +350,7 @@ export async function demoIntro(lat: number, lon: number, mapReady: Promise<void
 export async function revealLoadedGame() {
   const r = root();
   if (!r || r.hidden || finished || r.dataset.phase === 'error') return;
+  atlas?.terrainReady();
   const pending = atlasFlight;
   if (pending) await pending;
   if (pending !== atlasFlight || r.hidden || finished || !loadingGame()) return;
