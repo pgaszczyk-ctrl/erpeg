@@ -1,5 +1,6 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (26 Nov 2026, owner) Map hero chibi frames render at 24 px. The renderer keeps the same model, palette and foot anchor, with extra frame space for headwear, lowered weapons and their glow. Creature sizing is independent.
 - Login atlas (25 Nov 2026): `loadingAtlas.ts` plays three painted 16:9 WebP sheets (world → Europe → Poland) through two cloud passes, marking the saved position on the country sheet. The world is prepared during login. Other destinations use the worldwide regional renderer at country scale, with country labels only. Reduced motion shows the final sheet directly.
 - Login atlas (26 Nov 2026): the painted Poland sheet stays; elsewhere, `loadingAtlasRegion.ts` draws a world → country fly-in from bundled Natural Earth 1:50m outlines, rivers, lakes and peaks, with a warm wash on the destination and shared painted trees, mountain stamps, waves and steamship. The canvas fits the country (nearby islands included) and projects the saved location and its portrait. The artwork and cartographic detail are independent of the world tile server. Reduced motion reveals the finished view directly.
 - 1.075 = full release (25 Nov 2026, owner: „na prod”): grass footsteps, footprints and bending grass below on top of 1.074.

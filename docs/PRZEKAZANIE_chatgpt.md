@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-26 — bohater chibi 24 px
+
+- `src/chibi/LudzikChibi.ts` zleca renderowanie bohatera w 24 px. `src/chibi/rysownik.ts` zostawia dodatkowe miejsce wokół bohatera, szczególnie pod stopami dla poświaty opuszczonej broni. Kształty, cieniowanie, obrys i punkt zaczepienia stóp są te same. Stwory zachowują własną skalę.
+- `npm run build` i `npx vite build` przeszły. Sprawdzono 96 klatek na brzegi obrazu (cztery wyglądy, osiem kierunków, trzy pozy), a także skompilowany rysownik w Chromium na komputerze i telefonie. Test trzech zestawów ekwipunku w grze przeszedł na emulowanym telefonie z parametrem `wyglad=0`.
+
 ## 2026-11-26 — portrety i fryzury, 1.078
 
 - Mniejsze głowy, czarne oczy, cieńsze brwi i dopasowanie 23 fryzur w `public/postacie/edytor/{k,m}` (PR #71). Oczy rekrutki przesunięte po 12 px do środka.
