@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-26 — produkcja 1.079
+
+- Wydanie bohatera chibi w 24 px na produkcję. W porównaniu z 1.078 kod gry obejmuje zmianę rysowania chibi i numer wersji.
+- `npm run build` i `npx vite build` przeszły. Playwright potwierdził wersję 1.079 w menu i klatki bohatera 24 px po wejściu do gry na komputerze i emulowanym telefonie. Test lokalny korzystał z `wyglad=0` i zastąpił odpowiedzi serwera danymi testowymi.
+
 ## 2026-11-26 — bohater chibi 24 px
 
 - `src/chibi/LudzikChibi.ts` zleca renderowanie bohatera w 24 px. `src/chibi/rysownik.ts` zostawia dodatkowe miejsce wokół bohatera, szczególnie pod stopami dla poświaty opuszczonej broni. Kształty, cieniowanie, obrys i punkt zaczepienia stóp są te same. Stwory zachowują własną skalę.
