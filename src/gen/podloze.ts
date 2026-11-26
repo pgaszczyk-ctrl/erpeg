@@ -18,7 +18,8 @@ const T = {
   park: P(['#3a6229', '#456f33', '#507b38', '#5c873e', '#678f44', '#75994c']),
   liscie: P(['#3b4f2a', '#46592d', '#566233', '#6b5a34', '#7d6538']),
   igly: P(['#3d3d26', '#4a4529', '#5a4c2c', '#6b5530', '#45552e']),
-  bruk: P(['#5b5560', '#6e6872', '#807a83', '#938d94', '#3a3540']),
+  bruk: P(['#69636d', '#706a74', '#77717b']),
+  fuga_bruku: hex('#605a64'),
   chodnik: P(['#857e71', '#948d80', '#a19a8b', '#aea797', '#6a6358', '#5f6a3e', '#bab3a2']),
   plac: P(['#a08e74', '#b09d81', '#bfac8f', '#7a6a55']),
   droga: P(['#866744', '#98784e', '#ab8a5a', '#bf9c68', '#d3bb88', '#6a4f35']),
@@ -73,6 +74,14 @@ export function rodzajPostrzepiony(rodzajW: (x: number, y: number) => Rodzaj | n
 
 /** Kolor podłoża danego rodzaju w punkcie świata (x, y). */
 export function kolorPodloza(r: Rodzaj, x: number, y: number): number {
+  if (r === 'bruk') {
+    // Większe kamienie z delikatnymi fugami i jednym odcieniem na kamień.
+    const row = Math.floor(y / 6);
+    const shiftedX = x + (row & 1) * 4;
+    const column = Math.floor(shiftedX / 8);
+    if (y - row * 6 === 5 || shiftedX - column * 8 === 7) return T.fuga_bruku;
+    return pick(T.bruk, hash(column, row, 3));
+  }
   const n1 = szum(x / 9, y / 9), n2 = szum(x / 3.3 + 20, y / 3.3 + 7), h = hash(x, y, 1);
   const mix = n1 * 0.55 + n2 * 0.35 + h * 0.25 - 0.08;
   switch (r) {
@@ -86,12 +95,6 @@ export function kolorPodloza(r: Rodzaj, x: number, y: number): number {
     case 'las_lisciasty': return h < 0.05 ? T.liscie[3 + (h < 0.025 ? 1 : 0)] : pick(T.liscie.slice(0, 3), mix);
     case 'las_iglasty': return h < 0.04 ? T.igly[4] : pick(T.igly.slice(0, 4), mix);
     case 'zarosla': return pick(T.zarosla, mix);
-    case 'bruk': { // kamienie ok. 5×4 px, co drugi rząd przesunięty
-      const ry = Math.floor(y / 4), ox = (ry & 1) * 2, rx = Math.floor((x + ox) / 5);
-      if ((y & 3) === 3 || ((x + ox) % 5) === 4) return T.bruk[4];
-      const t = hash(rx, ry, 3) * 0.7 + n1 * 0.3;
-      return ((x + ox) % 5 === 0 || (y & 3) === 0) && t > 0.4 ? T.bruk[3] : pick(T.bruk.slice(0, 3), t);
-    }
     case 'chodnik': return chodnik(x, y, n1, n2, h);
     case 'plac': { const ry = Math.floor(y / 16), ox = (ry & 1) * 12;
       if (y % 16 === 15 || (x + ox) % 24 === 23) return T.plac[3];
