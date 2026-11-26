@@ -37,7 +37,8 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
  const progression = await g(() => {
    const scene = window.__game.scene.getScene('game'), session = window.__session;
    const previous = {level: session.level, age: session.age, exp: session.exp, dungeon: scene.loch,
-     entrances: scene.lochy, ready: scene.talkReadyAt, dialog: scene.dialog, move: scene.przejdzPoziom};
+     entrances: scene.lochy, ready: scene.talkReadyAt, dialog: scene.dialog, move: scene.przejdzPoziom,
+     combat: scene.inCombat, exit: scene.wyjdzZLochu};
    try {
      const hp = [1, 2, 4].map(multiplier => {
        session.level = {...previous.level, hpWrogow: multiplier};
@@ -54,20 +55,29 @@ for(const [name,width,height,mobile] of [['desktop',1280,800,false],['phone',844
      session.age = 12;
      session.exp = 0;
      scene.lochy = undefined;
-     scene.loch = {plan: {poziom: 1, normalne: 2}, przy: () => 'zejscie'};
+     let stairs = 'zejscie';
+     scene.loch = {plan: {poziom: 1, normalne: 2}, zostalo: 3, przy: () => stairs};
      scene.talkReadyAt = 0;
-     let floor;
-     scene.przejdzPoziom = n => { floor = n; };
+     scene.inCombat = () => true;
+     const floors = [];
+     scene.przejdzPoziom = n => floors.push(n);
+     scene.wyjdzZLochu = () => floors.push(0);
      scene.dialog = request => request.onChoose(0);
      scene.lochDotyk(scene.player.facing);
-     return {hp, protection, floor};
+     stairs = 'schody';
+     scene.loch.plan.poziom = 2;
+     scene.lochDotyk(scene.player.facing);
+     scene.loch.plan.poziom = 1;
+     scene.lochDotyk(scene.player.facing);
+     return {hp, protection, floors};
    } finally {
      session.level = previous.level; session.age = previous.age; session.exp = previous.exp;
      scene.loch = previous.dungeon; scene.lochy = previous.entrances; scene.talkReadyAt = previous.ready;
      scene.dialog = previous.dialog; scene.przejdzPoziom = previous.move;
+     scene.inCombat = previous.combat; scene.wyjdzZLochu = previous.exit;
    }
  });
- assert.deepEqual(progression, {hp: [10, 20, 40], protection: [true, false, false, false, false], floor: 2});
+ assert.deepEqual(progression, {hp: [10, 20, 40], protection: [true, false, false, false, false], floors: [2, 1, 0]});
 
  // Dungeon combat uses the same hit and AI damage entry points as the surface.
  const dungeon = await g(() => {

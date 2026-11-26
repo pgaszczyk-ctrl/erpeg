@@ -4136,10 +4136,6 @@ export class GameScene extends Phaser.Scene {
     if (!loch) return false;
     const co = loch.przy(hit.x, hit.y) ?? loch.przy(this.player.x, this.player.y) ?? loch.przy(this.player.x, this.player.y + FEET.dy);
     if (co === 'schody' || co === 'zejscie') {
-      if (this.inCombat()) {
-        this.toast(LOCH_TEKSTY.wWalce, 1800);
-        return true;
-      }
       const pz = loch.plan.poziom;
       if (co === 'zejscie') {
         const ukryty = pz + 1 > loch.plan.normalne;
