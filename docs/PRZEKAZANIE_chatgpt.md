@@ -1,5 +1,10 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-26 — portrety i fryzury, 1.078
+
+- Mniejsze głowy, czarne oczy, cieńsze brwi i dopasowanie 23 fryzur w `public/postacie/edytor/{k,m}` (PR #71). Oczy rekrutki przesunięte po 12 px do środka.
+- TypeScript i kompilacja Vite przeszły. Playwright sprawdził Kufer oraz zapis wyglądu na komputerze i telefonie emulowanym w poziomie. W kompilacji sprawdzono składanie wszystkich sylwetek i portretów oraz położenie oczu w bobie.
+
 ## 2026-11-25 — imię i tytuł postaci
 
 - Kreator proponuje jedną pełną nazwę w polu Imię. Są 40 tytułów PL/EN, a wybór płci odświeża tylko podpowiedź, której gracz nie edytował. Cała nazwa jest zapisywana i służy do wczytania postaci.
