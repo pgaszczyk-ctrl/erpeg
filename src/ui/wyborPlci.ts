@@ -13,7 +13,7 @@ export interface WyborPlci {
 }
 
 /** `imie`: the name field – while it still holds the ready-made name, it changes to one of the chosen gender. */
-export function wyborPlci(imie?: HTMLInputElement, losuj: (p: Plec) => string = losoweImie): WyborPlci {
+export function wyborPlci(imie?: HTMLInputElement, losuj: (p: Plec) => string = losoweImie, onChange?: (p: Plec) => void): WyborPlci {
   styl();
   let wybrana: Plec | null = null;
   let gotowe = imie?.value ?? '';
@@ -37,6 +37,7 @@ export function wyborPlci(imie?: HTMLInputElement, losuj: (p: Plec) => string = 
     b.setAttribute('aria-checked', 'false');
     b.textContent = `${znak} ${tx(pl, en)}`;
     b.onclick = () => {
+      if (wybrana !== p) onChange?.(p);
       wybrana = p;
       for (const q of ['k', 'm'] as const) {
         przyciski[q].classList.toggle('on', q === p);

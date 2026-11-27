@@ -256,7 +256,7 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
   switch (kind) {
     case 'supermarket': return 'shop';
     case 'convenience': return named ? 'shop' : null;
-    case 'school': return named ? 'school' : null;
+    case 'kindergarten': case 'school': return 'school';
     // Mosques are temples too (report 19 Nov 2026: temples by faith); other faiths stay out until they have a look.
     case 'place_of_worship': return named && (!detail || detail === 'christian' || detail === 'muslim') ? 'church' : null;
     case 'townhall': return named ? 'office' : null;
@@ -505,6 +505,10 @@ function worldLoader(map: CityMap): WorldLoader {
         ? (lang === 'pl' ? 'Apteka' : 'Pharmacy')
         : (lang === 'pl' ? DEFAULT_NAME[kind] : DEFAULT_NAME_EN[kind]);
       const name = (f.properties[lang === 'pl' ? 'name:pl' : 'name:en'] as string) || (f.properties.name as string) || fallback || kind;
+      if (kind === 'school') {
+        out.p!.push([kind, name, x * k, y * k, String(f.properties['isced:level'] ?? f.properties.kind_detail ?? '')]);
+        return;
+      }
       out.p!.push(kind === 'church' && f.properties.kind_detail ? [kind, name, x * k, y * k, String(f.properties.kind_detail)] : [kind, name, x * k, y * k]);
     });
     // Tiny sheds and garages without an address (they made towns a maze, bug report 15): under
@@ -550,10 +554,19 @@ function worldLoader(map: CityMap): WorldLoader {
         }
         parts.push(job);
       }
-    const [all] = await Promise.all([Promise.all(parts), map.terrain?.load(box)]);
+    const lat = (a.lat + b.lat) / 2, lon = (a.lon + b.lon) / 2;
+    const nn = 2 ** ZL;
+    const cx = Math.floor((lon + 180) / 360 * nn);
+    const cy = Math.floor((1 - Math.asinh(Math.tan(lat * Math.PI / 180)) / Math.PI) / 2 * nn);
+    const towns = Promise.all([-1, 0, 1].flatMap(dx => [-1, 0, 1].map(dy =>
+      placesOfTile((cx + dx + nn) % nn, cy + dy, lang))));
+    const [all, nearby] = await Promise.all([Promise.all(parts), towns.catch(() => null), map.terrain?.load(box)]);
+    const townM = nearby === null ? 0 : Math.min(20000, ...nearby.flat().filter(p => p.size !== 'village').map(p =>
+      Math.hypot((p.lat - lat) * 111320, (p.lon - lon) * 111320 * Math.cos(lat * Math.PI / 180)) - p.r));
     // Places belong to the game tile they stand in (each is added once).
     const inBox = (x: number, y: number) => x >= box.x0 && x < box.x1 && y >= box.y0 && y < box.y1;
     return {
+      townM,
       a: all.flatMap((t) => t.a),
       l: all.flatMap((t) => t.l),
       b: all.flatMap((t) => t.b),

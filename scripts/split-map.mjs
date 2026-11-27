@@ -56,7 +56,7 @@ const bld = city.buildings
     const d = city.entranceOf(b);
     return [b.id, r(b.x0), r(b.y0), r(b.x1), r(b.y1), r(d.x), r(d.y), b.addresses.join(' | ') || 0, b.name || 0];
   });
-const places = city.places.map((p) => [p.kind, p.name, p.id, p.building ? p.building.id : -1, r(p.door.x), r(p.door.y)]);
+const places = city.places.map((p) => [p.kind, p.name, p.id, p.building ? p.building.id : -1, r(p.door.x), r(p.door.y), ...(p.isced ? [p.isced] : [])]);
 
 // Every named street: where a character starting "on that street" stands.
 const streets = [];
@@ -89,6 +89,7 @@ for (const [k, t] of tiles) {
 }
 const index = {
   v: 2,
+  huntTowns: full.huntTowns,
   unitsPerM: full.unitsPerM,
   w: full.w,
   h: full.h,

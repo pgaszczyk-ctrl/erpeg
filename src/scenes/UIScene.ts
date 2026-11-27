@@ -1252,7 +1252,7 @@ export class UIScene extends Phaser.Scene {
     const guziki = [
       `📳 Trzęsienie ekranu: ${trzesienieWlaczone() ? 'wł.' : 'wył.'}`,
       `⛰ Efekt gór: ${efektGorWlaczony() ? 'wł.' : 'wył.'}`,
-      `⚖ Poziom trudności: ${session.level.nazwa}`,
+      `⚖ Wariant przygody: ${session.level.nazwa}`,
       MUZYKA,
       ...(TEST ? [SMOK] : []),
       ...(jakoAplikacja() || offline.demo ? [] : [INSTALUJ]),
