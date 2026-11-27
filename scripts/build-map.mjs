@@ -205,7 +205,8 @@ function poiOf(t) {
   if (['doityourself', 'hardware', 'sports', 'outdoor'].includes(t.shop)) return ['gear', t.brand || t.name || (t.shop === 'sports' || t.shop === 'outdoor' ? 'Sklep sportowy' : 'Market budowlany')];
   // Camp sites: a cheap save point.
   if (t.tourism === 'camp_site' || t.tourism === 'caravan_site') return ['camp', t.name || 'Pole namiotowe'];
-  // Petrol stations: the alchemist brews healing potions there.
+  // Pharmacies and petrol stations host alchemists.
+  if (t.amenity === 'pharmacy') return ['alchemist', t.name || t.brand || 'Apteka'];
   if (t.amenity === 'fuel') return ['alchemist', t.brand || t.name || 'Stacja paliw'];
   // Banks: deposits with interest.
   if (t.amenity === 'bank') return ['bank', t.name || t.brand || 'Bank'];

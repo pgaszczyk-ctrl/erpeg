@@ -114,7 +114,7 @@ export const DIAMENT = { monet: 1_000_000, euro: 2, dowolneMiasto: 1, szybciej: 
 export const DIAMENT_WSPIERAJACY = 'Diamenty są też nagrodą dla wspierających grę – szczegóły wkrótce w Kurierze Parowym.';
 
 /**
- * ALCHEMIK – na stacjach benzynowych. Przerabia owoce (dowolne jadalne, najpierw
+ * ALCHEMIK – w aptekach i na stacjach benzynowych. Przerabia owoce (dowolne jadalne, najpierw
  * najtańsze) na miksturę leczącą: całe zdrowie i dodatkowe serduszko w innym
  * kolorze na kilka minut. Miksturę pije się przyciskiem leczenia (🧪, klawisz H).
  */

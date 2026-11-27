@@ -49,7 +49,9 @@ try {
     const game = window.__game.scene.getScene('game');
     const ui = window.__game.scene.getScene('ui');
     ui.closeDialog();
-    game.openPlaceInner({ kind: 'alchemist', name: 'Test' });
+    const pharmacy = game.city.places.find(p => p.kind === 'alchemist' && p.name === 'Dbam o Zdrowie');
+    if (!pharmacy) throw new Error('The Lublin pharmacy was not loaded as an alchemist');
+    game.openPlace(pharmacy);
     return ui.dialogAktualny.buttons;
   });
   async function choose(index) {

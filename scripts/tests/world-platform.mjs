@@ -4,6 +4,12 @@ import { stripTypeScriptTypes } from 'node:module';
 import vm from 'node:vm';
 const fixture = JSON.parse(readFileSync('scripts/tests/fixtures/warsaw-platform.json'));
 const source = p => stripTypeScriptTypes(readFileSync(p, 'utf8'), { mode: 'transform', disableExperimentalWarning: true }).replace(/^import .*$/mg, '').replaceAll('export ', '');
+fixture.layers.pois = {
+ extent: fixture.layers.landuse.extent,
+ features: ['pharmacy', 'fuel'].map((kind, i) => ({
+  type: 1, properties: { kind }, geometry: [[fixture.layers.landuse.features[0].geometry[0][i]]],
+ })),
+};
 class VectorTile {
  constructor() {
   this.layers = Object.fromEntries(Object.entries(fixture.layers).map(([name,l]) => [name, {
@@ -11,7 +17,7 @@ class VectorTile {
   }]));
  }
 }
-const context = vm.createContext({ console, Math, Promise, setTimeout, VectorTile, PbfReader: class {},
+const context = vm.createContext({ console, Math, Promise, setTimeout, lang:'en', VectorTile, PbfReader: class {},
  PMTiles: class { async getZxy(z,x,y) { return z===fixture.z && x===fixture.x && y===fixture.y ? {data:new ArrayBuffer(0)} : null; } },
  Terrain: class { maxSlope=1; slopeAt() { return 0; } async load() {} }, SZOPY:{usunM2:30,przejscieM2:60,domyslniePieter:2} });
 vm.runInContext(source('src/map/CityMap.ts'), context);
@@ -28,4 +34,7 @@ const raised = map.buildings.find(b=>b.architecture?.sourceId.startsWith('featur
 // A raised roof currently has kind_detail=yes and min_height=3 in this extract, so it too is open below.
 if (raised) assert(raised.open, 'elevated building parts must allow ground-level passage');
 assert(!map.isBlocked(hero.x,hero.y), 'reported standing point on the platform remains walkable');
+
+assert(map.places.some(p => p.kind === 'alchemist' && p.name === 'Pharmacy'), 'unnamed pharmacies become alchemists');
+assert(map.places.some(p => p.kind === 'alchemist' && p.name === 'Petrol station'), 'petrol stations stay alchemists');
 console.log(`PASS: Warsaw fixture, ${platforms.length} real platforms, ${map.buildings.length} solid buildings retained`);

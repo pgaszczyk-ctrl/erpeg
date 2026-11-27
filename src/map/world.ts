@@ -265,7 +265,7 @@ function placeKind(p: Record<string, unknown>): Place['kind'] | null {
     case 'library': return 'library';
     case 'bank': return 'bank';
     case 'university': case 'college': return named ? 'university' : null;
-    case 'fuel': return 'alchemist';
+    case 'fuel': case 'pharmacy': return 'alchemist';
     case 'doityourself': case 'hardware': case 'sports': case 'outdoor': return 'gear';
     case 'hotel': case 'hostel': case 'guest_house': case 'motel': return 'hotel';
     case 'camp_site': case 'caravan_site': return 'camp';
@@ -501,7 +501,10 @@ function worldLoader(map: CityMap): WorldLoader {
       const kind = placeKind(f.properties);
       if (!kind) return;
       const [x, y] = pr(f.loadGeometry()[0][0]);
-      const name = (f.properties[lang === 'pl' ? 'name:pl' : 'name:en'] as string) || (f.properties.name as string) || (lang === 'pl' ? DEFAULT_NAME[kind] : DEFAULT_NAME_EN[kind]) || kind;
+      const fallback = f.properties.kind === 'pharmacy'
+        ? (lang === 'pl' ? 'Apteka' : 'Pharmacy')
+        : (lang === 'pl' ? DEFAULT_NAME[kind] : DEFAULT_NAME_EN[kind]);
+      const name = (f.properties[lang === 'pl' ? 'name:pl' : 'name:en'] as string) || (f.properties.name as string) || fallback || kind;
       out.p!.push(kind === 'church' && f.properties.kind_detail ? [kind, name, x * k, y * k, String(f.properties.kind_detail)] : [kind, name, x * k, y * k]);
     });
     // Tiny sheds and garages without an address (they made towns a maze, bug report 15): under
