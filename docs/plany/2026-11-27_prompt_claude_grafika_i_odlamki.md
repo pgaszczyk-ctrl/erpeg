@@ -4,7 +4,7 @@ Skopiuj wszystko poniżej linii do nowej sesji Claude Code w tym repozytorium.
 
 ---
 
-Przeczytaj `CLAUDE.md`. Pracujemy dziś z właścicielem nad tym, co wymaga rysowania kodem w stylu świata gry 09 (generator w `src/gen/`, pikselowa gęstość `GEN_DOTS`, kontur #1e1a24, światło z północnego zachodu, paleta `PALETA_SWIATA`, zasada „wszystko na mapie rysujemy kodem”). Limit pracy jest mały: rób punkty po kolei, po każdym build + zrzut ekranu (Playwright, komputer i telefon) + commit i krótka notatka w `CLAUDE.md`. Przed każdym punktem pokaż właścicielowi zrzut i poczekaj na „ok”, zanim przejdziesz dalej.
+Przeczytaj `CLAUDE.md`. Pracujemy dziś z właścicielem nad tym, co wymaga rysowania kodem w stylu świata gry 09 (generator w `src/gen/`, pikselowa gęstość `GEN_DOTS`, kontur #1e1a24, światło z północnego zachodu, paleta `PALETA_SWIATA`, zasada „wszystko na mapie rysujemy kodem”). Limit pracy jest mały: rób punkty po kolei, po każdym build + zrzut ekranu (Playwright, komputer i telefon) + commit i krótka notatka w `CLAUDE.md`. Ta sesja startuje sama z harmonogramu (sobota 28 XI 2026, 22:11), więc właściciel może jej nie oglądać na żywo: po każdym punkcie wyślij mu zrzuty (SendUserFile), wypchnij gałąź i rób dalej, nie czekając na „ok”. Jeśli odpowie w trakcie, jego uwagi mają pierwszeństwo. Nic nie idzie na produkcję.
 
 Najpierw sprawdź, co z planu dla Codexa (`docs/plany/2026-11-27_prompt_codex_silnik.md`) już jest w gałęzi: mikstury za złoto, apteki, pytanie przechodniów „Gdzie znajdę…?”, wspólna skrzynia przy poczcie, hotel jako dom, paszport. Opieraj się na tym, nie rób tego drugi raz.
 

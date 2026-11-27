@@ -53,7 +53,7 @@ Dziś skrzynia (`src/ui/chest.ts`, zapis `chest`) otwiera się w domu i w pokoju
 - w domu skrzynia zostaje.
 
 ### 6. Hotel jako dom
-Nie dodawaj żadnego „Zamieszkaj tutaj”. Wykupienie noclegu w hotelu samo czyni z niego miejsce domowe (dziś nocleg ustawia już punkt wczytania `save.at` i skrzynię w pokoju). Sprawdź i uzupełnij, żeby do czasu kolejnego wykupionego noclegu gdzie indziej ten hotel działał jak dom w Lublinie: powrót do niego leczy i zapisuje bez ponownej opłaty, skrzynia otwiera się w środku, po zalogowaniu gra startuje przy nim. Dom w Lublinie zostaje dla postaci, które jeszcze nigdzie nie nocowały. Nie zmieniaj logiki szpitala po porażce.
+Nie dodawaj żadnego „Zamieszkaj tutaj”. Wykupienie noclegu w hotelu samo czyni z niego miejsce domowe. Do czasu kolejnego wykupionego noclegu gdzie indziej ten hotel działa jak dom w Lublinie: powrót do niego leczy i zapisuje bez ponownej opłaty, a skrzynia otwiera się w środku. **Nie zmieniaj miejsca startu po zalogowaniu**: gra już zapisuje pozycję w wielu chwilach (wejście do budynku, zejście do lochu, zadania; pole `save.tu`) i po zalogowaniu startuje tam, gdzie gracz skończył. Dom w Lublinie zostaje dla postaci, które jeszcze nigdzie nie nocowały. Nie zmieniaj logiki szpitala po porażce.
 
 ### 7. Paszport Exp-lorera (dane i lista, bez grafiki)
 - Zapis `paszport`: miasta (nazwa + kraj + data pierwszej wizyty) i kraje. Miasto liczy się przy pierwszym wejściu do miejscowości (`whereIs`/`townHere`/`localTown` na mapach świata; `krajMapy`/`krajWPunkcie` dla kraju). Krótki komunikat „📘 Nowa pieczątka: …”.
