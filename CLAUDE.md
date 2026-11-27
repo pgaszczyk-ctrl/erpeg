@@ -1,5 +1,6 @@
 # Exp-lore (formerly Erpeg): notes for Claude
 
+- (27 Nov 2026, owner) Character creation offers 40 Polish and 150 English names from the steampunk workbook, grouped by gender. The main form adds a title from the matching language (79 Polish pairs, 187 English titles, including the previous titles). Legacy QR links open the same main form.
 - (26 Nov 2026, TEST) Procedural cobbles in `src/gen/podloze.ts` use staggered 8×6 cells, muted joints and a single shade per stone to reduce shimmer while walking. The cobble path skips per-pixel noise.
 - 1.079 (26 Nov 2026) promotes the 24 px map hero chibi to production.
 - (26 Nov 2026, owner) Map hero chibi frames render at 24 px. The renderer keeps the same model, palette and foot anchor, with extra frame space for headwear, lowered weapons and their glow. Creature sizing is independent.

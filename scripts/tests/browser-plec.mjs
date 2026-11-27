@@ -1,4 +1,4 @@
-// Gender choice at character creation (owner, 22 Nov 2026). Real built menu + QR-demo name form; the server is mocked
+// Gender choice at character creation (owner, 22 Nov 2026). Real built menu, reached directly and through the legacy QR link; the server is mocked
 // and create_character is answered with an error, so no character is made – the test only reads the sent look.
 // Usage: npm run build, then node scripts/tests/browser-plec.mjs (TELEFON=1 = phone viewport).
 import { createRequire } from 'node:module';
@@ -12,10 +12,8 @@ const server = await preview({ preview: { host: '127.0.0.1', port: PORT, strictP
 const browser = await chromium.launch({ args: ['--no-sandbox', '--enable-unsafe-swiftshader'] });
 await mkdir('work/plec', { recursive: true });
 const telefon = process.env.TELEFON === '1';
-const KOBIETY = ['Jagienka', 'Wiesia', 'Dobrawa', 'Halinka', 'Marysia', 'Zosia', 'Basia', 'Jadzia', 'Grażyna', 'Hania'];
-const MEZCZYZNI = ['Zbyszko', 'Bartosz', 'Mieszko', 'Kazik', 'Stach', 'Wojtek', 'Janek', 'Bolko', 'Leszek', 'Witek'];
 try {
-  for (const [nazwa, url, przycisk] of [['menu', '/?lang=pl#nowa', 'Stwórz postać'], ['demo', '/?lang=pl&d=ShgD6aib8', null]]) {
+  for (const [nazwa, url] of [['menu', '/?lang=pl#nowa'], ['qr', '/?lang=pl&d=ShgD6aib8']]) {
     const context = await browser.newContext({ viewport: telefon ? { width: 390, height: 844 } : { width: 1280, height: 800 }, locale: 'pl-PL', hasTouch: telefon });
     const wyslane = [];
     await context.route('**/*.supabase.co/**', (route) => {
@@ -32,14 +30,23 @@ try {
     const box = page.locator('#menu .m-plec');
     await box.waitFor({ timeout: 120000 });
     const imie = page.locator('#menu input').first();
-    const wyslij = przycisk ? page.getByRole('button', { name: przycisk, exact: true }) : page.locator('#menu button[type=submit]');
+    const wyslij = page.getByRole('button', { name: 'Stwórz postać', exact: true });
     // Nothing picked: refused with a message, nothing sent.
     await wyslij.click();
     await page.getByText('Wybierz płeć postaci.').waitFor();
     assert.equal(wyslane.length, 0, 'sent without a gender');
     // Woman: the untouched ready-made name becomes a woman's name.
-    await box.getByRole('radio', { name: /Kobieta/ }).click();
-    assert(KOBIETY.includes(await imie.inputValue()), `name ${await imie.inputValue()}`);
+    const kobieta = box.getByRole('radio', { name: /Kobieta/ });
+    await kobieta.evaluate((button) => {
+      const random = Math.random;
+      try {
+        Math.random = () => 0;
+        button.click();
+      } finally {
+        Math.random = random;
+      }
+    });
+    assert.equal(await imie.inputValue(), 'Dobrawa Budowniczka');
     assert.equal(await box.getByRole('radio', { name: /Kobieta/ }).getAttribute('aria-checked'), 'true');
     assert.equal(await page.getByText('Wybierz płeć postaci.').count(), 0, 'message left after choosing');
     await page.screenshot({ path: `work/plec/${nazwa}-${telefon ? 'telefon' : 'komputer'}.png` });

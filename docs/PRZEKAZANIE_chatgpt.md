@@ -1,5 +1,11 @@
 # Przekazanie projektu Exp-lore — ChatGPT
 
+## 2026-11-27 — propozycje imion i tytułów
+
+- `src/content/imiona.ts`: 40 polskich i 150 angielskich imion z arkusza RPG Steampunk, z podziałem na płeć. `src/content/tytulyPostaci.ts`: dopisano tytuły do odpowiednich pul i pominięto duplikaty. Łącznie 79 polskich par i 187 angielskich tytułów.
+- Sprawdzono zgodność wszystkich podpowiedzi z arkuszem, limit pełnej nazwy, TypeScript i kompilację Vite. Playwright sprawdził kreator PL i EN bezpośrednio oraz z dawnego linku QR na komputerze i telefonie, z testowymi odpowiedziami mapy i API.
+- `scripts/tests/browser-plec.mjs`: dostosowano test do nowej puli imion i przekierowania dawnych linków QR do głównego kreatora.
+
 ## 2026-11-26 — spokojniejszy bruk na TEST
 
 - `src/gen/podloze.ts`: kamienie 8 × 6 zamiast 5 × 4 pikseli generatora, łagodniejsze fugi, jeden odcień na kamień i mniej obliczeń podczas rysowania. Wzór jest wspólny dla sąsiednich fragmentów, także przy ujemnych współrzędnych.
