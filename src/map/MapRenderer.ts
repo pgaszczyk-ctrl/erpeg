@@ -18,7 +18,7 @@ import { plazaFurniture } from './landmarks';
 import { OSTROSC } from '../screen';
 import { pixelate } from '../art';
 import { WYGLAD_09, mapaRodzajow, rysujZiemie, ziemiaWTle, przygotujRysunkiUpraw } from './Podloze09';
-import { GEN_DOTS, MARGINES, RODZAJE, type Budynek09, type Pole09, type Rodzaj09 } from './ziemia09';
+import { GEN_DOTS, MARGINES, RODZAJE, type Budynek09, type Pole09, type Rodzaj09, type Zlecenie } from './ziemia09';
 import { prostokatnosc } from '../gen/dachyKsztalt';
 
 const poleObrysu = (r: number[]) => { let a = 0; for (let i = 0, j = r.length - 2; i < r.length; j = i, i += 2) a += (r[j] - r[i]) * (r[j + 1] + r[i + 1]) / 2; return Math.abs(a); };
@@ -27,7 +27,8 @@ const m09Zabronione = (b: Building) => !!b.open;
 import type { Terrain } from './terrain';
 import { STAN } from './drzewa09';
 import { POLA, miesiacUpraw } from '../content/pola';
-import { idRosliny, ksztaltBudynku, type WielkoscMiasta } from '../gen';
+import { idRosliny, ksztaltBudynku, pokrycieZCm, type WielkoscMiasta } from '../gen';
+import { weather } from '../weather';
 import { Korony, type Korona } from './Korony';
 import { peronyWOkolicy } from './perony';
 import { MOZAIKI } from '../content/mozaiki';
@@ -284,6 +285,9 @@ function pointIn(r: number[], x: number, y: number) {
   }
   return inside;
 }
+
+/** In the mountains the snow depth doubles every this many metres above where it was measured (and thins below). */
+const SNIEG_WYSOKOSC_M = 650;
 
 export function night() {
   if (makieta) return false;
@@ -605,6 +609,7 @@ export class MapRenderer {
 
   constructor(private scene: Phaser.Scene, private map: CityMap, private architectureOnly = false) {
     this.korony = new Korony(scene);
+    this.korony.snieg = (x, y) => this.sniegW(x, y);
     this.wysokie = new Wysokie(scene, this.korony);
     const off = map.onTile((b) => {
       // Walls hang up to ~60 px below a footprint: one chunk of margin.
@@ -640,8 +645,46 @@ export class MapRenderer {
   }
 
   /** Draws the chunks around the camera; call every frame. */
+  /** Snow the chunks were painted with (cm in tenths of coverage + reference height); a change repaints them. */
+  private sniegKlucz = '';
+
+  /**
+   * Snow coverage 0..1 at a map point (owner, 27 Nov 2026): the real depth (Open-Meteo, weather.snowCm) at the height
+   * it was measured for; in the mountains more snow higher up and less in the valleys (×(1 + Δh / SNIEG_WYSOKOSC_M)).
+   */
+  sniegW(x: number, y: number) {
+    const cm = weather.snowCm;
+    if (!(cm > 0) || this.map.loch) return 0;
+    const t = this.map.terrain, e = weather.snowElev;
+    if (!t || e === null) return pokrycieZCm(cm);
+    const h = t.heightAt(x, y);
+    if (!Number.isFinite(h)) return pokrycieZCm(cm);
+    return pokrycieZCm(cm * Math.max(0, Math.min(4, 1 + (h - e) / SNIEG_WYSOKOSC_M)));
+  }
+
+  /** Snow for a chunk's worker job (generator px grid from the kind map's corner, like strefyGor). */
+  private sniegKawalka(x0: number, y0: number, S: number): Zlecenie['snieg'] {
+    if (!(weather.snowCm > 0) || this.map.loch) return undefined;
+    if (!this.map.terrain || weather.snowElev === null) { const p = this.sniegW(x0, y0); return p > 0 ? { p } : undefined; }
+    const B = 32, w = Math.ceil(S / B) + 1, g = new Float32Array(w * w);
+    let any = false;
+    for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) {
+      const v = this.sniegW(x0 + (i * B - MARGINES) / GEN_DOTS, y0 + (j * B - MARGINES) / GEN_DOTS);
+      g[j * w + i] = v;
+      if (v > 0) any = true;
+    }
+    return any ? { b: B, w, g } : undefined;
+  }
+
   update(cam: Phaser.Cameras.Scene2D.Camera, budget = 2, prefetch = true) {
     if (this.map.loch) return; // underground: scenes/Lochy.ts paints the maze
+    // Snow changed (the weather came in, it fell or melted): every chunk is repainted, the old picture stays until then.
+    const sk = `${Math.round(pokrycieZCm(weather.snowCm) * 10)}|${weather.snowElev ?? ''}`;
+    if (sk !== this.sniegKlucz) {
+      const bylo = this.sniegKlucz;
+      this.sniegKlucz = sk;
+      if (bylo) for (const k of this.chunks.keys()) this.stale.add(k);
+    }
     const v = cam.worldView;
     const want: [number, number, number][] = [];
     const M = prefetch ? CHUNK / 4 : 0;
@@ -979,6 +1022,7 @@ export class MapRenderer {
         region: this.regionBudynku(b),
         swiatynia: this.swiatyniaBudynku(b),
         forma: this.formaBudynku(b, k.poziomy),
+        snieg: this.sniegDachu(b),
       };
     });
     const G2 = GEN_DOTS;
@@ -1030,7 +1074,13 @@ export class MapRenderer {
     // Trees follow the climate of the chunk's place (report: Burgas had Lublin's trees).
     const llKlimat = this.map.loch ? null : this.map.toLatLon(x0 + CHUNK / 2, y0 + CHUNK / 2);
     const klimat = llKlimat && Number.isFinite(llKlimat.lat) ? stylRegionu(llKlimat.lat, llKlimat.lon).id : 'umiarkowany';
-    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, klimat, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki, siedliska: siedl.map((sd) => doGeneratora(sd, GEN_DOTS)) };
+    return { ...kinds, budynki, hideArchitecture: this.architectureOnly, noc: night(), miasto: this.miasto, klimat, sciete: this.korony.sciete(), tory, perony: peronyGen, pola, miesiac: miesiacUpraw(), zebrane: [...STAN.zebrane], dojrzale: POLA.dojrzale, mozaiki, tramwaje, rury, strefy, szlaki, siedliska: siedl.map((sd) => doGeneratora(sd, GEN_DOTS)), snieg: this.sniegKawalka(x0, y0, kinds.S) };
+  }
+
+  /** Snow on a building's roof (coverage at its middle, in steps of 0.1 so the pictures can be cached). */
+  private sniegDachu(b: Building) {
+    const p = this.sniegW((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2);
+    return p > 0 ? Math.round(p * 10) / 10 : undefined;
   }
 
   /** Relief (spread of heights, m) within GORY.poziomiceRzezbaM of a point: mountains from GORY.poziomiceOdM. */

@@ -16,7 +16,7 @@ import { malujSiedlisko } from '../siedliska/ziemia';
 import { wWielokacie, odlegloscOdObrysu } from '../siedliska/kolizje';
 import type { Siedlisko } from '../siedliska/typy';
 import { stylPoId } from '../content/styleRegionow';
-import { malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, budynek, cienBudynku, tonyZKoloru, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
+import { osniezPodloze, malujPodloze, malujWode, posiejRuno, runo, nowy, hash, hex, ciemniej, budynek, cienBudynku, tonyZKoloru, MATERIALY, poziomSteampunku, poleM2, type WielkoscMiasta, type ZrodloPary, type Rodzaj, type Obraz } from '../gen';
 
 // Ziemia i budynki kawałka z generatora (overhaul 09) – bez DOM-u, więc liczy się też w Web Workerze (ziemia09.worker.ts).
 
@@ -56,6 +56,8 @@ export interface Budynek09 {
   swiatynia?: Swiatynia;
   /** Roof form instead of the ordinary hip roof (src/gen/dachySwiatyn.ts / dachyKsztalt.ts). */
   forma?: FormaObrotowa | FormaKsztaltu;
+  /** Snow on the roof, 0..1 coverage (src/gen/snieg.ts), quantized so pictures can be cached. */
+  snieg?: number;
 }
 
 export interface Zlecenie {
@@ -90,6 +92,8 @@ export interface Zlecenie {
   strefy?: { b: number; w: number; h: Float32Array; las: number };
   /** Mountain trails near the chunk (gen px polylines + half width) and their tree-free / thinner bands (gen px from the edge). */
   szlaki?: { linie: { p: number[]; pol: number }[]; wolne: number; rzadziej: number; zostaje: number };
+  /** Snow on the ground: constant coverage `p` (0..1), or a grid of coverage every `b` gen px (w × w corners from the kind map's corner; mountains: more snow higher up). */
+  snieg?: { p: number } | { b: number; w: number; g: Float32Array };
   /** Siedliska sięgające kawałka (px generatora, siedliska/ziemia.ts doGeneratora): cienie, palenisko, bez drzew w obrysie. */
   siedliska?: Siedlisko[];
 }
@@ -222,11 +226,11 @@ export function obrazBudynku(b: Budynek09, noc: boolean, miasto: WielkoscMiasta)
   const plaski = !b.hl && hash(b.seed, 11, 7) < R.plaskie ? true : undefined;
   // Steampunk wg wielkości miasta i budynku (właściciel 5.10.2026, GENERATOR_SWIATA 0.10): rury, kotły, lunety, para.
   const steampunk = poziomSteampunku(miasto, poleM2(b.r), b.seed);
-  const klucz = `${b.swiatynia ?? ''}${b.forma ?? ''}|${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
+  const klucz = `${b.swiatynia ?? ''}${b.forma ?? ''}|${R.id}|${plaski ? 1 : 0}|${b.seed}|${b.h}|${b.poziom ?? ''}|${dach}|${sciana}|${noc ? 1 : 0}|${b.snieg ?? 0}|${steampunk}|${b.drzwi ?? ''}|${b.r.length}|${b.r[0]},${b.r[1]}`;
   let gotowy = pamiec.get(klucz);
   if (gotowy) { pamiec.delete(klucz); pamiec.set(klucz, gotowy); }
   else {
-    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk,
+    const op = { wysokosc: b.h, poziom: b.poziom, dach, sciana, seed: b.seed, noc, snieg: b.snieg, drzwi: b.drzwi, dziury: b.dziury, komin: !plaski && !R.drewnianeLaczniki && hash(b.seed, 7, 3) < 0.4, plaski, dachPlaski: plaski ? R.dachPlaski : undefined, okap: plaski ? 0 : R.okap, azja: !plaski && !!R.drewnianeLaczniki, rura: hash(b.seed, 9, 5) < 0.25, steampunk,
       // Ivy on old walls (owner, 20 Nov 2026: „może bluszcz”): some houses in temperate regions, most libraries/town halls.
       bluszcz: (b.forma === 'biblioteka' || b.forma === 'ratusz' || b.forma === 'obserwatorium') ? 0.55 : (R.id === 'umiarkowany' || R.id === 'polnoc' || R.id === 'balkany') && hash(b.seed, 21, 5) < 0.13 ? 0.45 : 0 };
     const obrot = b.forma && OBROTOWE.has(b.forma) ? b.forma as FormaObrotowa : undefined;
@@ -331,6 +335,16 @@ export function ziemia(z: Zlecenie): { px: Uint32Array; drzewa: Drzewo09[]; para
   for (const t of z.tory) tor(obraz, t, X0, Y0, wodaPod);
   malujPerony(obraz, ids, S, X0, Y0);
   stragany(obraz, X0, Y0, (x, y) => { const i = x - X0 + MARGINES, j = y - Y0 + MARGINES; return i >= 0 && j >= 0 && i < S && j < S && ids[j * S + i] === TARG_ID && !(z.mozaiki ?? []).some((m) => naMozaice(m, x, y, 30)); });
+  // Śnieg (właściciel 27.11.2026): na ziemi, torach i peronach, pod budynkami, drzewami, rurami i dekoracjami peronów.
+  if (z.snieg) {
+    const sn = z.snieg;
+    const pokr = 'p' in sn ? () => sn.p : (x: number, y: number) => {
+      const fx = Math.max(0, Math.min(sn.w - 1.001, (x - X0 + MARGINES) / sn.b)), fy = Math.max(0, Math.min(sn.w - 1.001, (y - Y0 + MARGINES) / sn.b));
+      const i = Math.floor(fx), j = Math.floor(fy), ax = fx - i, ay = fy - j, q = j * sn.w + i, g = sn.g;
+      return (g[q] * (1 - ax) + g[q + 1] * ax) * (1 - ay) + (g[q + sn.w] * (1 - ax) + g[q + sn.w + 1] * ax) * ay;
+    };
+    osniezPodloze(obraz, X0, Y0, rodzajW, pokr);
+  }
   const para: [number, number][] = [];
   for (const r of z.rury ?? []) {
     const steam = rurociagWzdluz(obraz, r.pts, X0, Y0, r.seed, 'ziemia', 'ziemia', true, r.matowa);

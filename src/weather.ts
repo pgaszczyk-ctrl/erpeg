@@ -24,6 +24,8 @@ export const weather = {
   rain: 0,
   /** Snow on the ground (cm) and its level: 0 none, 1 light, 2 heavy. */
   snowCm: 0,
+  /** Elevation (m) the snow depth was measured for (Open-Meteo grid point); null = unknown (no height scaling). */
+  snowElev: null as number | null,
   snowLevel: 0 as 0 | 1 | 2,
   /** Wind (m/s) from the forecast; moves the tree crowns (overhaul 09). `?wiatr=<m/s>` forces it. */
   wind: 3,
@@ -48,9 +50,23 @@ const forcedWind = (() => {
 if (forcedWind !== null) weather.wind = forcedWind;
 
 let hours: Hour[] = [];
+/** Real snow depth from Open-Meteo (server, every ≤ 6 h): cm, elevation of its grid point, epoch s. */
+let realSnow: { cm: number; elev: number | null; at: number } | null = null;
+/** `?snieg=<cm>` forces the snow depth (tests, showing it off). */
+const forcedSnow = (() => {
+  const q = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('snieg');
+  return q !== null && Number.isFinite(+q) ? Math.max(0, +q) : null;
+})();
 let cell = '';
 let fetchedAt = 0;
 let asking: Promise<void> | null = null;
+
+/** Our model's snow (cm) in the hour holding `at` – the change since then is added to the real depth. */
+function firstN(at: number): number | null {
+  let n: number | null = null;
+  for (const x of hours) if (x.t <= at) n = x.n ?? 0;
+  return n ?? (hours[0]?.n ?? null);
+}
 
 /** What kind of weather an hour of the forecast is. */
 export function classify(h: Hour): Pogoda {
@@ -76,10 +92,14 @@ export function tickWeather(now = Date.now()): boolean {
     weather.temp = h.c;
     weather.rain = h.p;
     weather.snowCm = h.n ?? 0;
+    // The real depth (Open-Meteo) when fresh – our hourly model alone starts at 0 cm in a square nobody played in.
+    if (realSnow && t - realSnow.at < 12 * 3600) weather.snowCm = Math.max(0, realSnow.cm + ((h.n ?? 0) - (firstN(realSnow.at) ?? h.n ?? 0)));
     weather.wind = h.w ?? 3;
     weather.cloud = Math.max(0, Math.min(1, (h.k ?? 30) / 100));
     weather.real = true;
   }
+  weather.snowElev = realSnow?.elev ?? null;
+  if (forcedSnow !== null) { weather.snowCm = forcedSnow; weather.snowElev = null; }
   const S = POGODA.snieg;
   weather.snowLevel = weather.snowCm >= S.duzyOdCm ? 2 : weather.snowCm >= S.drobnyOdCm ? 1 : 0;
   if (forcedWind !== null) weather.wind = forcedWind;
@@ -97,11 +117,12 @@ export function loadWeather(lat: number, lon: number): Promise<void> {
   const want = `${Math.floor(lat / 0.3)}:${Math.floor(lon / 0.45)}`;
   if (want === cell && Date.now() - fetchedAt < POGODA.odswiezMin * 60_000) return Promise.resolve();
   if (asking) return asking;
-  asking = rpc<{ cell: string; h: Hour[] } | null>('weather', { p_lat: lat, p_lon: lon })
+  asking = rpc<{ cell: string; h: Hour[]; snieg?: { cm: number | null; elev: number | null; at: number } | null } | null>('weather', { p_lat: lat, p_lon: lon })
     .then((r) => {
       if (r?.h?.length) {
         hours = r.h;
         cell = r.cell;
+        realSnow = r.snieg && r.snieg.cm !== null ? { cm: r.snieg.cm, elev: r.snieg.elev, at: r.snieg.at } : null;
         fetchedAt = Date.now();
       } else if (want !== cell) {
         // A square nobody played in yet: the server fetches it now, ask again in a few minutes.

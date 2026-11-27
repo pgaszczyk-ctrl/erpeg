@@ -71,7 +71,7 @@ export class Wysokie {
         w = { b, noc, refs: new Set(), czeka: false, x0: 0, y0: 0, w: 0, h: 0, dol, para: [], miasto };
         this.wszystkie.set(id, w);
         this.licz(id, w, miasto);
-      } else if (w.b.forma !== b.forma || w.b.swiatynia !== b.swiatynia) {
+      } else if (w.b.forma !== b.forma || w.b.swiatynia !== b.swiatynia || w.b.snieg !== b.snieg) {
         // Its roof form became known later (its place's building arrives with the tile): drawn again.
         w.b = b;
         if (!w.czeka) this.licz(id, w, miasto);

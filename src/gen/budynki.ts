@@ -2,6 +2,7 @@
 // Konwencja gry zostaje: dach = obrys, ściany „wiszą” pod obrysem i są przesunięte w prawo (WALL_SKEW 0,35).
 // Wszystkie miary w px obrazu (0,5 px mapy): ściany 8 / 12 / 16 px.
 import { Obraz, nowy, hex, hash, rng, OBRYS, mieszaj } from './wspolne';
+import { osniezDach } from './snieg';
 
 /**
  * Kolor wyróżnienia miejsca (sklep, policja…) przygaszony do palety świata: połowa nasycenia mniej i odrobina
@@ -177,6 +178,7 @@ export interface OpcjeBudynku {
   seed: number;
   skos?: number;               // WALL_SKEW, domyślnie 0,35
   noc?: boolean;               // część okien świeci
+  snieg?: number;              // pokrycie dachu śniegiem 0..1 (src/gen/snieg.ts)
   rura?: boolean;              // mosiężna rura na ścianie
   komin?: boolean;
   drzwi?: [number, number];    // punkt drzwi (we współrzędnych pierścienia) – drzwi na najbliższej ścianie
@@ -524,6 +526,7 @@ export function budynek(pierscien: number[], op: OpcjeBudynku): { obraz: Obraz; 
   // z prawdziwych odcinków obrysu (dach), podstawy ścian (obrys przesunięty o wysokość) i pionów w narożnikach.
   // Każdy piksel przy krawędzi dostaje tyle tuszu, ile wynika z jego odległości od linii – brzeg jest gładki,
   // kształt budynku bez zmian. Krawędź dach–ściana tak samo, cieńsza.
+  if (op.snieg) osniezDach(o, kind, x0, y0, op.snieg);
   obwodkaGladka(o, kind, W, Hh, x0, y0, pierscienie, H, sk, dachPierscienie);
   if (op.azja) laczenaAzja(o, kind, W, Hh, mask, kalenica);
   if (op.komin && maxD > 6) { // komin ceglany w ok. 1/3 od lewej-góry

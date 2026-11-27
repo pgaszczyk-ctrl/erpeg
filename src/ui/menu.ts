@@ -72,7 +72,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
     root.append(box);
 
     const screen = (...children: (Node | string)[]) => {
-      box.replaceChildren(el('h1', {}, [logoTekst()]), el('p', { className: 'm-sub' }, [tx('Przygoda palcem po mapie', 'Finger-on-the-map adventure')]), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway']));
+      box.replaceChildren(el('h1', {}, [logoTekst()]), el('p', { className: 'm-sub' }, [tx('Przygoda palcem po mapie', 'Finger-on-the-map adventure')]), ...children, el('p', { className: 'm-ver' }, [wersjaNapis()]), el('p', { className: 'm-ver' }, ['Mapy: © OpenStreetMap · Pogoda: MET Norway · Śnieg: Open-Meteo.com']));
       const languages = el('select', { 'ariaLabel': 'Language / Język' }, [el('option', {value:'pl'}, ['Polski']), el('option', {value:'en'}, ['English'])]);
       languages.value = lang;
       languages.onchange = () => {

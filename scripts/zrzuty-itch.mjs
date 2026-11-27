@@ -64,7 +64,8 @@ try {
     page.on('pageerror', (e) => console.log('pageerror', e.message));
     page.on('console', (m) => { if (/Ludzik|WebGL|three/i.test(m.text())) console.log('console', m.type(), m.text().slice(0, 300)); });
     page.on('dialog', (d) => d.accept());
-    const q = new URLSearchParams({ lang: JEZYK, pogoda: 'czysto', miesiac: '7' });
+    const q = new URLSearchParams({ lang: JEZYK, pogoda: process.env.POGODA ?? 'czysto', miesiac: process.env.MIESIAC ?? '7' });
+    if (process.env.SNIEG) q.set('snieg', process.env.SNIEG);
     if (process.env.GORY === '0') q.set('gory', '0');
     if (process.env.DX) q.set('dx', process.env.DX);
     if (process.env.DY) q.set('dy', process.env.DY);

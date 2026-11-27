@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { klatkiWiatru, GATUNKI, para, klatkaPary, type Obraz, type ZrodloPary } from '../gen';
+import { klatkiWiatru, osniezKorone, GATUNKI, para, klatkaPary, type Obraz, type ZrodloPary } from '../gen';
 import { drzewoZ, idDrzewa, OWOCOWE, STAN, type Drzewo09 } from './drzewa09';
 import { hash } from '../gen';
 import { GEN_DOTS } from './ziemia09';
@@ -47,14 +47,18 @@ export class Korony {
 
   constructor(private scene: Phaser.Scene) {}
 
+  /** Snow coverage 0..1 at a map point (MapRenderer.sniegW); crowns get a snow cap in steps of a quarter. */
+  snieg: (x: number, y: number) => number = () => 0;
+
   /** Tekstura z 5 klatkami wiatru dla gatunku i wariantu (owoce kołyszą się razem z koroną). */
-  private arkusz(g: string, w: number, bezOwocow = false): Arkusz {
-    const key = `drz09-${g}-${w}${bezOwocow ? '-p' : ''}`;
+  private arkusz(g: string, w: number, bezOwocow = false, sn = 0): Arkusz {
+    const key = `drz09-${g}-${w}${bezOwocow ? '-p' : ''}${sn ? `-s${sn}` : ''}`;
     let a = this.arkusze.get(key);
     if (a) return a;
     const d = drzewoZ(g, w);
     const kor: Obraz = { w: d.korona.w, h: d.korona.h, px: d.korona.px.slice() };
     if (d.owoce && !bezOwocow) for (let i = 0; i < kor.px.length; i++) if (d.owoce.px[i] >>> 24) kor.px[i] = d.owoce.px[i];
+    if (sn) osniezKorone(kor, sn / 4, w);
     const klatki = klatkiWiatru(kor, d.koronaGora, d.koronaDol, GATUNKI[g].sztywnosc, MARGINES);
     const W = klatki[0].w, H = klatki[0].h;
     if (!this.scene.textures.exists(key)) {
@@ -74,8 +78,8 @@ export class Korony {
 
   make(t: Drzewo09): Korona {
     const pusta = OWOCOWE.has(t.g) && this.owoce(t) === 0;
-    const a = this.arkusz(t.g, t.w, pusta);
     const x = t.x / GEN_DOTS, y = t.y / GEN_DOTS;
+    const a = this.arkusz(t.g, t.w, pusta, Math.round(this.snieg(x, y) * 4));
     const im = this.scene.add.image(x, y, a.key, 'w0').setOrigin(a.kx / a.w, a.ky / a.h).setScale(1 / GEN_DOTS).setDepth(y);
     const k: Korona = { t, im, a, k: 2, r: 0, szelest: 0, ziarno: (t.x * 7919 + t.y * 104729) % 1000, pusta };
     this.wszystkie.add(k);
@@ -267,7 +271,7 @@ export class Korony {
     STAN.owoce.set(idDrzewa(k.t), n - 1);
     if (n - 1 === 0) {
       // Bez owoców: ten sam kształt, inna tekstura (też w klatkach wiatru).
-      k.a = this.arkusz(k.t.g, k.t.w, true);
+      k.a = this.arkusz(k.t.g, k.t.w, true, Math.round(this.snieg(k.t.x / GEN_DOTS, k.t.y / GEN_DOTS) * 4));
       k.pusta = true;
       this.zdejmijDziure(k);
       k.im.setTexture(k.a.key, `w${KLATKI[k.k]}`);
