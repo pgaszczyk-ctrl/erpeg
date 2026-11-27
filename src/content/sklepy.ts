@@ -118,7 +118,7 @@ export const DIAMENT_WSPIERAJACY = 'Diamenty są też nagrodą dla wspierającyc
  * najtańsze) na miksturę leczącą: całe zdrowie i dodatkowe serduszko w innym
  * kolorze na kilka minut. Miksturę pije się przyciskiem leczenia (🧪, klawisz H).
  */
-export const ALCHEMIK = { owocow: 50, premiaSerc: 1, premiaMinut: 10 };
+export const ALCHEMIK = { owocow: 50, cena: 60, premiaSerc: 1, premiaMinut: 10 };
 
 
 /** Jedzenie owoców leczy: tyle owoców (dowolnych, najpierw najtańsze) = jedno serduszko. */

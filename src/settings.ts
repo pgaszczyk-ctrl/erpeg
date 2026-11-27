@@ -38,6 +38,7 @@ const USTAW: Record<string, (v: number) => void> = {
   ceny_przedmiotow: (v) => PRZEDMIOTY.forEach((p) => { if (!p.pojazd) p.cena = Math.round((CENY_PRZEDMIOTOW.get(p.id) ?? p.cena) * v); }),
   ceny_zbiorow: (v) => Object.entries(OWOCE).forEach(([k, o]) => (o.cena = Math.max(1, Math.round((CENY_ZBIOROW.get(k) ?? o.cena) * v)))),
   namiot_pole: (v) => (NAMIOT.cenaPola = Math.round(v)),
+  alchemik_cena: (v) => (ALCHEMIK.cena = Math.round(v)),
   alchemik_owocow: (v) => (ALCHEMIK.owocow = Math.round(v)),
   leczenie_owocow: (v) => (LECZENIE_OWOCAMI.owocow = Math.round(v)),
   grzybow_na_kratke: (v) => (LAS.grzybowNaKratke = Math.round(v)),

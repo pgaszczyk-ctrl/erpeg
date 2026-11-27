@@ -1000,3 +1000,7 @@ Kontrola: TypeScript i Vite build poprawne; zbudowana gra w Playwright z prawdzi
 
 ## 2026-11-04 — wyczerpane złoże znika
 - Złoże po ostatniej grudce natychmiast znika wraz z interakcją. Zapisany dzienny stan utrzymuje ukrycie po odejściu/powrocie i wczytaniu; następnego dnia wraca w tym samym miejscu. Zamiast przygaszania skały wspólny warunek dostępności w Zloza i GameScene. Regresja browser-mining obejmuje znikanie, brak interakcji, odtworzenie z dziennym stanem i powrót następnego dnia. PASS: npm run build, ponowny vite build, Playwright/preview PC i 390×844; obejrzano zrzuty po zniknięciu skały i etykiety.
+
+## 27 XI 2026 — plan silnika, punkt 1: mikstura za złoto
+
+Alchemik sprzedaje gotową miksturę (domyślnie 60 złota, panel ⚙ Ustawienia → Leczenie). Zakup, warzenie i zapis korzystają z dotychczasowego licznika mikstur. Zmiany w `GameScene.ts`, `sklepy.ts`, `ustawienia.ts` i `settings.ts`. Przeszły `VITE_TEST=1 npm run build` oraz `browser-alchemik.mjs` w Vite Preview na komputerze (PL) i telefonie (EN, zmieniona cena). Następny punkt: apteki jako alchemicy.

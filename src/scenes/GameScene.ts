@@ -7520,21 +7520,38 @@ export class GameScene extends Phaser.Scene {
     this.emitHud();
   }
 
-  /** The alchemist at a petrol station: 50 fruit → a healing potion. */
+  /** Buy or brew a healing potion at the alchemist. */
   private openAlchemist(p: CityPlace) {
-    // The hermit's recipe (flag receptura_alchemika, Stary Gród Q6): a potion from 30 fruit instead of 50.
+    // The hermit's recipe (Stary Gród Q6) reduces the fruit cost.
     const n = session.flagi.receptura_alchemika ? Math.min(ALCHEMIK.owocow, 30) : ALCHEMIK.owocow;
-    const have = totalFruit();
+    const cena = ALCHEMIK.cena;
+
+    const buttons = [
+      tx(`🧪 Uwarz miksturę (${n} owoców)`, `🧪 Brew potion (${n} fruit)`),
+      tx(`🪙 Kup miksturę – ${cena} złota`, `🪙 Buy potion – ${cena} gold`),
+      ...ESENCJE.map((e) => `${e.ikona} ${e.nazwa} (${this.recipeText(e)})`),
+      tx('Wyjdź', 'Leave'),
+    ];
     this.dialog({
-      title: `⚗️ Alchemik – ${p.name}`,
-      text: `Na zapleczu stacji bulgocze kociołek. Alchemik mruczy: „Daj mi ${n} owoców albo grzybów, a uwarzę ci miksturę: wyleczy cię całego i przez ${ALCHEMIK.premiaMinut} minut da ci dodatkowe serduszko.”\n\nMasz ${have} owoców i ${session.mikstury} ${session.mikstury === 1 ? 'miksturę' : 'mikstur'}. Miksturę wypijesz przyciskiem 🧪 (klawisz H).`,
-      buttons: [`🧪 Uwarz miksturę (${n} owoców)`, ...ESENCJE.map((e) => `${e.ikona} ${e.nazwa} (${this.recipeText(e)})`), 'Wyjdź'],
+      title: tx(`⚗️ Alchemik – ${p.name}`, `⚗️ Alchemist – ${p.name}`),
+      text: tx(
+        `W kociołku bulgocze mikstura. Wyleczy cię do pełna i da dodatkowe serce na ${ALCHEMIK.premiaMinut} min. Uwarzę ci ją z owoców lub grzybów. Gotową możesz kupić za złoto.\n\nZapasy: ${totalFruit()} owoców i grzybów, ${session.mikstury} 🧪, ${session.coins} złota. Wypij miksturę przyciskiem 🧪 lub klawiszem H.`,
+        `A potion bubbles in the cauldron. It restores full health and grants an extra heart for ${ALCHEMIK.premiaMinut} min. I can brew one from fruit or mushrooms, or sell you one for gold.\n\nSupplies: ${totalFruit()} fruit and mushrooms, ${session.mikstury} 🧪, ${session.coins} gold. Drink a potion with the 🧪 button or the H key.`,
+      ),
+      buttons,
+      zamknij: buttons.length - 1,
       onChoose: (i) => {
-        if (i >= 1 && i <= ESENCJE.length) return this.brewEssence(ESENCJE[i - 1]);
-        if (i !== 0) return;
-        if (!eatInventoryFruit(n)) return this.toast(`Za mało owoców – potrzeba ${n}, masz ${have}.`, 2500);
+        if (i === 1) {
+          if (session.coins < cena) return this.toast(tx('Za mało złota na miksturę.', 'Not enough gold for a potion.'), 2500);
+          spend(cena);
+        } else if (i === 0) {
+          if (!eatInventoryFruit(n)) return this.toast(tx(`Za mało owoców – potrzeba ${n}, masz ${totalFruit()}.`, `Not enough fruit – you need ${n} and have ${totalFruit()}.`), 2500);
+        } else {
+          if (i >= 2 && i < buttons.length - 1) this.brewEssence(ESENCJE[i - 2]);
+          return;
+        }
         session.mikstury++;
-        this.toast('🧪 Masz nową miksturę!', 1800);
+        this.toast(tx('🧪 Masz nową miksturę!', '🧪 You have a new potion!'), 1800);
         this.emitHud();
         this.save();
       },

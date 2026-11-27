@@ -37,6 +37,7 @@ export const POKRETLA: Pokretlo[] = [
   { k: 'ceny_przedmiotow', grupa: 'Ceny', nazwa: 'Ceny przedmiotów w sklepach (× mnożnik)', domyslnie: 1, min: 0.1, max: 10, krok: 0.05 },
   { k: 'ceny_zbiorow', grupa: 'Ceny', nazwa: 'Skup owoców, warzyw, grzybów, drewna (× mnożnik)', domyslnie: 1, min: 0.1, max: 10, krok: 0.05 },
   { k: 'namiot_pole', grupa: 'Ceny', nazwa: 'Nocleg na polu namiotowym (monet)', domyslnie: 50, min: 0, max: 100000 },
+  { k: 'alchemik_cena', grupa: 'Leczenie', nazwa: 'Zakup mikstury u alchemika (złoto)', domyslnie: 60, min: 1, max: 10000 },
   { k: 'alchemik_owocow', grupa: 'Leczenie', nazwa: 'Mikstura u alchemika kosztuje (owoców)', domyslnie: 50, min: 1, max: 1000 },
   { k: 'leczenie_owocow', grupa: 'Leczenie', nazwa: 'Jedno serduszko = tyle zjedzonych owoców', domyslnie: 20, min: 1, max: 200 },
   { k: 'grzybow_na_kratke', grupa: 'Zbieranie', nazwa: 'Grzybów na kratkę lasu (30 m) najwyżej', domyslnie: 3, min: 0, max: 10 },
