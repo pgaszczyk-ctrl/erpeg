@@ -262,7 +262,7 @@ export function startSession(r: LoginResult, remember = true) {
   if (remember) zapamietajPostac(p.name, p.idik);
   session.trudnoscWybrana = p.trudnosc_wybrana !== false;
   session.trudnoscDzis = !!p.trudnosc_dzis;
-  session.age = p.age ?? 7;
+  session.age = TRUDNOSCI[trudnoscZWieku(p.age ?? 12)].wiek;
   session.level = TRUDNOSCI[trudnoscZWieku(session.age)];
   // Hearts by difficulty, plus the level bonus (half-hearts count, like hp).
   PLAYER.maxHp = zyciePostaci(session.level.serca, p.exp);

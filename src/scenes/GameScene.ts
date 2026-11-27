@@ -423,6 +423,7 @@ const FLAGI_NAZWY: Record<NonNullable<Misja['flaga']>, string> = {
 };
 
 /** Places where the story's question about the dragon's shadow can be asked. */
+const huntStrength = (stars: number) => stars === 3 ? 2.5 : stars === 2 ? 1.5 : 1;
 const STORY_PLACES = new Set(['school', 'church', 'university']);
 
 /** How often (ms) the hero's sight and the fog picture are worked out while he moves (~16 a second). */
@@ -895,6 +896,14 @@ export class GameScene extends Phaser.Scene {
     // are discovered by exploring).
     const showPlace = (p: CityPlace) => {
       const look = PLACE_LOOK[p.kind];
+      if (p.kind === 'school' || p.kind === 'university') {
+        const at = this.signSpot(p);
+        for (let i = 0; i < 3; i++) {
+          const star = this.add.image(at.x + (i - 1)*5, at.y - 13, TEX.star).setDisplaySize(5,5).setDepth(900001);
+          star.setData('schoolPlace', p).setData('schoolStar', i).setAlpha(i < this.schoolStars(p) ? 1 : 0);
+          this.farObjects.push(star);
+        }
+      }
       if (p.building && !this.mapView.highlight.has(p.building)) this.mapView.highlight.set(p.building, { roof: look.roof, wall: look.wall });
       if (p.kind === 'station') this.stationVehicles(p);
       else if (p.kind === 'port') this.portLook(p);
@@ -964,7 +973,7 @@ export class GameScene extends Phaser.Scene {
       this.city,
       avoid,
       (sp, g) => {
-        const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
+        const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind, true);
         e.ambient = true;
         // They stand at their spot; they only come out when they see the hero.
         e.roam = g.boss === 'out' && sp.kind === g.kind.herszt ? 40 : 12;
@@ -1013,7 +1022,7 @@ export class GameScene extends Phaser.Scene {
           this.city,
           avoid,
           (sp, p) => {
-            const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind);
+            const e = this.spawnEnemy(sp.x, sp.y, undefined, sp.kind, true);
             e.lowisko = true;
             // Settlements (src/siedliska): stronger residents in big camps, some berserkers – same bestiary, EXP and loot.
             if (sp.moc && sp.moc !== 1) { e.power = (e.power ?? 1) * sp.moc; e.hp = Math.max(1, Math.round(e.hp * sp.moc)); }
@@ -1520,8 +1529,9 @@ export class GameScene extends Phaser.Scene {
       // Far from the hero: asleep (saves work on phones).
       if (now >= s.pursuitUntil && !this.wilki.get(s)?.inCombat && !this.wilki.get(s)?.returning
         && (Math.abs(s.x - this.player.x) > 380 || Math.abs(s.y - this.player.y) > 380)) continue;
+      s.ignoresTraveller = s.kindId === 'wilk' && s.huntStars === 1 && poziomPostaci(session.exp) >= 10;
       // Where one goes, its friends follow.
-      if (!s.chasing && chasers.some((c) => Math.abs(c.x - s.x) < 70 && Math.abs(c.y - s.y) < 70)) s.chasing = true;
+      if (!s.ignoresTraveller && !s.chasing && chasers.some((c) => Math.abs(c.x - s.x) < 70 && Math.abs(c.y - s.y) < 70)) s.chasing = true;
       // A dragon in a fight has its own way (claws, backing off, fire).
       if (s.kindId === 'smok' && !this.dragons.has(s)) this.dragonFight(s);
       const dragon = this.dragons.get(s);
@@ -1530,7 +1540,7 @@ export class GameScene extends Phaser.Scene {
       // (objects/StworAI.ts), never by touching the hero.
       if ((live() || s.lowisko) && !this.wilki.has(s) && s.kindId !== 'smok' && !s.duel && !s.brain && !this.demoRun?.isDragon(s)) {
         const home = s.lowiskoHome ?? (s.leash ? { x: s.leash.x, y: s.leash.y, r: Math.max(s.leash.r, 40 * PX_PER_M) } : { x: s.home.x, y: s.home.y, r: 90 * PX_PER_M });
-        this.wilki.set(s, new StworAI(this.wilkHost(s.power), s, home, profilStwora(s.rolaKrypty === 'lucznik' ? 'glut' : s.kindId, s.kind.damage)));
+        this.wilki.set(s, new StworAI(this.wilkHost(() => s.power ?? 1), s, home, profilStwora(s.rolaKrypty === 'lucznik' ? 'glut' : s.kindId, s.kind.damage)));
       }
       const wilk = this.wilki.get(s);
       if (dragon) dragon.update(now, dt);
@@ -2656,7 +2666,7 @@ export class GameScene extends Phaser.Scene {
     else this.atakiDystans = Math.max(0, this.atakiDystans - 1);
   }
 
-  private wilkHost(sila = 1): StworHost {
+  private wilkHost(sila = () => 1): StworHost {
     return {
       scene: this,
       player: this.player,
@@ -2666,7 +2676,7 @@ export class GameScene extends Phaser.Scene {
       przejscie: (ax, ay, bx, by) => przejscieSiedlisk(this.city, ax, ay, bx, by),
       hurt: (from: Phaser.Math.Vector2, obrazenie: number, fizyczne = true) => {
         if (this.time.now < this.noHurtUntil || this.player.isDead) return;
-        const pending = this.wilkCarry + poPancerzu(obrazenie * sila * session.level.obrazenia, defense(), fizyczne);
+        const pending = this.wilkCarry + poPancerzu(obrazenie * sila() * session.level.obrazenia, defense(), fizyczne);
         const dmg = Math.floor(pending);
         if (!this.player.hurt(from, this.time.now, dmg)) return;
         this.wilkCarry = pending - dmg;
@@ -2816,12 +2826,16 @@ export class GameScene extends Phaser.Scene {
     return e;
   }
 
-  spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut') {
-    const s = new Slime(this, x, y, kind, session.level.hpWrogow) as Enemy;
+  spawnEnemy(x: number, y: number, missionId?: string, kind: RodzajWroga = 'glut', outdoor = false) {
+    const stars = outdoor && session.level.wiek !== 6 && !this.city.loch ? this.city.huntStars(x, y) : 0;
+    const strength = huntStrength(stars);
+    const s = new Slime(this, x, y, kind, session.level.hpWrogow * strength) as Enemy;
+    s.huntStars = stars;
+    s.power = strength;
     s.missionId = missionId;
     const w = WPLYW_NA_POTWORY[kind]?.[weather.kind];
     if (w?.sila) {
-      s.power = w.sila;
+      s.power *= w.sila;
       s.hp = Math.max(1, Math.round(s.hp * w.sila));
     }
     if (kind === 'wodnik') s.brain = (now) => this.wodnikThink(s, now);
@@ -3985,11 +3999,14 @@ export class GameScene extends Phaser.Scene {
     const zloto = chroniony ? 0 : session.coins;
     session.coins -= zloto;
     const od = expNaPoziom(lvl);
-    const strata = chroniony ? 0 : Math.floor((session.exp - od) / 2);
+    const hardkor = session.level.wiek === 19;
+    const strata = hardkor ? Math.ceil(session.exp / 10) : chroniony ? 0 : Math.floor((session.exp - od) / 2);
     session.exp -= strata;
     this.emitHud();
     // The EXP lost isn't spelled out (owner, 26 Oct 2026): only a hint that experience must be earned again.
-    const kara = chroniony
+    const kara = hardkor
+      ? tx(`Utrata: ${strata} EXP i ${zloto} monet. Poziom: ${poziomPostaci(session.exp)}.`, `Lost ${strata} EXP and ${zloto} coins. Level: ${poziomPostaci(session.exp)}.`)
+      : chroniony
       ? tx(`Do ${KARA_OD_POZIOMU}. poziomu nic nie tracisz po porażce. Później przepada złoto z plecaka i część doświadczenia – złoto trzymaj w kufrze albo w banku.`, `Until level ${KARA_OD_POZIOMU} you lose nothing when defeated. Later the gold in your backpack and some experience are lost – keep gold in your chest or a bank.`)
       : `${zloto > 0 ? tx(`Złoto z plecaka (${zloto.toLocaleString('pl-PL')}) przepadło.`, `The gold in your backpack (${zloto}) is lost.`) : tx('W plecaku nie było złota – nic nie przepadło.', 'There was no gold in your backpack – nothing lost.')}${strata > 0 ? tx(' Wszystko wydaje się jakby mniej znajome… Musisz teraz nabrać więcej doświadczenia.', ' Everything feels less familiar… You must gain more experience now.') : ''}`;
     const dist = (q: CityPlace) => Math.hypot(q.door.x - this.player.x, q.door.y - this.player.y);
@@ -4063,7 +4080,7 @@ export class GameScene extends Phaser.Scene {
       x: Math.round(tu.x),
       y: Math.round(tu.y),
       hp: this.player.hp,
-      enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: e.hp, k: e.kindId })),
+      enemies: near.map((e) => ({ x: Math.round(e.x), y: Math.round(e.y), hp: e.hp, k: e.kindId, stars: e.huntStars, power: e.power })),
     };
   }
 
@@ -4083,6 +4100,8 @@ export class GameScene extends Phaser.Scene {
       const s = this.spawnEnemy(e.x, e.y, undefined, e.k ?? 'glut');
       s.temp = true;
       s.hp = e.hp;
+      s.power = e.power ?? s.power;
+      s.huntStars = e.stars ?? 0;
     }
     this.lingerUntil = this.time.now + LINGER_MS;
     this.toast('Gra została zamknięta bez wyjścia – twoja postać stoi bezbronna na ulicy przez 10 sekund!', 5000);
@@ -4520,7 +4539,7 @@ export class GameScene extends Phaser.Scene {
         text: DEMO_TEKSTY.pobudka(session.name),
         buttons: ['Rozejrzę się'],
         // First the difficulty (owner, 19 Oct 2026: „po pobudce każ wybrać poziom”), then the portrait tutorial.
-        onChoose: () => (session.trudnoscWybrana ? portret() : this.time.delayedCall(250, () => this.wyborTrudnosci(true, portret))),
+        onChoose: portret,
       }));
     };
     const portret = () => this.time.delayedCall(350, () => {
@@ -4578,8 +4597,21 @@ export class GameScene extends Phaser.Scene {
     }
     if (!pierwszy) session.trudnoscDzis = true;
     session.trudnoscWybrana = true;
+    const previous = session.level;
     session.age = age;
     session.level = TRUDNOSCI[trudnoscZWieku(age)];
+    for (const enemy of this.enemies) {
+      if (enemy.isDead || enemy.duel) continue;
+      const before = huntStrength(enemy.huntStars);
+      if (enemy.ambient || enemy.lowisko) enemy.huntStars = age === 6 ? 0 : this.city.huntStars(enemy.home.x, enemy.home.y);
+      const geography = huntStrength(enemy.huntStars) / before;
+      enemy.power = (enemy.power ?? 1) * geography;
+      enemy.rescaleLife(session.level.hpWrogow / previous.hpWrogow * geography);
+    }
+    for (const star of this.farObjects) {
+      const place = star.getData('schoolPlace') as CityPlace | undefined;
+      if (place) star.setAlpha(star.getData('schoolStar') < this.schoolStars(place) ? 1 : 0);
+    }
     // Everything that reads the level at a moment: monsters' pace, hearts (new ones come filled), the view.
     Slime.tempo = session.level.tempo;
     this.appliedLevel = '';
@@ -5054,7 +5086,7 @@ export class GameScene extends Phaser.Scene {
 
   private openPlaceInner(p: CityPlace) {
     if (p.kind === 'university') {
-      return this.dialog({ title: `🎓 ${p.name}`, text: 'Studenci spieszą na zajęcia, a profesorowie dyskutują przy tablicy.', buttons: ['Wyjdź'], onChoose: () => {} });
+      return this.openSchool(p);
     }
     if (p.kind === 'shop' || p.kind === 'merchant') return this.openShop(p);
     if (p.kind === 'station') return this.openCoach(p);
@@ -5626,7 +5658,7 @@ export class GameScene extends Phaser.Scene {
         }
       },
       lamiglowka: offline.demo ? undefined : {
-        poziom: trudnoscZWieku(session.age),
+        poziom: Math.min(2, trudnoscZWieku(session.age)),
         rozwiazana: (dzien) => session.daily.lamiglowka?.d === dzien,
         rozwiaz: (dzien, rodzaj, sekundy) => {
           session.daily.lamiglowka = { d: dzien, n: 1, a: 1 };
@@ -5634,7 +5666,7 @@ export class GameScene extends Phaser.Scene {
           session.stats.lamiglowki = (session.stats.lamiglowki ?? 0) + 1;
           this.emitHud();
           void this.save();
-          void rpc('lamiglowka_rozwiazana', { p_token: session.token, p_dzien: dzien, p_poziom: trudnoscZWieku(session.age), p_rodzaj: rodzaj, p_sekundy: sekundy }).catch(() => {});
+          void rpc('lamiglowka_rozwiazana', { p_token: session.token, p_dzien: dzien, p_poziom: Math.min(2, trudnoscZWieku(session.age)), p_rodzaj: rodzaj, p_sekundy: sekundy }).catch(() => {});
         },
       },
       wyslij: async (text) => {
@@ -7315,10 +7347,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Schools give quizzes: questions, riddles and number puzzles (content/quizy.ts, quizzes.ts). */
+  private schoolStars(p: CityPlace) {
+    if (session.level.wiek === 6) return 1;
+    if (p.kind === 'university') return 3;
+    const secondary = p.isced ? /(?:^|[;, ])3(?:$|[;, ])|secondary|high_school/i.test(p.isced) : false;
+    return secondary || /liceum|technikum|branżow|high school|secondary school|lycée|gymnasium/i.test(p.name) ? 2 : 1;
+  }
+
   private openSchool(p: CityPlace) {
     // d.a = questions answered today, d.n = when the break ends (minutes after midnight).
     const d = this.dailyCount(`szkola:${p.id}`);
-    const title = `🏫 ${p.name}`;
+    const stars = this.schoolStars(p);
+    const title = `${'★'.repeat(stars)} · ${p.name}`;
     const now = new Date();
     const mins = now.getHours() * 60 + now.getMinutes();
     if (d.a >= SZKOLA_QUIZ.naSzkoleDziennie) {
@@ -7333,14 +7373,14 @@ export class GameScene extends Phaser.Scene {
     }
     this.dialog({
       title,
-      text: `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie – im dalej, tym trudniejsze.`, // no reward told up front (owner 7 Oct 2026)
+      text: `Nauczycielka zaprasza do tablicy: rachunki, łamigłówki, zagadki i wiedza o świecie.`, // no reward told up front (owner 7 Oct 2026)
       buttons: ['🧠 Quiz', 'Wyjdź'],
       onChoose: (i) => {
         if (i !== 0) return;
         const ll = this.city.toLatLon(p.door.x, p.door.y);
-        const z = schoolQuiz(p.id, d.d, d.a, session.age, krajMapy(session.mapId, ll.lat, ll.lon));
+        const z = schoolQuiz(p.id, d.d, d.a, session.age, krajMapy(session.mapId, ll.lat, ll.lon), session.level.wiek === 6 ? undefined : stars);
         const nth = d.a;
-        const hard = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
+        const hard = session.level.wiek === 6 ? SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length : 0;
         const tag = hard ? ` ${'🔥'.repeat(hard)}` : '';
         this.askRiddle(title, `📝 ${z.kategoria}${tag}`, z, SZKOLA_QUIZ.exp, `quiz:${p.id}:${d.d}:${nth}`, (right) => {
           d.a++;
@@ -7450,7 +7490,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     const n = session.libRiddles++;
-    const r = riddleFor({ id: `lib:${p.id}:${session.nonce}:${n}`, x: 0, y: 0, name: '', greeting: '', difficulty: 0 }, today(), session.age);
+    const r = riddleFor({ id: `lib:${p.id}:${session.nonce}:${n}`, x: 0, y: 0, name: '', greeting: '', difficulty: 0 }, today(), Math.min(session.age, 12));
     this.dialog({
       title: `🧩 Zagadka bibliotekarki (${n + 1}/${naSesje})`,
       text: `${r.question}\n\nTylko jedna próba!`,

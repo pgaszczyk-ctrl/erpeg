@@ -105,6 +105,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   static tempo = 1;
   vel = new Phaser.Math.Vector2();
   hp: number;
+  huntStars = 0;
+  ignoresTraveller = false;
   poziomLochu = 0;
   rolaKrypty?: 'tarczownik' | 'lucznik';
   private kierunekTarczy = Math.PI / 2;
@@ -112,7 +114,8 @@ export class Slime extends Phaser.GameObjects.Sprite {
   get nazwaWalki() {
     const nazwa = this.rolaKrypty === 'tarczownik' ? tx('Szkielet tarczownik', 'Skeleton shieldbearer')
       : this.rolaKrypty === 'lucznik' ? tx('Szkielet łucznik', 'Skeleton archer') : this.kind.name;
-    return this.poziomLochu ? nazwa + tx(' · poz. ', ' · Lv. ') + this.poziomLochu : nazwa;
+    const stars = Math.min(5, this.poziomLochu || this.huntStars);
+    return stars ? '★'.repeat(stars) + '\n' + nazwa : nazwa;
   }
 
   readonly kind: EnemyKind;
@@ -156,7 +159,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
   modelDeathAt = -Infinity;
   modelAttack?: { clip: string; start: number; contact: number; end: number; aim: number };
 
-  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut', readonly mnoznikHp = 1) {
+  constructor(scene: Phaser.Scene, x: number, y: number, kind: RodzajWroga = 'glut', public mnoznikHp = 1) {
     const k = ENEMY_KINDS[kind];
     // Wilk/warg have no art yet (łowiska test pilot): placeholder on the bandit's humanoid sheet, tinted –
     // same idiom the game already used for koziol/the grey dragon before their own art arrived.
@@ -269,6 +272,12 @@ export class Slime extends Phaser.GameObjects.Sprite {
 
   /** Name and life bar over the creature, only in a fight (report #13): from the first blow either way, gone a few
    *  seconds after the fight. Life max = its life until the first blow (spawners adjust hp after the constructor). */
+  rescaleLife(ratio: number) {
+    this.mnoznikHp *= ratio;
+    this.hp *= ratio;
+    this.hpMax *= ratio;
+    this.napis?.setText(this.nazwaWalki);
+  }
   private hpMax = 0;
   private trafiony = false;
   walkaDo = 0;
@@ -280,7 +289,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     if (!show) { this.pasek?.setVisible(false); this.napis?.setVisible(false); return; }
     if (!this.pasek) {
       this.pasek = this.scene.add.graphics();
-      this.napis = this.scene.add.text(0, 0, this.nazwaWalki, { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '6px', resolution: 4, color: '#fff2d0', stroke: '#1e1a24', strokeThickness: 2 }).setOrigin(0.5, 1);
+      this.napis = this.scene.add.text(0, 0, this.nazwaWalki, { fontFamily: 'Alegreya Sans, sans-serif', fontSize: '6px', align: 'center', resolution: 4, color: '#fff2d0', stroke: '#1e1a24', strokeThickness: 2 }).setOrigin(0.5, 1);
       this.once(Phaser.GameObjects.Events.DESTROY, () => { this.pasek?.destroy(); this.napis?.destroy(); });
     }
     const top = this.y - Math.max(10, this.displayHeight * (this.model3d ? 0.62 * POWIEKSZENIE_3D : this.hd ? 0.62 : 0.7));
@@ -333,7 +342,7 @@ export class Slime extends Phaser.GameObjects.Sprite {
     }
 
     const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-    if (!this.chasing && dist < this.kind.sightRange) this.chasing = true;
+    if (!this.ignoresTraveller && !this.chasing && dist < this.kind.sightRange) this.chasing = true;
     if (this.chasing && now >= this.pursuitUntil && dist > this.kind.loseRange) this.chasing = false;
     const l = this.leash;
     if (this.chasing && now >= this.pursuitUntil && l && (Math.hypot(target.x - l.x, target.y - l.y) > l.r || Math.hypot(this.x - l.x, this.y - l.y) > l.r)) {

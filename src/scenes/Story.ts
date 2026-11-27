@@ -407,7 +407,7 @@ export class Story {
 
   /** The dragons' melody: repeat the notes, then the pact is renewed. */
   private async melody() {
-    const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
+    const lvl = session.level === TRUDNOSCI[0] ? 0 : 2;
     this.scene.scene.pause();
     await playMelody(MELODIA.nut[lvl] ?? 4);
     this.scene.scene.resume();

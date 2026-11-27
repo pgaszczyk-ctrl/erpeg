@@ -90,7 +90,7 @@ type RawMap = {
   areas: [string, ...number[][]][];
   lines: [string, number, number[], string | 0][];
   buildings: [number[][], string | 0, string | 0, number][];
-  pois?: [string, string, number, number, string | 0][];
+  pois?: [string, string, number, number, string | 0, string?][];
   /** Post offices, post boxes, parcel lockers (map units; the tiled index has them in px as postsPx). */
   posts?: [number, number][];
   postsPx?: [number, number][];
@@ -104,10 +104,11 @@ type RawMap = {
   tile?: number;
   tiles?: string[];
   bld?: [number, number, number, number, number, number, number, string | 0, string | 0][];
-  places?: [string, string, string, number, number, number][];
+  places?: [string, string, string, number, number, number, string?][];
   streets?: [string, number, number][];
   /** Named towns on the map (split-map: Lublin's centre and lublin-area places): name, x, y. */
   towns?: [string, number, number][];
+  huntTowns?: [number, number, number][];
   /** City boards with the city's map (split-map, scripts/tablice/tablice.mjs). */
   tablice?: { plan: PlanMiasta; miejsca: [number, number][] };
   /** Odd places for the boards' scouting notes: [x, y, kind, name] (split-map, scripts/tablice/osobliwosci.mjs). */
@@ -143,6 +144,7 @@ function skalujPlan(p: PlanMiasta, sp: number): PlanMiasta {
 }
 
 export type RawTile = {
+  townM?: number;
   a: [number, string, ...number[][]][];
   l: [number, string, number, number[], string | 0][];
   /** [id, rings, addresses, name, levels, open (world maps: a shed you walk through)] */
@@ -169,6 +171,7 @@ export interface Place {
   door: { x: number; y: number };
   /** Places of worship: the faith when the map says it (world tiles' kind_detail), e.g. 'muslim', 'christian'. */
   religia?: string;
+  isced?: string;
 }
 
 const CELL = 256; // px
@@ -533,6 +536,23 @@ export class CityMap {
   plan: PlanMiasta | null = null;
   /** World maps: named mountain peaks with their height (they come with the tiles). */
   readonly peaks: { name: string; ele: number; x: number; y: number }[] = [];
+  // Distance from the edge of a city/town at each world tile centre, in metres.
+  private huntTowns: { x: number; y: number; radius: number }[];
+  private townDistance = new Map<number, number>();
+  huntStars(x: number, y: number) {
+    const townM = this.world ? (this.townDistance.get(this.tileKey(x, y)) ?? 0)
+      : this.huntTowns.length ? Math.min(...this.huntTowns.map(t => Math.hypot(x - t.x, y - t.y) / PX_PER_M - t.radius))
+      : 0;
+    if (townM < 1500) return 1;
+    const radius = 500 * PX_PER_M;
+    let roadM = 500;
+    for (const l of this.lineGrid.query({ x0: x-radius, x1: x+radius, y0: y-radius, y1: y+radius })) {
+      if (l.kind === 'major') roadM = Math.min(roadM, distToPolyline(l.pts, x, y) / PX_PER_M);
+    }
+    if (roadM < 100) return 1;
+    return townM >= 7500 && roadM >= 400 ? 3 : 2;
+  }
+
   private namedTowns: { name: string; x: number; y: number }[] = [];
   private tileListeners = new Set<(box: Box) => void>();
 
@@ -551,6 +571,10 @@ export class CityMap {
     }
     this.origin = raw.origin ?? { lon: raw.bounds.minLon, lat: raw.bounds.maxLat, lat0: (raw.bounds.minLat + raw.bounds.maxLat) / 2 };
     const k = PX_PER_M / raw.unitsPerM;
+    this.huntTowns = (raw.huntTowns ?? []).map(([x, y, radius]) => ({ x: x*k, y: y*k, radius }));
+    if (!this.huntTowns.length) {
+      this.huntTowns = this.namedTowns.filter(t => t.name === 'Lublin').map(t => ({ ...t, radius: 6000 }));
+    }
     this.width = raw.w * PX_PER_M;
     this.height = raw.h * PX_PER_M;
     this.minX = (raw.x0 ?? 0) * PX_PER_M;
@@ -584,7 +608,7 @@ export class CityMap {
     }
 
     // Shops and schools: inside a building, or the nearest one close by.
-    for (const [kind, name, ux, uy, addr] of raw.pois ?? []) this.addPlace(kind as Place['kind'], name, ux * k, uy * k, addr, `${kind}:${Math.round(ux)}:${Math.round(uy)}`);
+    for (const [kind, name, ux, uy, addr, isced] of raw.pois ?? []) this.addPlace(kind as Place['kind'], name, ux * k, uy * k, addr, `${kind}:${Math.round(ux)}:${Math.round(uy)}`, isced);
   }
 
   /** An underground map (src/loch/mapa.ts): its maze plan; MapRenderer paints nothing, scenes/Lochy.ts does. */
@@ -603,7 +627,7 @@ export class CityMap {
 
   private placeBuildings = new Set<Building>();
   /** A place at (x, y) px: in the building there, or the nearest one close by. */
-  private addPlace(kind: Place['kind'], name: string, x: number, y: number, addr: string | 0 | undefined, key: string) {
+  private addPlace(kind: Place['kind'], name: string, x: number, y: number, addr: string | 0 | undefined, key: string, isced?: string) {
     const id = `${this.id === 'lublin' ? '' : `${this.id}/`}${key}`;
     if (this.placeIds.has(id)) return null;
     // One station once (OSM often has it as a node, an area and a building).
@@ -628,7 +652,7 @@ export class CityMap {
       && this.places.some(p => p.building === b && p.kind !== 'maker' && p.kind !== 'workshop')) return null;
     if (b) this.placeBuildings.add(b);
     this.placeIds.add(id);
-    const place: Place = { kind, name, id, building: b, door: b ? this.entranceOf(b) : kind === 'station' || kind === 'port' ? this.freeNear(x, y) : { x, y } };
+    const place: Place = { kind, name, id, isced, building: b, door: b ? this.entranceOf(b) : kind === 'station' || kind === 'port' ? this.freeNear(x, y) : { x, y } };
     this.places.push(place);
     return place;
   }
@@ -795,8 +819,8 @@ export class CityMap {
       }
       if (b.name) this.named.push(b);
     }
-    for (const [kind, name, pid, bid, dx, dy] of raw.places ?? []) {
-      this.places.push({ kind: kind as Place['kind'], name, id: pid, building: this.stubs.get(bid) ?? null, door: { x: dx * sp, y: dy * sp } });
+    for (const [kind, name, pid, bid, dx, dy, isced] of raw.places ?? []) {
+      this.places.push({ kind: kind as Place['kind'], name, id: pid, isced, building: this.stubs.get(bid) ?? null, door: { x: dx * sp, y: dy * sp } });
     }
     for (const [name, x, y] of raw.streets ?? []) this.streets.set(normAddress(name), { x: x * sp, y: y * sp });
     this.tileBase = `map/${id}/`;
@@ -851,6 +875,7 @@ export class CityMap {
   }
 
   private addTile(cx: number, cy: number, t: RawTile) {
+    if (t.townM !== undefined) this.townDistance.set(cx * 100000 + cy, t.townM);
     for (const [aid, kind, ...rings] of t.a) this.addArea(aid, kind, rings);
     for (const [lid, kind, flags, pts, name] of t.l) this.addLine(lid, kind, flags, pts, name);
     for (const [bid, rings, addr, name, levels, open, architecture] of t.b) {
@@ -875,7 +900,10 @@ export class CityMap {
     // unloaded tile counts as blocked – so every door fell back into the middle of its roof.
     this.loadedTiles.add(cx * 100000 + cy);
     if (t.p?.length) {
-      const added = t.p.map(([kind, name, x, y, rel]) => { const pl = this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`); if (pl && rel) pl.religia = rel; return pl; }).filter((p): p is Place => !!p);
+      const added = t.p.map(([kind, name, x, y, rel]) => { const pl = this.addPlace(kind, name, x, y, 0, `${kind}:${Math.round(x / this.k)}:${Math.round(y / this.k)}`); if (pl && rel) {
+        if (kind === 'school') pl.isced = rel;
+        if (kind === 'church') pl.religia = rel;
+      } return pl; }).filter((p): p is Place => !!p);
       if (added.length) for (const f of this.placeListeners) f(added);
     }
     this.surfaces.clear();

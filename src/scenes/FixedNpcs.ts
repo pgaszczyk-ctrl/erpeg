@@ -596,7 +596,7 @@ export class FixedNpcs {
   /** Her next botany riddle (a wrong answer: another one next time). */
   private grazynkaRiddle() {
     const c = this.counter('grazynka-zagadki');
-    const pool = GRAZYNKA.zagadki[levelForAge(session.age)];
+    const pool = GRAZYNKA.zagadki[levelForAge(Math.min(session.age, 12))];
     const order = [...pool.keys()].sort((a, b) => hash(`grazynka:${session.idik}:${a}`) - hash(`grazynka:${session.idik}:${b}`));
     const z = pool[order[(c.n + c.a) % pool.length]];
     const title = `👵 ${tr(GRAZYNKA.imie)}`;

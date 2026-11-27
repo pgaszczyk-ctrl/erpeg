@@ -9,8 +9,9 @@ import { googleSignOut, googleToken, googleUser } from '../google';
 import { askAccount, liniaRegulaminu } from './account';
 import { logoTekst } from './logo';
 import { wersjaNapis, TEST, TEST_POSTACIE } from '../version';
-import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
-import { kafelkiTrudnosci, opisKafla } from './trudnoscPozy';
+import { TRUDNOSCI, trudnoscZWieku } from '../content/trudnosc';
+import { trybyPrzygody } from './trybyPrzygody';
+import { podgladRekruta } from './rekrutMenu';
 import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { zapamietanaPostac, zapomnijPostac } from '../pamiecPostaci';
@@ -21,7 +22,6 @@ import { showLoginMap, beginMapIntro } from './loadingMap';
 import { przedWejsciem, anulujWejscie } from './poziomo';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
-import { losowyWyglad } from './postacEdytor';
 import { wyborPlci, BRAK_PLCI } from './wyborPlci';
 import { losowaNazwaPostaci, MAKS_NAZWY_POSTACI } from '../content/tytulyPostaci';
 import { przygotujMiasta, znajdzMiejsceStartu, type MiejsceStartu } from '../miastaStartu';
@@ -80,7 +80,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         const url = new URL(location.href); url.searchParams.set('lang', languages.value); location.href = url.href;
       };
       box.append(languages);
-      box.querySelector('input')?.focus();
+      if (!matchMedia('(pointer: coarse)').matches || !box.querySelector('.m-warianty')) box.querySelector('input')?.focus();
     };
     const error = () => el('p', { className: 'm-error' });
     const busy = async (btn: HTMLButtonElement, err: HTMLElement, fn: () => Promise<void>, waiting?: string) => {
@@ -166,7 +166,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
       // A ready name (owner, 8 Nov 2026): the player may keep it or type their own.
       name.value = losowaNazwaPostaci();
       name.addEventListener('focus', () => name.select(), { once: true });
-      const plec = wyborPlci(name, losowaNazwaPostaci);
+      const rekrut = podgladRekruta();
+      const plec = wyborPlci(name, losowaNazwaPostaci, rekrut.ustaw);
       const start = input({ placeholder: tx('np. Zamkowa 9, Lublin albo Paryż', 'e.g. Zamkowa 9, Lublin or Paris') });
       przygotujMiasta();
       // "📍": the phone's location as the start, if the game has a map of it.
@@ -211,14 +212,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
         );
       };
-      // Difficulty: five pose plates from crawling to a muscleman (kept on the server as an age).
-      let level = DOMYSLNA_TRUDNOSC;
-      const levelDetails = el('small', { id: 'new-character-difficulty-details', className: 'tr-opis' });
-      const levelPlates = kafelkiTrudnosci(level, (i) => {
-        level = i;
-        const t = TRUDNOSCI[i];
-        levelDetails.textContent = `${tx(t.nazwa, t.en)}: ${opisKafla(i)}`;
-      }, levelDetails.id);
+      const tryby = trybyPrzygody();
       const err = error();
       plec.el.addEventListener('click', () => { if (err.textContent === BRAK_PLCI()) err.textContent = ''; });
       // Optionally assigned to the player's account (then loaded from a list, no code needed).
@@ -240,7 +234,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           const p0 = plec.plec();
           if (!p0) throw new Error(BRAK_PLCI());
           // Every hero starts as a young guard; the gender is the player's (owner, 22 Nov 2026), the rest is drawn.
-          const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0, wyg: losowyWyglad(p0) };
+          const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0, wyg: rekrut.wyglad(p0) };
           const place = poDemo ? PO_DEMO_START.nazwa : start.value.trim() || DEFAULT_START;
           let p = poDemo ? city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon) : geoStart ?? (geoSwiat ? null : city.findAnyStart(place, DEFAULT_START));
           let gdzie: MiejsceStartu | null = poDemo ? null : geoSwiat;
@@ -258,7 +252,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
           // Home is always on the Lublin map (only Lublin has one): a world start keeps the default home.
           if (!p) p = city.findStart(DEFAULT_START)!;
           const token = googleUser() && linkCheck.checked ? await googleToken() : null;
-          const r = await api.createCharacter(nazwa, place, p.x, p.y, PX_PER_M, TRUDNOSCI[level].wiek, look);
+          const r = await api.createCharacter(nazwa, place, p.x, p.y, PX_PER_M, TRUDNOSCI[tryby.wybrany()].wiek, look);
           if (!poDemo) r.newCharacter = true;
           if (token) await api.linkGoogle(r.player.name, r.player.idik, token).catch(() => {});
           if (poDemo) try { localStorage.removeItem(PO_DEMO_KLUCZ); } catch { /* nothing to clear */ }
@@ -268,6 +262,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         }), 'm-primary');
       screen(
         el('h2', {}, [tx('Nowa postać', 'New character')]),
+        rekrut.el,
         field(tx('Imię', 'Name'), name, tx('⚠ Imienia nie można później zmienić.', '⚠ You can’t change the name later.')),
         plec.el,
         // After the demo the adventure starts in front of Targi Lublin: no address to choose (owner 7.10.2026).
@@ -278,12 +273,8 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
               el('div', { className: 'm-pass' }, [start, geoBtn]),
               geoInfo,
             ]),
-        el('div', { className: 'm-field' }, [
-          el('span', {}, [tx('Poziom trudności', 'Difficulty')]),
-          levelPlates.el,
-          levelDetails,
-        ]),
         linkBox,
+        tryby.el,
         err,
         go,
         liniaRegulaminu(),
@@ -320,7 +311,7 @@ export function showMenu(city: CityMap, reopen?: { name: string; code: string })
         if (!token) return load(undefined, 'Sesja wygasła – zaloguj się ponownie.');
         const chars = await api.myCharacters(token);
         const row = (c: (typeof chars)[number], first = false) => {
-          const lvl = TRUDNOSCI.find((t) => t.wiek === c.age)?.nazwa ?? '';
+          const lvl = TRUDNOSCI[trudnoscZWieku(c.age ?? 12)].nazwa;
           const b = el('button', { type: 'button', className: `m-btn m-char${first ? ' m-primary' : ''}` }, [
             el('b', {}, [c.name]),
             el('small', {}, [`${c.exp} EXP${lvl ? ` · ${lvl}` : ''}${c.last_seen ? ` · grano ${formatDate(c.last_seen)}` : ''}`]),

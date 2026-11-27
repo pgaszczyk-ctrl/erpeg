@@ -148,7 +148,9 @@ const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
  * from today's date, the clock and where the person stands.
  */
 export function requestFor(npc: Npc, day: string, age: number, seen: Record<string, number>, where: { lat: number; lon: number } | null, now = new Date()): Request {
-  const level = Phaser.Math.Clamp(levelForAge(age) + npc.difficulty, 0, POZIOMY.length - 1);
+  const roll = rng(hash(`stars:${npc.id}:${day}`))();
+  const level = age <= 7 ? Phaser.Math.Clamp(levelForAge(age) + npc.difficulty, 0, POZIOMY.length - 1)
+    : roll < 0.4 ? 1 : roll < 0.8 ? 2 : 3;
   const r = rng(hash(`prosba:${npc.id}:${day}`));
   const g = (f: string, m: string) => (npc.female ? f : m);
   const n = (a: number, b: number) => a + Math.floor(r() * (b - a + 1));
@@ -158,7 +160,7 @@ export function requestFor(npc: Npc, day: string, age: number, seen: Record<stri
   const otherDays = (right: number) => [DNI[right], ...shuffle(DNI.filter((_, i) => i !== right), r).slice(0, 3)];
   type Q = { key: string; q: string; a: string[] } | null;
   const makers: (() => Q)[] = [];
-  for (const p of PROSBY) if (p.od <= level) makers.push(() => ({ key: p.id, q: p.tekst(g), a: p.odp }));
+  for (const p of PROSBY) if (age <= 7 ? p.od <= level : p.od === level) makers.push(() => ({ key: p.id, q: p.tekst(g), a: p.odp }));
   const gen: [number, () => Q][] = [
     [0, () => ({ key: 'dzis', q: `Przepraszam, ${g('miałam', 'miałem')} trudną noc… Jaki dzisiaj mamy dzień tygodnia?`, a: otherDays(dow) })],
     [0, () => ({ key: 'jutro', q: 'Jutro idę do dentysty i już się denerwuję. Jaki jutro będzie dzień tygodnia?', a: otherDays((dow + 1) % 7) })],
@@ -216,7 +218,7 @@ export function requestFor(npc: Npc, day: string, age: number, seen: Record<stri
     }],
   ];
   // The made-up kinds come up about as often as a third of the list (each tried a few times).
-  for (const [od, make] of gen) if (od <= level) for (let i = 0; i < 3; i++) makers.push(make);
+  for (const [od, make] of gen) if (age <= 7 ? od <= level : od === level) for (let i = 0; i < 3; i++) makers.push(make);
   let pick: { key: string; q: string; a: string[] } | null = null;
   for (const make of shuffle(makers, r)) {
     const q = make();
@@ -235,7 +237,7 @@ export function requestFor(npc: Npc, day: string, age: number, seen: Record<stri
   const apples = hash(pick.key + day) % 2 === 0;
   return {
     key: pick.key,
-    question: pick.q,
+    question: age <= 7 ? pick.q : '★'.repeat(level) + ' ' + pick.q,
     answers: order.map((i) => pick!.a[i]),
     correct: order.indexOf(0),
     exp: NAGRODA_PROSBY.expNaPoziom[level],
