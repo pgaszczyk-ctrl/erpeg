@@ -109,7 +109,8 @@ function model(o, faza) {
   const czesci = [];
   const add = (sdf, mat, ext) => czesci.push(Object.assign({ sdf, mat }, ext || {}));
   const sw = Math.sin(faza * Math.PI * 2), chod = o.chod || o.bieg ? 1 : 0, bieg = o.bieg ? 1 : 0;
-  const bob = chod ? Math.abs(Math.cos(faza * Math.PI * 2)) * (bieg ? 1.1 : 0.5) : 0;
+  const oddech = o.oddechMenu ? (1 - Math.cos(faza * Math.PI * 2)) * 0.5 : 0;
+  const bob = chod ? Math.abs(Math.cos(faza * Math.PI * 2)) * (bieg ? 1.1 : 0.5) : -0.55 * oddech;
   const nogaL = chod ? sw * (bieg ? 2.3 : 1.3) : 0, nogaP = -nogaL;
   const podL = chod ? Math.max(0, sw) * (bieg ? 1.5 : 0.7) : 0, podP = chod ? Math.max(0, -sw) * (bieg ? 1.5 : 0.7) : 0;
   const k = o.kolory;
@@ -122,7 +123,12 @@ function model(o, faza) {
   for (const [sx, dz, dy] of [[-1.55, nogaL, podL], [1.55, nogaP, podP]]) {
     if (A) {
       add(rbox([sx, 0.95 + dy, 0.35 + dz], [1.25, 0.95, 1.6], 0.75), 'buty');
-      add(kaps([sx, 2.0 + dy, dz * 0.6], [sx * 0.9, 4.3 + bob, 0], 1.15), 'spodnie');
+      const kostka = [sx, 2.0 + dy, dz * 0.6], biodro = [sx * 0.9, 4.3 + bob, 0];
+      if (oddech) {
+        const kolano = [sx, 3.1 + bob * 0.45, 0.72 * oddech];
+        add(kaps(kostka, kolano, 1.15), 'spodnie');
+        add(kaps(kolano, biodro, 1.15), 'spodnie');
+      } else add(kaps(kostka, biodro, 1.15), 'spodnie');
       if (eq.buty?.cholewa) add(kaps([sx, 1.6 + dy, dz * 0.7], [sx * 0.95, 3.0 + dy * 0.6 + bob * 0.5, dz * 0.4], 1.3), 'buty', { fasety: true });
       if (eq.buty?.skrzydelka) add(elip([sx * 2.4, 1.9 + dy, dz - 0.3], [0.35, 0.75, 1.1]), 'eqBuz');
     } else {
@@ -131,7 +137,7 @@ function model(o, faza) {
     }
   }
   // tułów (z paskiem i guzikami jako wzór)
-  const tulow = A ? elip([0, ty, 0], [2.8, 2.5, 2.1]) : rbox([0, ty, 0], [2.7, 2.3, 1.9], 0.55);
+  const tulow = A ? elip([0, ty, 0], [2.8 + 0.10 * oddech, 2.5, 2.1 + 0.14 * oddech]) : rbox([0, ty, 0], [2.7, 2.3, 1.9], 0.55);
   const zb = eq.zbroja, matTulow = zb ? 'eqZ' : o.plaszcz ? 'plaszcz' : 'mundur';
   add(tulow, matTulow, { wzor: 'tulow', ty, kolczuga: zb?.ksztalt === 'kolczuga' });
   if (zb?.ksztalt === 'szata') add(A ? elip([0, ty - 2.2, 0], [3.3, 1.8, 2.5]) : rbox([0, ty - 2.2, 0], [3.2, 1.4, 2.3], 0.4), 'eqZ', { wzor: 'pola' });
@@ -264,7 +270,7 @@ function model(o, faza) {
       add(elip([d[0] - 2.3, ty + 7.1, d[2]], [1.2, 0.7, 0.5]), 'lisc'); add(elip([d[0] + 0.9, ty + 7.4, d[2]], [1.2, 0.7, 0.5]), 'lisc'); }
   }
   if (o.pas) czesci[czesci.findIndex(c => c.wzor === 'tulow')].skos = 1;
-  return { czesci, k, A, hy, hr, ty, kolory: kd, kolorOczu: o.kolorOczu, usta: o.ustaD, bezRumiencow: o.bezRumiencow };
+  return { czesci, k, A, hy, hr, ty, kolory: kd, kolorOczu: o.kolorOczu, usta: o.oddechMenu ? { y: -0.43, w: 0.12, h: 0.035 + 0.045 * oddech } : o.ustaD, bezRumiencow: o.bezRumiencow };
 }
 
 // ---------- ekwipunek z opisu (content/naPostaci.ts): każdy przedmiot ze swoim kształtem i kolorami ----------
@@ -585,7 +591,8 @@ function material(h, m) {
     const q = [p[0] - cz.glowa[0], p[1] - cz.glowa[1], p[2] - cz.glowa[2]], r = cz.hr;
     if (q[2] > 0) {
       const ex = q[0] / r, ey = q[1] / r;
-      if (m.usta && Math.abs(ex) < m.usta.w && ey < m.usta.y + 0.07 && ey > m.usta.y - 0.07 + Math.abs(ex) * (m.usta.usmiech || 0)) return 'usta';
+      const wysokoscUst = m.usta?.h ?? 0.07;
+      if (m.usta && Math.abs(ex) < m.usta.w && ey < m.usta.y + wysokoscUst && ey > m.usta.y - wysokoscUst + Math.abs(ex) * (m.usta.usmiech || 0)) return 'usta';
       if (m.A && !m.bezRumiencow && Math.abs(ex) > 0.48 && Math.abs(ex) < 0.72 && ey < -0.22 && ey > -0.42) return 'rumieniec';
     }
   }

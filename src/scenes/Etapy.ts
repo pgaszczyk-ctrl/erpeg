@@ -670,7 +670,7 @@ export class Etapy {
       onChoose: (i) => {
         if (i === 0) {
           const ll = this.host.city.toLatLon(rm.target!.x, rm.target!.y);
-          const q = schoolQuiz(`etap:${rm.m.id}`, today(), l.step++, session.age, ll ? krajMapy(session.mapId, ll.lat, ll.lon) : 'PL');
+          const q = schoolQuiz(`etap:${rm.m.id}`, today(), l.step++, Math.min(session.age, 12), ll ? krajMapy(session.mapId, ll.lat, ll.lon) : 'PL');
           const r = rng(hash(`${rm.m.id}:${l.step}`));
           const order = q.odpowiedzi.map((_, k) => k).sort(() => r() - 0.5);
           this.ask(rm, title, { pytanie: q.pytanie, odpowiedzi: order.map((k) => q.odpowiedzi[k]), dobra: order.indexOf(0) }, undefined, () => this.host.stageDone(rm, tx('Przekonany! ', 'Convinced! ')));
@@ -705,7 +705,7 @@ export class Etapy {
   }
 
   private async melody(rm: ResolvedMission, z: Etap, title: string) {
-    const lvl = Math.max(0, TRUDNOSCI.indexOf(session.level));
+    const lvl = session.level === TRUDNOSCI[0] ? 0 : 2;
     this.host.scene.scene.pause();
     await playMelody(MELODIA.nut[lvl] ?? 4, { notes: z.nuty, title: `🎵 ${title}`, intro: z.tekst || z.cel, hums: tx('Melodia:', 'Tune:') });
     this.host.scene.scene.resume();

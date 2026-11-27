@@ -64,7 +64,8 @@ const opisPoziomu = (i: number) => WYBOR_TRUDNOSCI.krotko[i] ?? '';
  */
 export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, opisId?: string) {
   dodajStyl();
-  const n = TRUDNOSCI.length;
+  const warianty = [0, 2, 4];
+  const n = warianty.length;
   const box = document.createElement('div');
   box.className = 'tr-os';
   box.tabIndex = 0;
@@ -78,9 +79,10 @@ export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, o
   const blask = document.createElement('div');
   blask.className = 'tr-blask';
   scena.appendChild(blask);
-  const ludziki = TRUDNOSCI.map((t, i) => {
+  const ludziki = warianty.map((id, i) => {
+    const t = TRUDNOSCI[id];
     const d = document.createElement('div');
-    d.className = `tr-ludzik tr-p${i}`;
+    d.className = `tr-ludzik tr-p${id}`;
     d.style.left = `${((i + 0.5) / n) * 100}%`;
     d.title = tx(t.nazwa, t.en);
     scena.appendChild(d);
@@ -112,8 +114,8 @@ export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, o
     blask.style.left = `${srodek(i)}%`;
     pelne.style.width = `${Math.max(0, ((srodek(i) - 8) / 84) * 100)}%`;
     box.setAttribute('aria-valuenow', String(i));
-    box.setAttribute('aria-valuetext', tx(TRUDNOSCI[i].nazwa, TRUDNOSCI[i].en));
-    onChange(i);
+    box.setAttribute('aria-valuetext', tx(TRUDNOSCI[warianty[i]].nazwa, TRUDNOSCI[warianty[i]].en));
+    onChange(warianty[i]);
   };
   // On an upright phone in live mode the whole page is turned (obrot.ts): map the touch and the box's corners back.
   const zPunktu = (cx: number, cy: number) => {
@@ -138,8 +140,8 @@ export function kafelkiTrudnosci(start: number, onChange: (i: number) => void, o
     e.stopPropagation();
     ustaw(k ?? wybrany + d);
   };
-  ustaw(start);
-  return { el: box, wybrany: () => wybrany };
+  ustaw(warianty.indexOf(start));
+  return { el: box, wybrany: () => warianty[wybrany] };
 }
 
 /** One short line under the plates. */

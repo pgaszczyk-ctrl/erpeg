@@ -178,6 +178,7 @@ const lines = [];
 const buildings = [];
 const addrNodes = [];
 const pois = [];
+const huntTowns = [];
 // Post offices, post boxes and parcel lockers: only decorations (the pneumatic post pillar).
 const posts = [];
 const roundabouts = [];
@@ -188,6 +189,7 @@ function poiOf(t) {
   if (t.shop === 'supermarket' || t.shop === 'discount') return ['shop', t.brand || t.name || 'Supermarket'];
   // Towns and villages: a named grocery counts too (few supermarkets there).
   if (BBOX && t.shop === 'convenience' && t.name) return ['shop', t.name];
+  if (t.amenity === 'kindergarten') return ['school', t.name || 'Przedszkole'];
   // Real schools only: not driving or language schools.
   if (t.amenity === 'school' && t.name && /szko|liceum|technikum|gimnazjum|zespół|zespol|school/i.test(t.name) && !/auto|jazd|język|jezyk|tańc|tanc|muzy/i.test(t.name)) {
     return ['school', t.name];
@@ -236,11 +238,14 @@ for (const f of features) {
   const t = f.properties || {};
   const g = f.geometry;
   if (!g || t.boundary === 'administrative') continue;
+  if (g.type === 'Point' && (t.place === 'city' || t.place === 'town')) {
+    huntTowns.push([...proj(g.coordinates), t.place === 'city' ? 6000 : 2500]);
+  }
   const fp = firstPoint(g);
   if (!fp || !insideCity(proj(fp))) continue;
 
   const poi = poiOf(t);
-  if (poi) pois.push({ kind: poi[0], name: poi[1], p: proj(centroidLL(g)), a: address(t) });
+  if (poi) pois.push({ kind: poi[0], name: poi[1], p: proj(centroidLL(g)), a: address(t), isced: t['isced:level'] });
   if (t.amenity === 'post_office' || t.amenity === 'post_box' || t.amenity === 'parcel_locker') posts.push(proj(centroidLL(g)));
 
   if (g.type === 'Point') {
@@ -603,6 +608,7 @@ console.log(`map: ${buildings.length} buildings merged into ${merged.length} blo
 areas.sort((a, b) => AREA_ORDER.indexOf(a.kind) - AREA_ORDER.indexOf(b.kind));
 const out = {
   v: 1,
+  huntTowns,
   unitsPerM: UNITS_PER_M,
   w: W,
   h: H,
@@ -615,7 +621,7 @@ const out = {
   lines: lines.map((l) => [l.kind, l.bridge | (l.pass << 1), l.pts, l.name || 0]),
   buildings: merged.map((b) => [b.rings, b.a || 0, b.name || 0, b.levels]),
   // [kind, name, x, y, address]
-  pois: pois.map((p) => [p.kind, p.name, p.p[0], p.p[1], p.a || 0]),
+  pois: pois.map((p) => [p.kind, p.name, p.p[0], p.p[1], p.a || 0, ...(p.isced ? [String(p.isced)] : [])]),
   posts: posts.map((p) => [p[0], p[1]]),
 };
 mkdirSync(OUT.replace(/\/[^/]*$/, ''), { recursive: true });

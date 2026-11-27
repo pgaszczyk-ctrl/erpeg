@@ -174,7 +174,7 @@ export class StworAI {
           const v = P.predkosc * M * 0.55, radial = Phaser.Math.Clamp((this.home.krazy - d) / (3 * M), -1, 1);
           s.vel.set((-dy / d + (dx / d) * radial) * v, (dx / d + (dy / d) * radial) * v);
         }
-        if (dist < P.wzrokM * M) this.stan = 'podejscie';
+        if (!s.ignoresTraveller && dist < P.wzrokM * M) this.stan = 'podejscie';
         return;
 
       case 'powrot': {

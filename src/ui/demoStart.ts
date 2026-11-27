@@ -5,13 +5,14 @@ import { askAccount, liniaRegulaminu } from './account';
 import { logoImage } from './logo';
 import { PX_PER_M, type CityMap } from '../map/CityMap';
 import { PO_DEMO_START, DEMO_TEKSTY } from '../content/demo';
-import { TRUDNOSCI, DOMYSLNA_TRUDNOSC } from '../content/trudnosc';
+import { TRUDNOSCI } from '../content/trudnosc';
+import { trybyPrzygody } from './trybyPrzygody';
+import { podgladRekruta } from './rekrutMenu';
 import { BOHATEROWIE } from '../content/wyglad';
 import { randomLook, type Look } from '../look';
 import { rememberTestLook } from '../testAppearance';
 import { sciezkaGry } from '../sciezka';
 import { randomModul } from './modulPostac';
-import { losowyWyglad } from './postacEdytor';
 import { wyborPlci, BRAK_PLCI } from './wyborPlci';
 
 // The QR demo's own start screen (owner, 18 Oct 2026: many visitors from the flyers, nobody made a character):
@@ -56,14 +57,17 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
     };
     const logo = logoImage(110, 'm-demo-logo');
     // Every hero starts as a young guard; only the gender is picked (owner, 22 Nov 2026).
-    const plec = wyborPlci(name);
+    const rekrut = podgladRekruta();
+    const plec = wyborPlci(name, losoweImie, rekrut.ustaw);
     plec.el.addEventListener('click', () => { if (err.textContent === BRAK_PLCI()) err.textContent = ''; });
+    const tryby = trybyPrzygody();
     box.append(
       logo,
       el('h2', {}, [DEMO_TEKSTY.formularzTytul]),
+      rekrut.el,
       el('label', { className: 'm-field' }, [el('span', {}, ['Imię']), name, el('small', {}, ['Imienia nie można później zmienić.'])]),
-      plec.el,
-      err, go, liniaRegulaminu(), konto, mam,
+      plec.el, konto, tryby.el,
+      err, go, liniaRegulaminu(), mam,
     );
     if (!document.getElementById('demo-start-css')) {
       const st = el('style', { id: 'demo-start-css' });
@@ -80,7 +84,7 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       `;
       document.head.append(st);
     }
-    setTimeout(() => name.focus(), 50);
+    if (!matchMedia('(pointer: coarse)').matches) setTimeout(() => name.focus(), 50);
     box.onsubmit = async (e) => {
       e.preventDefault();
       if (go.disabled) return;
@@ -93,9 +97,9 @@ export function demoStartForm(city: CityMap): Promise<{ r: LoginResult; look: Lo
       const label = go.textContent;
       go.textContent = 'Chwileczkę…';
       try {
-        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0, wyg: losowyWyglad(p0) };
+        const look: Look = { ...randomLook(), postac: Math.floor(Math.random() * BOHATEROWIE.length), modul: randomModul(p0), guard3d: p0, wyg: rekrut.wyglad(p0) };
         const p = city.fromLatLon(PO_DEMO_START.lat, PO_DEMO_START.lon);
-        const r = await api.createCharacter(imie, PO_DEMO_START.nazwa, p.x, p.y, PX_PER_M, TRUDNOSCI[DOMYSLNA_TRUDNOSC].wiek, look);
+        const r = await api.createCharacter(imie, PO_DEMO_START.nazwa, p.x, p.y, PX_PER_M, TRUDNOSCI[tryby.wybrany()].wiek, look);
         rememberTestLook(look, r.player.name);
         const token = googleUser() ? await googleToken() : null;
         if (token) {

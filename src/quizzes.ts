@@ -104,10 +104,10 @@ function puzzle(level: number, r: () => number): PytanieQuizu {
  * (always the same for that school, day and number). `kraj` = the school's
  * country (kraj.ts): questions about one country are asked only there.
  */
-export function schoolQuiz(schoolId: string, day: string, nth: number, age: number, kraj: string | null): PytanieQuizu {
+export function schoolQuiz(schoolId: string, day: string, nth: number, age: number, kraj: string | null, fixedLevel?: number): PytanieQuizu {
   // Later questions of the day get harder (content/quizy.ts trudniejOd).
   const harder = SZKOLA_QUIZ.trudniejOd.filter((from) => nth + 1 >= from).length;
-  const level = Math.min(3, levelForAge(age) + harder);
+  const level = fixedLevel === 1 ? nth % 2 : fixedLevel ?? Math.min(3, levelForAge(age) + harder);
   const r = rng(hash(`quiz:${schoolId}:${day}:${nth}:${level}`));
   // Few server questions (no fresh batch for days): more of the never-ending number puzzles.
   const server = serverFor(level, kraj);

@@ -61,11 +61,11 @@ export const ATAKI_SMOKA = {
 
 /** Trudność (Dziecięcy, Młody, Średni, Wysoki, Hardkor): obrażenia ×, czas telegrafu ×, kule kwasu. */
 export const TRUDNOSC_SMOKOW = {
-  obrazenia: [0.5, 0.75, 1, 1.2, 1.5],
-  telegraf: [1.5, 1.25, 1, 0.85, 0.7],
-  kulKwasu: [1, 1, 2, 2, 3],
+  obrazenia: [0.5, 0.75, 1, 1.2, 1.2],
+  telegraf: [1.5, 1.25, 1, 0.85, 1],
+  kulKwasu: [1, 1, 2, 2, 2],
   /** Dziecięcy: dłuższe mignięcia cienia przed upadkiem. */
-  odstepLotu: [1000, 850, 700, 700, 650],
+  odstepLotu: [1000, 850, 700, 700, 700],
 };
 
 /** Limity efektów (wydajność): kałuże, plamy, pęknięcia, chmury naraz. */
