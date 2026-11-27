@@ -6,7 +6,7 @@ Skopiuj wszystko poniżej linii do nowej sesji Claude Code w tym repozytorium.
 
 Przeczytaj `CLAUDE.md`. Pracujemy dziś z właścicielem nad tym, co wymaga rysowania kodem w stylu świata gry 09 (generator w `src/gen/`, pikselowa gęstość `GEN_DOTS`, kontur #1e1a24, światło z północnego zachodu, paleta `PALETA_SWIATA`, zasada „wszystko na mapie rysujemy kodem”). Limit pracy jest mały: rób punkty po kolei, po każdym build + zrzut ekranu (Playwright, komputer i telefon) + commit i krótka notatka w `CLAUDE.md`. Ta sesja startuje sama z harmonogramu (sobota 28 XI 2026, 22:11), więc właściciel może jej nie oglądać na żywo: po każdym punkcie wyślij mu zrzuty (SendUserFile), wypchnij gałąź i rób dalej, nie czekając na „ok”. Jeśli odpowie w trakcie, jego uwagi mają pierwszeństwo. Nic nie idzie na produkcję.
 
-Najpierw sprawdź, co z planu dla Codexa (`docs/plany/2026-11-27_prompt_codex_silnik.md`) już jest w gałęzi: mikstury za złoto, apteki, pytanie przechodniów „Gdzie znajdę…?”, wspólna skrzynia przy poczcie, hotel jako dom, paszport. Opieraj się na tym, nie rób tego drugi raz.
+Pracuj na gałęzi `claude/bold-gauss-peehzd` – z niej sam buduje się serwer testowy, a właściciel chce widzieć zmiany od razu w grze. Przed każdym pushem `git pull --rebase origin claude/bold-gauss-peehzd` (piszą tam też inne sesje), bez `--force`; wypychaj tylko punkt, który przeszedł build i test. Produkcji (`PRODUKCJA`, `produkcja/`) nie ruszasz. Najpierw sprawdź, co z planu dla Codexa (`docs/plany/2026-11-27_prompt_codex_silnik.md`) już jest w gałęzi: mikstury za złoto, apteki, pytanie przechodniów „Gdzie znajdę…?”, wspólna skrzynia przy poczcie, hotel jako dom, paszport. Opieraj się na tym, nie rób tego drugi raz.
 
 ## Kierunek gry (decyzje właściciela, 27 XI 2026)
 
