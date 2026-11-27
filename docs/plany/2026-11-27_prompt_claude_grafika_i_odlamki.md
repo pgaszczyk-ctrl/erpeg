@@ -6,7 +6,7 @@ Skopiuj wszystko poniżej linii do nowej sesji Claude Code w tym repozytorium.
 
 Przeczytaj `CLAUDE.md`. Pracujemy dziś z właścicielem nad tym, co wymaga rysowania kodem w stylu świata gry 09 (generator w `src/gen/`, pikselowa gęstość `GEN_DOTS`, kontur #1e1a24, światło z północnego zachodu, paleta `PALETA_SWIATA`, zasada „wszystko na mapie rysujemy kodem”). Limit pracy jest mały: rób punkty po kolei, po każdym build + zrzut ekranu (Playwright, komputer i telefon) + commit i krótka notatka w `CLAUDE.md`. Przed każdym punktem pokaż właścicielowi zrzut i poczekaj na „ok”, zanim przejdziesz dalej.
 
-Najpierw sprawdź, co z planu dla Codexa (`docs/plany/2026-11-27_prompt_codex_silnik.md`) już jest w gałęzi: mikstury za złoto, apteki, „Najbliższy…”, wspólna skrzynia przy poczcie, kwatera, paszport. Opieraj się na tym, nie rób tego drugi raz.
+Najpierw sprawdź, co z planu dla Codexa (`docs/plany/2026-11-27_prompt_codex_silnik.md`) już jest w gałęzi: mikstury za złoto, apteki, pytanie przechodniów „Gdzie znajdę…?”, wspólna skrzynia przy poczcie, hotel jako dom, paszport. Opieraj się na tym, nie rób tego drugi raz.
 
 ## Kierunek gry (decyzje właściciela, 27 XI 2026)
 
@@ -32,7 +32,7 @@ Na rozwidleniach przy trasie do najbliższego alchemika/sklepu znak z ikoną us�
 ### 4. Drobiazgi graficzne do mechaniki od Codexa (jeśli są i zostanie czasu)
 - słup poczty pneumatycznej jako czytelna skrzynia wspólna (lekka poświata/ruch zaworu, gdy gracz jest blisko),
 - pieczątki paszportu rysowane kodem (okrągłe/kanciaste, kolor kraju, nazwa miasta),
-- wygląd kwatery na mapie (mała tabliczka/klucz przy wejściu hotelu).
+- znak „tu nocujesz” przy hotelu, który jest teraz domem (mała tabliczka/klucz przy wejściu).
 
 ## Na koniec
 Napisz właścicielowi po polsku, co powstało, ze zrzutami, i listę rzeczy na kolejną sesję. Bez wydania na produkcję, chyba że właściciel wprost o to poprosi.

@@ -29,13 +29,21 @@ Gracz ma podróżować po świecie, a nie krążyć po jednym ogromnym mieście.
 ### 2. Apteki jako alchemicy
 Stacje benzynowe są rzadkie, apteki (`amenity=pharmacy`) są prawie na każdym osiedlu. Na mapach świata (`src/map/world.ts`, tam gdzie `fuel` → `alchemist`) dodaj `pharmacy` → `alchemist`. Dla Lublina sprawdź, czy apteki są w danych (`scripts/fetch-osm.sh`, `scripts/build-map.mjs`); jeśli nie, dopisz tag do pobierania i budowania, ale danych nie odświeżaj (sandbox nie łączy się z OSM; właściciel uruchomi workflow „Fetch Lublin map data”). W tekstach alchemika uwzględnij, że może stać w aptece.
 
-### 3. „Najbliższy…” na ekranie mapy
-W `src/ui/minimap.ts`:
-- dodaj alchemikowi własną ikonę (znak tekstowy jak inne w `PLACE_ICONS`, np. ⚗) i wpis w legendzie,
-- dodaj rząd przycisków „🧭 Najbliższy: alchemik · sklep · szpital · poczta” (poczta = słupy z `CityMap.posts`, zob. punkt 5). Przycisk szuka najbliższego miejsca danego rodzaju wśród wczytanych miejsc, także poza odkrytą mgłą, i uruchamia istniejące `GameScene.prowadzDo` (strzałka + linia celu). Pokaż odległość słownie (`jakDaleko`). Gdy nic nie ma w zasięgu wczytanych kafli: krótki komunikat.
+### 3. „Gdzie znajdę…?” – pytanie przechodniów
+Gracz nie dostaje przycisków „najbliższy…” na mapie. Pyta ludzi na ulicy.
+- W rozmowie z przechodniem (`talkToFolk`, `src/scenes/Townsfolk.ts`, dialog przez `UIScene.dialog`) dodaj opcję „🧭 Gdzie znajdę…?”. Po niej lista tego, czego gracz może szukać, tylko rodzaje, które w ogóle istnieją na tej mapie: alchemik (mikstury), sklep, szpital, hotel (nocleg), poczta pneumatyczna (skrzynia), bank, biblioteka, woźnica / dworzec, port, warsztat, posterunek straży, tablica miasta, wejście do lochu. Lista mieści się na telefonie (strony istniejącego dialogu albo dwa poziomy: „Sklepy i usługi” / „Podróż” / „Przygoda”).
+- Odpowiedź przechodnia, losowana stabilnie z ziarna (id przechodnia + rodzaj celu + dzień), żeby ponowne pytanie tej samej osoby o to samo dawało tę samą odpowiedź:
+  - **80 %: wie.** Krótka, naturalna wskazówka („Apteka? Prosto tą ulicą, potem w lewo, jakieś pięć minut.”), kierunek i odległość słownie (`kierunek`/`jakDaleko`), i strzałka do celu przez istniejące `GameScene.prowadzDo` (linia celu, która nie liczy się jako zadanie). Cel = najbliższe miejsce danego rodzaju wśród wczytanych miejsc, także poza odkrytą mgłą.
+  - **5 %: zagraniczny turysta.** Odpowiada po swojemu, w jednym z pięciu języków: francuski, angielski, polski, japoński, arabski, ale **nigdy w języku kraju, w którym stoi gracz** (w Polsce nie po polsku, w Wielkiej Brytanii nie po angielsku itd.; kraj z `krajMapy`/`krajWPunkcie`). Sens: „Jestem tylko turystą, co?”. Te kwestie zostają w obcym języku, bez tłumaczenia (np. „I'm just a tourist, sorry… what?”, „Désolé, je suis touriste…”, „すみません、観光客なので…”, „آسف، أنا مجرد سائح…”, „Sorry, ja tu tylko zwiedzam…”).
+  - **5 %: turysta z kraju.** W języku gracza: „Nie wiem, ja tu tylko zwiedzam”.
+  - **5 %: „Nie mam czasu!”** i idzie dalej.
+  - **5 %: „Chyba tam… albo tam… właściwie to nie wiem.”** Bez strzałki.
+- Teksty dwujęzyczne `{ pl, en }` w `src/content/mieszkancy.ts` (po kilka wariantów każdej odpowiedzi), liczby 80/5/5/5/5 jako stałe w tym samym pliku.
+- Gdy na mapie nie ma żadnego miejsca danego rodzaju, nawet przechodzień, który „wie”, mówi uczciwie, że tu takiego nie ma.
+- Własna ikona alchemika na ekranie mapy (znak tekstowy jak inne w `PLACE_ICONS` w `src/ui/minimap.ts`, np. ⚗) i wpis w legendzie. Żadnych nowych przycisków na mapie.
 
-### 4. Po wyjściu z lochu
-Gdy gracz wychodzi z lochu na powierzchnię (`wyjdzZLochu`, nie po porażce), a w promieniu ~1,5 km jest alchemik, pokaż jedno pytanie: „Najbliższy alchemik ok. X – prowadzić?” (Prowadź / Nie). Najwyżej raz na wyjście.
+### 4. (usunięte)
+Po wyjściu z lochu nic nie podpowiadamy – gracz sam pyta przechodniów, czego potrzebuje.
 
 ### 5. Wspólna skrzynia: poczta pneumatyczna
 Dziś skrzynia (`src/ui/chest.ts`, zapis `chest`) otwiera się w domu i w pokoju hotelu z `session.at`. Zrób z niej jedną skrzynię dostępną w całym świecie:
@@ -44,8 +52,8 @@ Dziś skrzynia (`src/ui/chest.ts`, zapis `chest`) otwiera się w domu i w pokoju
 - tytuł okna i krótki tekst w duchu steampunku („Twoje rzeczy przyjechały rurą”); zawartość ta sama wszędzie (to samo pole `chest`),
 - w domu skrzynia zostaje.
 
-### 6. Kwatera, którą można przenieść
-Dom istnieje tylko w Lublinie. Dodaj „🏠 Zamieszkaj tutaj” w hotelu (cena `KWATERA.cena`, pokrętło): zapisuje w zapisie gry `kwatera` {m, x, y, s} (mapa + pozycja + skala jak `save.at`). Kwatera działa jak dom: pełne leczenie, zapis, skrzynia, punkt wczytania po zalogowaniu (gdy nie ma nowszego `save.at`/`tu`). Stary dom w Lublinie zostaje, dopóki gracz nie wybierze kwatery. Nie zmieniaj logiki szpitala po porażce.
+### 6. Hotel jako dom
+Nie dodawaj żadnego „Zamieszkaj tutaj”. Wykupienie noclegu w hotelu samo czyni z niego miejsce domowe (dziś nocleg ustawia już punkt wczytania `save.at` i skrzynię w pokoju). Sprawdź i uzupełnij, żeby do czasu kolejnego wykupionego noclegu gdzie indziej ten hotel działał jak dom w Lublinie: powrót do niego leczy i zapisuje bez ponownej opłaty, skrzynia otwiera się w środku, po zalogowaniu gra startuje przy nim. Dom w Lublinie zostaje dla postaci, które jeszcze nigdzie nie nocowały. Nie zmieniaj logiki szpitala po porażce.
 
 ### 7. Paszport Exp-lorera (dane i lista, bez grafiki)
 - Zapis `paszport`: miasta (nazwa + kraj + data pierwszej wizyty) i kraje. Miasto liczy się przy pierwszym wejściu do miejscowości (`whereIs`/`townHere`/`localTown` na mapach świata; `krajMapy`/`krajWPunkcie` dla kraju). Krótki komunikat „📘 Nowa pieczątka: …”.
