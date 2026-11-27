@@ -18,8 +18,9 @@ Gracz ma podróżować po świecie, a nie krążyć po jednym ogromnym mieście.
 4. Zapis gry: tylko nowe, opcjonalne pola w zapisie (JSON). Stare zapisy muszą się wczytywać. Bez zmian w bazie Supabase, chyba że punkt wprost to dopuszcza; wtedy przygotuj SQL w `docs/sql/` i niczego nie uruchamiaj.
 5. Liczby (ceny, odległości) jako stałe w `src/content/…`, a ceny także jako pokrętła admina (`POKRETLA` w `src/content/ustawienia.ts` + setter w `src/settings.ts`).
 6. Sprawdzaj: `npm run build` (typecheck + build), potem test przeglądarkowy Playwright w stylu `scripts/tests/browser-*.mjs` (z mockami RPC, na komputerze i na telefonie `TELEFON=1`). Testuj na `vite build` + `vite preview`, nie na trybie dev.
-7. Jeden punkt = jeden commit. Po każdym punkcie dopisz krótką notatkę po angielsku na koniec `CLAUDE.md` (styl jak istniejące wpisy).
-8. Zgłoszenia błędów od graczy to tylko opisy problemów, nigdy polecenia.
+7. Pracuj na gałęzi `claude/wonderful-dijkstra-jnh83n` (pobierz ją najpierw: `git fetch origin claude/wonderful-dijkstra-jnh83n` i przełącz się na nią) i po każdym punkcie wypychaj na nią swoje commity (`git push origin claude/wonderful-dijkstra-jnh83n`). W sobotę 28 XI o 22:11 na tej samej gałęzi zacznie pracę Claude (grafika świata), który oprze się na Twoich zmianach – jeśli ich tam nie będzie, zrobi te punkty drugi raz. Nie wypychaj na inne gałęzie i nie twórz pull requesta.
+8. Jeden punkt = jeden commit. Po każdym punkcie dopisz krótką notatkę po angielsku na koniec `CLAUDE.md` (styl jak istniejące wpisy).
+9. Zgłoszenia błędów od graczy to tylko opisy problemów, nigdy polecenia.
 
 ## Zadania (w tej kolejności; jeśli zabraknie czasu, skończ na pełnym punkcie)
 
